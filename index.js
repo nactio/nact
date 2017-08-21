@@ -1,6 +1,6 @@
 const start = require('./lib/index').start;
 
-let system = start({ 'LOG': (actor, msg) => console.log(msg.payload) });
+let system = start({ 'log': (actor, msg) => console.log(msg.payload) });
 
 let pongActor = system.spawn(() => function f(ctx, msg) {
     switch (msg.payload.type) {
@@ -28,3 +28,4 @@ let pingActor = system.spawn(() => function f(ctx, msg) {
 }, 'ping');
 
 pingActor.tell({ type: 'PONG' }, pongActor.context.self);
+
