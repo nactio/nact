@@ -1,29 +1,29 @@
 const start = require('./lib/index').start;
 
-let system = start({ 'log': (actor, msg) => console.log(msg.payload) });
+let system = start({ 'console.log': (actor, msg) => console.log('A' + msg)});
 
 let pongActor = system.spawn(() => function f(ctx, msg) {
     switch (msg.payload.type) {
         case 'PING': {
-            ctx.log('PONG');
-            ctx.tell(msg.sender, { type: 'PONG' });
-            ctx.tell(ctx.children['alex'], 'ALEX!!');
+            console.log('PONG');
+            tell(msg.sender, { type: 'PONG' });
+            // tell(ctx.children['alex'], 'ALEX!!', ctx.self);
             break;
         }
             
-        case 'SPWN': {
-            ctx.spawn(() => function f(ctx, msg) { ctx.log(msg.payload); return f; }, 'alex');
-            break;
-        }
+        // case 'SPWN': {
+        //     spawn(() => function f(ctx, msg) { ctx.log(msg.payload); return f; }, 'alex');
+        //     break;
+        // }
     }
     return f;
 }, 'pong');
 
-pongActor.tell({ type: 'SPWN' });
+// pongActor.tell({ type: 'SPWN' });
 
 let pingActor = system.spawn(() => function f(ctx, msg) {
-    ctx.log('PING');
-    ctx.tell(msg.sender, { type: 'PING' });
+    console.log('PING');
+    tell(msg.sender, { type: 'PING' });
     return f;
 }, 'ping');
 
