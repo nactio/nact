@@ -5,8 +5,8 @@ let system = start({ 'console.log': (actor, msg) => console.log('A' + msg)});
 let pongActor = system.spawn(() => function f(ctx, msg) {
     switch (msg.payload.type) {
         case 'PING': {
-            console.log('PONG');
-            tell(msg.sender, { type: 'PONG' });
+            // console.log('PONG');
+            tell(ctx.sender, { type: 'PONG' });
             // tell(ctx.children['alex'], 'ALEX!!', ctx.self);
             break;
         }
@@ -22,8 +22,8 @@ let pongActor = system.spawn(() => function f(ctx, msg) {
 // pongActor.tell({ type: 'SPWN' });
 
 let pingActor = system.spawn(() => function f(ctx, msg) {
-    console.log('PING');
-    tell(msg.sender, { type: 'PING' });
+    // console.log('PING');
+    tell(ctx.sender, { type: 'PING' });
     return f;
 }, 'ping');
 
