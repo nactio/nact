@@ -1,18 +1,14 @@
 const start = require('./lib/index').start;
-
 let system = start({ 'console.log': (actor, msg) => console.log(msg)});
 
-let pongActor = system.spawn(() => function f(ctx, msg) {
-    console.log('PING');       
-    tell(ctx.sender, { type: 'PONG' });                
-    return f;
+let pongActor = system.spawnSimple((ctx, msg) => {
+    console.log(msg);       
+    tell(ctx.sender, 'PONG');                    
 }, 'pong');
 
-let pingActor = system.spawn(() => function f(ctx, msg) {
-    console.log('PONG');
-    tell(ctx.sender, { type: 'PING' });
-    return f;
+let pingActor = system.spawnSimple((ctx, msg) => {
+    console.log(msg);
+    tell(ctx.sender, 'PING');    
 }, 'ping');
 
-pingActor.tell({ type: 'PONG' }, pongActor.context.self);
-
+pingActor.tell('PONG', pongActor.context.self);
