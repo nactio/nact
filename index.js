@@ -1,19 +1,15 @@
 const start = require('./lib/index').start;
 
+exports.start = start;
 
 let system = start({
-    'console.log': { f: (actor, msg) => console.log('A: ' + msg) },
+    'console.log': { f: (actor, msg) => console.log(msg) },
     'test': { f: (actor) => Promise.resolve(2), async: true }
 });
 
 let pongActor = system.spawnSimple((ctx, msg) => {
     console.log(msg);
-    
-    return test().then(result => {
-        console.log(result);
-        tell(ctx.sender, 'PONG');
-    });
-    
+    tell(ctx.sender, 'PONG');
 }, 'pong');
 
 let pingActor = system.spawnSimple((ctx, msg) => {

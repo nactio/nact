@@ -1,14 +1,15 @@
 {
-  "name": "n-act",
+  "name": "nact",
   "version": "0.1.0",
-  "description": "Implementation of the actor model for node",
+  "description": "Mulithreaded implementation of the actor model for Node",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "ncthbrt",
-  "license": "ISC",
+  "license": "Apache-2.0",
   "dependencies": {
+    "minimatch": "^3.0.4",
     "webworker-threads": "^0.7.13"
   }
 }
