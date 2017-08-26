@@ -5,10 +5,10 @@ import Effect from './effect';
 export const tell =
     new Effect((actor, recipient, message, sender) => {        
         sender = sender || actor.path;        
-        const concreteRecipient = LocalPath.actorFromReference(recipient, actor.system);
+        const concreteRecipient = actor.system.actorFromReference(recipient);
         if(!concreteRecipient.isStopped){                        
             concreteRecipient.tell(message,sender);
-        }        
+        }
     });
 
 export const stop =

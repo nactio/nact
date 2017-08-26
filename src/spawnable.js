@@ -50,17 +50,19 @@ export default class Spawnable {
 
     stop() {
         this.isStopped = true;
-        this.dispatch('stopping', {});
+        if(this.dispatch){
+            this.dispatch('stop', {});
+        }
 
-        if (this.parent) {
+        if (this.parent) {            
             if (!this.parent.isStopped && this.parent.dispatch) {
                 this.parent.dispatch('childStopped', { child: this.name }, this.path);
             }
-            delete this.parent.children[actor.context.name];
+            delete this.parent.children[this.name];
             delete this.parent;
         }
 
-        this.children.forEach(child => child.stop());
+        Object.keys(this.children).map(child=> this.children[child].stop());
     }
 
 }

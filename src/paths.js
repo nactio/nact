@@ -5,6 +5,7 @@ const actorNameRegex = /^[a-z0-9\-]+$/i
 export class LocalPath {
     constructor(localParts){                
         this.localParts = localParts;
+        this.type = 'local';
     }    
 
     createChildPath(name) {
@@ -19,15 +20,22 @@ export class LocalPath {
         return !!name.match(actorNameRegex);
     }
 
-    static pathReduction (parent,part) { 
-            return (parent && parent.children[part]);
-    }
-
-    static actorFromReference (actorReference, system) {
-        return actorReference.localParts.reduce(LocalPath.pathReduction, system);
-    }
-
     static root(){
         return new LocalPath([]);
+    }
+
+    static isLocalPath(path){
+        return path.localParts!==undefined && path.type ==='local';
+    }
+}
+
+export class TempPath {
+    constructor(id){
+        this.id = id; 
+        this.type = 'temp';
+    }
+
+    static isTempPath(path){        
+        return path.id!==undefined && path.type === 'temp';                
     }
 }

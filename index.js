@@ -5,14 +5,25 @@ let system = start({
     'test': { f: (actor) => Promise.resolve(2), async: true }
 });
 
-let pongActor = system.spawnSimple((msg) => {
-    console.log(msg);
-    tell(sender, 'PONG');
-}, 'pong');
+// let pongActor = system.spawnSimple((msg) => {
+//     console.log(msg);
+//     tell(sender, 'PONG');
+// }, 'pong');
 
-let pingActor = system.spawnSimple((msg) => {    
-    console.log(msg);    
-    tell(sender, 'PING');
+// let pingActor = system.spawnSimple((msg) => {    
+//     console.log(msg);    
+//     tell(sender, 'PING');
+// }, 'ping');
+
+let askActor = system.spawnSimple((msg) => {    
+    let sum = 0;
+    for (let i=0; i<msg; i++){
+        sum+=i;
+    }    
+    tell(sender, sum);
 }, 'ping');
 
-pingActor.tell('PONG', pongActor.path);
+askActor.ask(1000,1000)
+        .then((result)=>{console.log(result); askActor.stop(); });
+// pingActor.tell('PONG', pongActor.path);
+

@@ -3,6 +3,4 @@ export default class Effect {
         this.f = f;
         this.async = !!async;
     }
-
-
 }

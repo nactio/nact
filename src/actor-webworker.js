@@ -11,10 +11,11 @@ const createActorWebworker = () => new Worker (
 
         class Deferred {
             constructor() {
-                this.promise = new Promise((resolve, reject) => {
+                this.promise = new Promise((resolve, reject) => {                    
                     this.reject = reject;
                     this.resolve = resolve;
                 });
+                this.promise.then(()=>{this.done = true}).catch(()=>{this.done = true});
             }
         }
 
@@ -73,10 +74,11 @@ const createActorWebworker = () => new Worker (
 
             add(value) {
                 let i = this.count;
+                let prev = this.arr[i];
                 this.arr[i] = value;
                 ++this.count;
                 this.count = this.count >= this.size ? 0 : this.count;
-                return i;
+                return [i,prev];
             }
         }
 
@@ -101,7 +103,7 @@ const createActorWebworker = () => new Worker (
                     busy = false;
                 }
             } else if (next == undefined) {
-                destroy();
+                stop();
             } else {
                 throw new TypeError("Unsupported Type");
             }
@@ -116,7 +118,7 @@ const createActorWebworker = () => new Worker (
                 const _parent = Object.freeze(parent);                                
                 const _children = Object.assign({}, children);
 
-                sender = msg.payload.sender;      
+                sender = Object.freeze(msg.payload.sender);      
                 next = f.call({}, msg.payload.message);
 
                 name = _name;
@@ -139,7 +141,12 @@ const createActorWebworker = () => new Worker (
 
         const dispatchAsync = (action, args) => {
             let deferred = new Deferred();
-            let index = outstandingEffects.add(deferred);
+            let [index, prev] = outstandingEffects.add(deferred);
+            
+            if(prev!=undefined && !prev.done){
+                prev.reject('Promise timedout');
+            }
+
             self.postMessage({ action, args, sender: path, index });
             return deferred.promise;
         };
@@ -153,8 +160,8 @@ const createActorWebworker = () => new Worker (
             self.close();
         };
 
-        const destroy = () => {
-            self.postMessage({ action: 'destroy', sender: path, args: [] });
+        const stop = () => {
+            self.postMessage({ action: 'stop', sender: path, args: [] });
             self.close();
         };
 
@@ -202,7 +209,7 @@ const createActorWebworker = () => new Worker (
                         children = nextChildren;
                         break;
                     }
-                    case 'childDestroyed': {
+                    case 'childStoped': {
                         let nextChildren = { ...children };
                         delete nextChildren[payload.child];
                         children = nextChildren;
@@ -233,8 +240,8 @@ const createActorWebworker = () => new Worker (
                         }
                         break;
                     }
-                    case 'destroy': {
-                        destroy();
+                    case 'stop': {
+                        stop();
                         break;
                     }
                 }

@@ -7,7 +7,7 @@ export default class Actor extends Spawnable {
     constructor(system, f, name, parent, effects) {
         super(effects, name, parent);        
         this.system = system;
-
+        
         let effectReducer = (prev, effect) => [...prev, { effect, async: !!(effects[effect].async) }];
         let effectList = Object.keys(effects).reduce(effectReducer, []);
         
@@ -27,8 +27,10 @@ export default class Actor extends Spawnable {
         this.dispatch('tell', { message, sender });
     }
 
-    ask() {
-
+    ask(message, timeout) {
+        let [defferal, tempPath] = this.system.registerAsk(timeout);
+        this.tell(message,tempPath);
+        return defferal.promise;   
     }
 
     onMessage(evt) {
