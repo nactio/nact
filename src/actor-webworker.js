@@ -80,11 +80,16 @@ const createActorWebworker = () => new Worker (
             }
         }
 
-        let context = undefined;
-        let f = undefined;
         let busy = false;
         let outstandingEffects = new RingBuffer(4048);
         let mailbox = Queue.empty();
+        
+        let f = undefined;        
+        name = undefined;
+        path = undefined;
+        sender = undefined;
+        parent = undefined;
+        children = {};
 
         const processNext = (next) => {
             if (next.isType(Function)) {
@@ -103,11 +108,22 @@ const createActorWebworker = () => new Worker (
         };
 
         const handleMessage = (msg) => {
-            busy = true;
-            let msgContext = Object.freeze(Object.assign({}, context, { sender: msg.payload.sender }));            
-            let next = undefined;
+            busy = true;            
+            let next = undefined;            
             try {
-                next = f.call(msgContext, msg.payload.message);
+                const _name = ''+name;
+                const _path = Object.freeze(path);
+                const _parent = Object.freeze(parent);                                
+                const _children = Object.assign({}, children);
+
+                sender = msg.payload.sender;      
+                next = f.call({}, msg.payload.message);
+
+                name = _name;
+                path = _path;
+                parent = _parent;
+                children = _children;                                
+
             } catch (e) {
                 signalFault(e);
                 return;
@@ -124,21 +140,21 @@ const createActorWebworker = () => new Worker (
         const dispatchAsync = (action, args) => {
             let deferred = new Deferred();
             let index = outstandingEffects.add(deferred);
-            self.postMessage({ action, args, sender: context.path, index });
+            self.postMessage({ action, args, sender: path, index });
             return deferred.promise;
         };
 
         const dispatch = (action, args) =>
-            self.postMessage({ action, args, sender: context.path });
+            self.postMessage({ action, args, sender: path });
 
         const signalFault = (e) => {
             let error = serializeErr(e);
-            self.postMessage({ action: 'faulted', payload: { sender: context.path, payload: { error } }, sender: context.path });
+            self.postMessage({ action: 'faulted', payload: { sender: path, payload: { error } }, sender: path });
             self.close();
         };
 
         const destroy = () => {
-            self.postMessage({ action: 'destroy', sender: context.path, args: [] });
+            self.postMessage({ action: 'destroy', sender: path, args: [] });
             self.close();
         };
 
@@ -159,7 +175,8 @@ const createActorWebworker = () => new Worker (
                 };
             };
 
-            effects.map(e => ({ parts: e.effect.split('.'), name: e.effect, async: e.async }))
+            effects
+                .map(e => ({ parts: e.effect.split('.'), name: e.effect, async: e.async }))
                 .map(e => e.parts.reduce(mapFold(e.name, e.parts.length, e.async), global));
         };
 
@@ -172,27 +189,23 @@ const createActorWebworker = () => new Worker (
                 switch (message.action) {
                     
                     case 'initialize': {
-                        f = eval(payload.f)();
-
-                        context = {
-                            name: payload.name,
-                            path: payload.path,
-                            parent: payload.parent,
-                            children: {}
-                        };
+                        f = eval(payload.f)();                        
+                        name = payload.name;
+                        path = payload.path;
+                        parent = payload.parent;                        
+                        children = {};
                         bindEffects(payload.effects);
                         break;
                     }
-                    case 'childSpawned': {
-                        
-                        let nextChildren = Object.assign({}, context.children, { [payload.name]: payload.child });
-                        context = Object.assign(context, { children: nextChildren });
+                    case 'childSpawned': {                        
+                        let nextChildren = {...children, ...{ [payload.name]: payload.child }};
+                        children = nextChildren;
                         break;
                     }
                     case 'childDestroyed': {
-                        let nextChildren = Object.assign({}, context.children);
+                        let nextChildren = { ...children };
                         delete nextChildren[payload.child];
-                        context = Object.assign(context, { children: nextChildren });
+                        children = nextChildren;
                         break;
                     }
                     case 'effectApplied': {

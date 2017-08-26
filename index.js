@@ -7,12 +7,12 @@ let system = start({
 
 let pongActor = system.spawnSimple((msg) => {
     console.log(msg);
-    tell(this.sender, 'PONG');
+    tell(sender, 'PONG');
 }, 'pong');
 
 let pingActor = system.spawnSimple((msg) => {    
-    console.log(msg);
-    tell(this.sender, 'PING');
+    console.log(msg);    
+    tell(sender, 'PING');
 }, 'ping');
 
 pingActor.tell('PONG', pongActor.path);
