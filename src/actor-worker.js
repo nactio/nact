@@ -158,8 +158,7 @@ const bindEffects = (effects) => {
            .map(e => e.parts.reduce(mapFold(e.name, e.parts.length, e.async), this));
 };
 
-
-self.onmessage = (evt) => {
+function onmessage (evt) {
     try {
         let message = evt.data;
         let payload = message.payload;
@@ -222,3 +221,5 @@ self.onmessage = (evt) => {
         signalFault(e);
     }
 };
+
+self.onmessage = onmessage;
