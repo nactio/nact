@@ -1,5 +1,5 @@
 const dispatch = require('./dispatcher').dispatch;
-const Worker = require('webworker-threads').Worker;
+const createActorWorker = require('./workers/actor-worker').createActorWorker;
 require('./typing');
 
 const onMessage = (actor, effects) => (evt) => {        
@@ -40,7 +40,7 @@ const sendInitialPayload = (actor, payload) =>
 
 
 exports.start = (f, actor, effects) => {
-    actor.worker = new Worker(`${__dirname}/workers/actor-worker.js`);
+    actor.worker = createActorWorker();
 
     const initialPayload = Object.assign({}, actor.context);
     initialPayload.f = f;
