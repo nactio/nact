@@ -1,15 +1,18 @@
 {
   "name": "nact",
   "version": "0.1.0",
-  "description": "Mulithreaded implementation of the actor model for Node",
+  "description": "Mulithreaded implementation of the actor model for node",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "babel src -d lib"
   },
-  "author": "ncthbrt",
+  "author": "Nick Cuthbert (https://github.com/ncthbrt)",
   "license": "Apache-2.0",
   "dependencies": {
-    "minimatch": "^3.0.4",
     "webworker-threads": "^0.7.13"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-preset-env": "^1.6.0"
   }
 }
