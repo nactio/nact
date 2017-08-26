@@ -1,6 +1,6 @@
-const Worker = require('webworker-threads').Worker;
+import { Worker } from 'webworker-threads';
 
-exports.createActorWorker = () => new Worker(
+const createActorWebworker = () => new Worker (
     function () {
         // Helper functions for type introspection
         Object.prototype.isType = function (t) { return t.name === Object.getPrototypeOf(this).constructor.name };
@@ -104,7 +104,7 @@ exports.createActorWorker = () => new Worker(
 
         const handleMessage = (msg) => {
             busy = true;
-            let msgContext = Object.assign({}, context, { sender: msg.payload.sender });
+            let msgContext = Object.assign({}, context, { sender: msg.payload.sender });            
             let next = undefined;
 
             try {
@@ -125,21 +125,21 @@ exports.createActorWorker = () => new Worker(
         const dispatchAsync = (action, args) => {
             let deferred = new Deferred();
             let index = outstandingEffects.add(deferred);
-            self.postMessage({ action, args, sender: context.self, index });
+            self.postMessage({ action, args, sender: context.path, index });
             return deferred.promise;
         };
 
         const dispatch = (action, args) =>
-            self.postMessage({ action, args, sender: context.self });
+            self.postMessage({ action, args, sender: context.path });
 
         const signalFault = (e) => {
             let error = serializeErr(e);
-            self.postMessage({ action: 'faulted', payload: { sender: context.self, payload: { error } }, sender: context.self });
+            self.postMessage({ action: 'faulted', payload: { sender: context.path, payload: { error } }, sender: context.path });
             self.close();
         };
 
         const destroy = () => {
-            self.postMessage({ action: 'destroy', sender: context.self, args: [] });
+            self.postMessage({ action: 'destroy', sender: context.path, args: [] });
             self.close();
         };
 
@@ -167,15 +167,17 @@ exports.createActorWorker = () => new Worker(
 
         self.onmessage = (evt) => {
             try {
+                
                 let message = evt.data;
                 let payload = message.payload;
                 switch (message.action) {
+                    
                     case 'initialize': {
                         f = eval(payload.f)();
 
                         context = {
                             name: payload.name,
-                            self: payload.self,
+                            path: payload.path,
                             parent: payload.parent,
                             children: {}
                         };
@@ -183,6 +185,7 @@ exports.createActorWorker = () => new Worker(
                         break;
                     }
                     case 'childSpawned': {
+                        
                         let nextChildren = Object.assign({}, context.children, { [payload.name]: payload.child });
                         context = Object.assign(context, { children: nextChildren });
                         break;
@@ -197,8 +200,7 @@ exports.createActorWorker = () => new Worker(
                         let index = payload.index;
                         let effect = outstandingEffects.get(index);
                         outstandingEffects.set(index, undefined);
-                        if (effect) {
-                            console.log('resolving');
+                        if (effect) {                            
                             effect.resolve(payload.value);
                         }
                         break;
@@ -211,7 +213,7 @@ exports.createActorWorker = () => new Worker(
                         }
                         break;
                     }
-                    case 'tell': {
+                    case 'tell': {                        
                         if (!busy) {
                             handleMessage(message);
                         } else {
@@ -231,3 +233,4 @@ exports.createActorWorker = () => new Worker(
     });
 
 
+export default createActorWebworker;

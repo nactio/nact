@@ -1,7 +1,8 @@
-class Effect{
-    constructor(f, name, async){
+export default class Effect {
+    constructor(f, async){
         this.f = f;
-        this.name = name+'';
         this.async = !!async;
     }
+
+
 }

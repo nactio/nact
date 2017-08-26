@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "description": "Mulithreaded implementation of the actor model for node",
   "main": "index.js",
-  "scripts": {    
-    "build": "babel src -d lib --copy-files"
+  "scripts": {
+    "build": "babel src -d lib"
   },
   "author": "Nick Cuthbert (https://github.com/ncthbrt)",
   "license": "Apache-2.0",
@@ -13,6 +13,7 @@
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
+    "babel-plugin-transform-object-rest-spread": "^6.26.0",
     "babel-preset-env": "^1.6.0"
   }
 }
