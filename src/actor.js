@@ -40,7 +40,7 @@ const sendInitialPayload = (actor, payload) =>
 
 
 exports.start = (f, actor, effects) => {
-    actor.worker = new Worker(`${__dirname}/actor-worker.js`);
+    actor.worker = new Worker(`${__dirname}/workers/actor-worker.js`);
 
     const initialPayload = Object.assign({}, actor.context);
     initialPayload.f = f;

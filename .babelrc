@@ -6,5 +6,9 @@
                     "node": "current"
                 }
             }      
-        ]]        
+        ]]
+        ,
+        "ignore": [
+            "**/workers/*.js"
+        ]
 }

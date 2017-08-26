@@ -14,6 +14,7 @@ class Deferred {
 }
 
 class Queue {
+
     constructor() { }
 
     static empty() { return new Queue(); }
@@ -158,7 +159,8 @@ const bindEffects = (effects) => {
            .map(e => e.parts.reduce(mapFold(e.name, e.parts.length, e.async), this));
 };
 
-function onmessage (evt) {
+
+self.onmessage = (evt) => {
     try {
         let message = evt.data;
         let payload = message.payload;
@@ -221,5 +223,3 @@ function onmessage (evt) {
         signalFault(e);
     }
 };
-
-self.onmessage = onmessage;
