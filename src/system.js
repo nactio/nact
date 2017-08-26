@@ -15,8 +15,8 @@ class ActorSystem extends Spawnable {
     registerAsk(timeoutDuration) {
         timeoutDuration = timeoutDuration || Number.MAX_SAFE_INTEGER;
         var defferal = new Deferred();
-        defferal.tell = (message) => defferal.resolve(message); 
-        
+        defferal.tell = (message) => defferal.resolve(message);
+
         let timeout = setTimeout(() => { defferal.reject('Ask Timeout') }, timeoutDuration);
         defferal.promise.then(() => clearTimeout(timeoutDuration));
 
@@ -29,15 +29,11 @@ class ActorSystem extends Spawnable {
         return [defferal, new TempPath(index)];
     }
 
-    static pathReduction(parent, part) {
-        return (parent && parent.children[part]);
-    }
-
-    actorFromReference(actorReference) {                
-        console.log(actorReference);
+    actorFromReference(actorReference) {
         if (LocalPath.isLocalPath(actorReference)) {
+            const pathReduction = (parent, part) => (parent && parent.children[part]);
             return actorReference.localParts.reduce(pathReduction, this);
-        } else if (TempPath.isTempPath(actorReference)) {            
+        } else if (TempPath.isTempPath(actorReference)) {
             return this.askBuffer.get(actorReference.id);
         }
     }

@@ -103,7 +103,7 @@ const createActorWebworker = () => new Worker (
                     busy = false;
                 }
             } else if (next == undefined) {
-                stop();
+                stopping();
             } else {
                 throw new TypeError("Unsupported Type");
             }
@@ -157,11 +157,15 @@ const createActorWebworker = () => new Worker (
         const signalFault = (e) => {
             let error = serializeErr(e);
             self.postMessage({ action: 'faulted', payload: { sender: path, payload: { error } }, sender: path });
-            self.close();
+            setTimeout(self.close(),1000);
         };
 
-        const stop = () => {
-            self.postMessage({ action: 'stop', sender: path, args: [] });
+        const stopping = () => {
+            self.postMessage({ action: 'stopping', sender: path, args: [] });
+            setTimeout(()=>self.close(),1000);
+        };
+
+        const stop = () => {            
             self.close();
         };
 
@@ -209,7 +213,7 @@ const createActorWebworker = () => new Worker (
                         children = nextChildren;
                         break;
                     }
-                    case 'childStoped': {
+                    case 'childStopped': {
                         let nextChildren = { ...children };
                         delete nextChildren[payload.child];
                         children = nextChildren;

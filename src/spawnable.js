@@ -62,7 +62,21 @@ export default class Spawnable {
             delete this.parent;
         }
 
-        Object.keys(this.children).map(child=> this.children[child].stop());
+        Object.keys(this.children).map(child => this.children[child].stop());
+    }
+
+    stopping() {
+        this.isStopped = true;        
+
+        if (this.parent) {            
+            if (!this.parent.isStopped && this.parent.dispatch) {
+                this.parent.dispatch('childStopped', { child: this.name }, this.path);
+            }
+            delete this.parent.children[this.name];
+            delete this.parent;
+        }
+
+        Object.keys(this.children).map(child => this.children[child].stop());
     }
 
 }
