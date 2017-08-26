@@ -5,14 +5,14 @@ let system = start({
     'test': { f: (actor) => Promise.resolve(2), async: true }
 });
 
-let pongActor = system.spawnSimple((ctx, msg) => {
-    console.log(msg);    
-    tell(ctx.sender, 'PONG');
+let pongActor = system.spawnSimple((msg) => {
+    console.log(msg);
+    tell(this.sender, 'PONG');
 }, 'pong');
 
-let pingActor = system.spawnSimple((ctx, msg) => {
+let pingActor = system.spawnSimple((msg) => {    
     console.log(msg);
-    tell(ctx.sender, 'PING');
+    tell(this.sender, 'PING');
 }, 'ping');
 
 pingActor.tell('PONG', pongActor.path);

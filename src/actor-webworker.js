@@ -104,11 +104,10 @@ const createActorWebworker = () => new Worker (
 
         const handleMessage = (msg) => {
             busy = true;
-            let msgContext = Object.assign({}, context, { sender: msg.payload.sender });            
+            let msgContext = Object.freeze(Object.assign({}, context, { sender: msg.payload.sender }));            
             let next = undefined;
-
             try {
-                next = function(){ return f(msgContext, msg.payload.message); }();
+                next = f.call(msgContext, msg.payload.message);
             } catch (e) {
                 signalFault(e);
                 return;
