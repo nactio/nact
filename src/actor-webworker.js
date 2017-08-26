@@ -108,7 +108,7 @@ const createActorWebworker = () => new Worker (
             let next = undefined;
 
             try {
-                next = f(msgContext, msg.payload.message);
+                next = function(){ return f(msgContext, msg.payload.message); }();
             } catch (e) {
                 signalFault(e);
                 return;

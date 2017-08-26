@@ -6,7 +6,7 @@ let system = start({
 });
 
 let pongActor = system.spawnSimple((ctx, msg) => {
-    console.log(msg);
+    console.log(msg);    
     tell(ctx.sender, 'PONG');
 }, 'pong');
 
