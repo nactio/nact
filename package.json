@@ -6,11 +6,12 @@
   "scripts": {
     "build": "babel src -d lib",
     "build-test": "babel test -d compiled_test",
-    "test": "yarn run build && yarn run build-test && mocha --require babel-polyfill  ./test/**/*.js"
+    "test": "yarn run build && yarn run build-test && mocha --require babel-polyfill  ./compiled_test/**/*.js"
   },
   "author": "Nick Cuthbert (https://github.com/ncthbrt)",
   "license": "Apache-2.0",
   "dependencies": {
+    "bluebird": "^3.5.0",
     "webworker-threads": "^0.7.13"
   },
   "devDependencies": {

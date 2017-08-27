@@ -3,8 +3,7 @@ import { Worker } from 'webworker-threads';
 const createActorWebworker = () => new Worker(
     function () {
         // Helper functions for type introspection
-        Object.prototype.isType = function (t) { return t.name === Object.getPrototypeOf(this).constructor.name };
-        Object.prototype.typeName = function () { return Object.getPrototypeOf(this).constructor.name; };
+        const isType = (self, t) => { return !!self && t.name === Object.getPrototypeOf(self).constructor.name };
 
 
         const serializeErr = err => JSON.stringify(err, Object.getOwnPropertyNames(err));
@@ -85,8 +84,8 @@ const createActorWebworker = () => new Worker(
         let busy = false;
         let outstandingEffects = new RingBuffer(4048);
         let mailbox = Queue.empty();
-
         let f = undefined;
+
         name = undefined;
         path = undefined;
         sender = undefined;
@@ -94,7 +93,7 @@ const createActorWebworker = () => new Worker(
         children = {};
 
         const processNext = (next) => {
-            if (next.isType(Function)) {
+            if (isType(next, Function)) {
                 f = next;
                 if (!mailbox.isEmpty()) {
                     let nextMessage = mailbox.dequeue();
@@ -102,41 +101,39 @@ const createActorWebworker = () => new Worker(
                 } else {
                     busy = false;
                 }
-            } else if (next == undefined) {
+            } else if (!next) {
                 stopping();
             } else {
                 throw new TypeError("Unsupported Type");
             }
         };
 
-        const handleMessage = (msg) =>  {
+        const handleMessage = (msg) => {
             busy = true;
             let next = undefined;
-            try {
-                const _name = '' + name;
-                const _path = Object.freeze(path);
-                const _parent = Object.freeze(parent);
-                const _children = Object.assign({}, children);
-
-                sender = Object.freeze(msg.payload.sender);
-                next = f.call({}, msg.payload.message);
-
-                name = _name;
-                path = _path;
-                parent = _parent;
-                children = _children;
-
-            } catch (e) {
-                signalFault(e);
-                return;
+            if (!!f) {
+                try {
+                    const _name = '' + name;
+                    const _path = Object.freeze(path);
+                    const _parent = Object.freeze(parent);
+                    const _children = Object.assign({}, children);
+                    sender = Object.freeze(msg.payload.sender);
+                    next = f.call({}, msg.payload.message);
+                    name = _name;
+                    path = _path;
+                    parent = _parent;
+                    children = _children;
+                } catch (e) {
+                    signalFault(e);
+                    return;
+                }
             }
 
-            if (next.isType(Promise)) {
+            if (isType(next, Promise)) {
                 next.then(processNext).catch(signalFault);
             } else {
                 processNext(next);
             }
-
         };
 
         const dispatchAsync = (action, args) => {
@@ -160,14 +157,9 @@ const createActorWebworker = () => new Worker(
             setTimeout(self.close(), 1000);
         };
 
-        const stopping = () => {
-            self.postMessage({ action: 'stopping', sender: path, args: [] });
-            setTimeout(() => self.close(), 1000);
-        };
+        const stopping = () => dispatch('stopping');
 
-        const stop = () => {
-            self.close();
-        };
+        const stop = () => self.close();
 
         const bindEffects = (effects) => {
 
@@ -197,15 +189,21 @@ const createActorWebworker = () => new Worker(
 
                 let message = evt.data;
                 let payload = message.payload;
+
                 switch (message.action) {
 
                     case 'initialize': {
-                        f = eval(payload.f)();
-                        name = payload.name;
-                        path = payload.path;
-                        parent = payload.parent;
-                        children = {};
-                        bindEffects(payload.effects);
+                        try {
+                            f = eval(payload.f)();
+                            name = payload.name;
+                            path = payload.path;
+                            parent = payload.parent;
+                            children = {};
+                            bindEffects(payload.effects);
+                        } catch (e) {
+                            console.log(serializeErr(e));
+                            signalFault(e);
+                        }
                         break;
                     }
                     case 'childSpawned': {

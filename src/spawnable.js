@@ -19,10 +19,10 @@ export default class Spawnable {
         this.isStopped = false;
     }
 
-    spawn(f, name, customEffects) {        
+    spawn(f, name, customEffects) {
         let effects = customEffects || this.effects;
         let combinedEffects = { ...effects, ...this.system.effects };
-        let childActor = new Actor(this.system, f, name, this, combinedEffects);
+        let childActor = new Actor(this.system, f+'', name, this, combinedEffects);        
         this.children[name] = childActor;
         if(this.dispatch){
             this.dispatch('childSpawned', { name, child: childActor.path });
@@ -65,17 +65,16 @@ export default class Spawnable {
         Object.keys(this.children).map(child => this.children[child].stop());
     }
 
-    stopping() {
-        this.isStopped = true;        
-
-        if (this.parent) {            
+    stopping() {    
+        this.isStopped = true;                
+        if (this.parent) { 
             if (!this.parent.isStopped && this.parent.dispatch) {
                 this.parent.dispatch('childStopped', { child: this.name }, this.path);
             }
             delete this.parent.children[this.name];
             delete this.parent;
         }
-
+        this.stop();
         Object.keys(this.children).map(child => this.children[child].stop());
     }
 

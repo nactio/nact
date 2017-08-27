@@ -12,9 +12,8 @@ export default class Actor extends Spawnable {
         let effectList = Object.keys(effects).reduce(effectReducer, []);
         
         this.worker = createActorWebWorker();
-        this.worker.onmessage = (evt) => this.onMessage(evt);
-
-        const initialPayload = { path: this.path, name, parent: this.parent.path, f, effects: effectList };
+        this.worker.onmessage = (evt) => this.onMessage(evt);        
+        const initialPayload = { path: this.path, name, parent: this.parent.path, f, effects: effectList };        
         this.dispatch('initialize', initialPayload);        
     }
 
@@ -36,10 +35,10 @@ export default class Actor extends Spawnable {
     onMessage(evt) {
         // NB: Very important line. This makes the promises resolve within 
         // the mailbox context. hacky_workaround===true    
-        setTimeout(() => { });                
-        let effect = this.effects[evt.data.action];        
+        setTimeout(() => { });             
+        let effect = this.effects[evt.data.action];                
         if (effect !== undefined) {
-            let args = evt.data.args.slice();
+            let args = (evt.data.args || []).slice();
             args.unshift(this);
             let result = undefined;
             try {

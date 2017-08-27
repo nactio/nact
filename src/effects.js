@@ -16,6 +16,7 @@ export const stop =
 
 export const stopping =
     new Effect((actor) => actor.stopping());
+    
 export const spawn =
     new Effect((actor, f, name) => actor.spawn(f,name), true);
 
