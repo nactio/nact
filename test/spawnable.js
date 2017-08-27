@@ -10,16 +10,23 @@ describe('Spawnable', function () {
   describe('#spawn()', function () {
     it('Should correctly register children when spawned', function () {
       let child = system.spawnSimple(() => (msg) => { tell(sender, children); }, 'testActor');
-      system.children.should.have.key('testActor');      
-      child.ask({}).then((children)=>{
-        
-      });
+      system.children.should.have.key('testActor');
+      return child
+        .ask()
+        .then((children) => {
+          children.should.have.length(0);
+          let grandchild = child.spawn(() => { });
+          return child.ask();
+        })
+        .then((children) => {
+          children.should.have.length(1);
+          child.stop();
+          return delay(100);
+        }).then(()=> system.children.should.have.length(0));
 
-      let grandchild = child.spawn(()=>{})
-      
-      
-      child.stop();
-      return delay(100).then(() => system.children.should.not.have.key('testActor'));      
+
+
+
     });
 
   });
