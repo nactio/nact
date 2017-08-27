@@ -2,6 +2,7 @@ import { LocalPath } from './paths';
 import createActorWebWorker from './actor-webworker';
 import './typing';
 import Spawnable from './spawnable';
+import { Promise } from 'bluebird';
 
 export default class Actor extends Spawnable {
     constructor(system, f, name, parent, effects) {
@@ -26,7 +27,7 @@ export default class Actor extends Spawnable {
         this.dispatch('tell', { message, sender });
     }
 
-    ask(message, timeout) {
+    ask(message=undefined, timeout) {
         let [defferal, tempPath] = this.system.registerAsk(timeout);
         this.tell(message,tempPath);
         return defferal.promise;   

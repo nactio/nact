@@ -9,24 +9,21 @@ describe('Spawnable', function () {
 
   describe('#spawn()', function () {
     it('Should correctly register children when spawned', function () {
-      let child = system.spawnSimple(() => (msg) => { tell(sender, children); }, 'testActor');
-      system.children.should.have.key('testActor');
-      return child
-        .ask()
-        .then((children) => {
-          children.should.have.length(0);
-          let grandchild = child.spawn(() => { });
+      let child = system.spawnSimple(() => (msg) => { tell(sender, children); }, 'testChildActor');
+      system.children.should.have.key('testChildActor');
+      
+      return child.ask()
+        .then((children) => {          
+          console.log('chillren'+JSON.stringify(children));
+          Object.keys(children).should.have.length(0);
+          let grandchild = child.spawn(() => { }, 'testGrandchildActor');
           return child.ask();
         })
         .then((children) => {
-          children.should.have.length(1);
+          children.should.have.key('testGrandchildActor');
           child.stop();
           return delay(100);
-        }).then(()=> system.children.should.have.length(0));
-
-
-
-
+        }).done(()=> system.children.should.not.have.key('testChildActor'));
     });
 
   });

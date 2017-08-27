@@ -12,12 +12,19 @@ class ActorSystem extends Spawnable {
         this.askBuffer = new RingBuffer(4096);
     }
 
-    registerAsk(timeoutDuration) {
-        timeoutDuration = timeoutDuration || Number.MAX_SAFE_INTEGER;
-        var defferal = new Deferred();
-        defferal.tell = (message) => defferal.resolve(message);
+    static getSafeTimeout(timeoutDuration){        
+        if(!timeoutDuration || timeoutDuration > 2147483647){
+            return 2147483647;
+        }else{
+            return timeoutDuration;
+        }        
+    }
 
-        let timeout = setTimeout(() => { defferal.reject('Ask Timeout') }, timeoutDuration);
+    registerAsk(timeoutDuration) {
+        
+        var defferal = new Deferred();        
+        defferal.tell = (message) => defferal.resolve(message);        
+        let timeout = setTimeout(() => { defferal.reject('Ask Timeout') }, ActorSystem.getSafeTimeout(timeoutDuration));
         defferal.promise.then(() => clearTimeout(timeoutDuration));
 
         let [index, prev] = this.askBuffer.add(defferal);

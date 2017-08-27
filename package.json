@@ -4,6 +4,7 @@
   "description": "Mulithreaded implementation of the actor model for node",
   "main": "index.js",
   "scripts": {
+    "clean": "rm -rf ./lib/ ./compiled_test/",
     "build": "babel src -d lib",
     "build-test": "babel test -d compiled_test",
     "test": "yarn run build && yarn run build-test && mocha --require babel-polyfill  ./compiled_test/**/*.js"
