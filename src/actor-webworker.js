@@ -1,6 +1,6 @@
 import { Worker } from 'webworker-threads';
 
-const createActorWebworker = () => new Worker (
+const createActorWebworker = () => new Worker(
     function () {
         // Helper functions for type introspection
         Object.prototype.isType = function (t) { return t.name === Object.getPrototypeOf(this).constructor.name };
@@ -11,11 +11,11 @@ const createActorWebworker = () => new Worker (
 
         class Deferred {
             constructor() {
-                this.promise = new Promise((resolve, reject) => {                    
+                this.promise = new Promise((resolve, reject) => {
                     this.reject = reject;
                     this.resolve = resolve;
                 });
-                this.promise.then(()=>{this.done = true}).catch(()=>{this.done = true});
+                this.promise.then(() => { this.done = true }).catch(() => { this.done = true });
             }
         }
 
@@ -78,15 +78,15 @@ const createActorWebworker = () => new Worker (
                 this.arr[i] = value;
                 ++this.count;
                 this.count = this.count >= this.size ? 0 : this.count;
-                return [i,prev];
+                return [i, prev];
             }
         }
 
         let busy = false;
         let outstandingEffects = new RingBuffer(4048);
         let mailbox = Queue.empty();
-        
-        let f = undefined;        
+
+        let f = undefined;
         name = undefined;
         path = undefined;
         sender = undefined;
@@ -109,22 +109,22 @@ const createActorWebworker = () => new Worker (
             }
         };
 
-        const handleMessage = (msg) => {
-            busy = true;            
-            let next = undefined;            
+        const handleMessage = (msg) =>  {
+            busy = true;
+            let next = undefined;
             try {
-                const _name = ''+name;
+                const _name = '' + name;
                 const _path = Object.freeze(path);
-                const _parent = Object.freeze(parent);                                
+                const _parent = Object.freeze(parent);
                 const _children = Object.assign({}, children);
 
-                sender = Object.freeze(msg.payload.sender);      
+                sender = Object.freeze(msg.payload.sender);
                 next = f.call({}, msg.payload.message);
 
                 name = _name;
                 path = _path;
                 parent = _parent;
-                children = _children;                                
+                children = _children;
 
             } catch (e) {
                 signalFault(e);
@@ -142,8 +142,8 @@ const createActorWebworker = () => new Worker (
         const dispatchAsync = (action, args) => {
             let deferred = new Deferred();
             let [index, prev] = outstandingEffects.add(deferred);
-            
-            if(prev!=undefined && !prev.done){
+
+            if (prev != undefined && !prev.done) {
                 prev.reject('Promise timedout');
             }
 
@@ -157,15 +157,15 @@ const createActorWebworker = () => new Worker (
         const signalFault = (e) => {
             let error = serializeErr(e);
             self.postMessage({ action: 'faulted', payload: { sender: path, payload: { error } }, sender: path });
-            setTimeout(self.close(),1000);
+            setTimeout(self.close(), 1000);
         };
 
         const stopping = () => {
             self.postMessage({ action: 'stopping', sender: path, args: [] });
-            setTimeout(()=>self.close(),1000);
+            setTimeout(() => self.close(), 1000);
         };
 
-        const stop = () => {            
+        const stop = () => {
             self.close();
         };
 
@@ -194,22 +194,22 @@ const createActorWebworker = () => new Worker (
 
         self.onmessage = (evt) => {
             try {
-                
+
                 let message = evt.data;
                 let payload = message.payload;
                 switch (message.action) {
-                    
+
                     case 'initialize': {
-                        f = eval(payload.f)();                        
+                        f = eval(payload.f)();
                         name = payload.name;
                         path = payload.path;
-                        parent = payload.parent;                        
+                        parent = payload.parent;
                         children = {};
                         bindEffects(payload.effects);
                         break;
                     }
-                    case 'childSpawned': {                        
-                        let nextChildren = {...children, ...{ [payload.name]: payload.child }};
+                    case 'childSpawned': {
+                        let nextChildren = { ...children, ...{ [payload.name]: payload.child } };
                         children = nextChildren;
                         break;
                     }
@@ -223,7 +223,7 @@ const createActorWebworker = () => new Worker (
                         let index = payload.index;
                         let effect = outstandingEffects.get(index);
                         outstandingEffects.set(index, undefined);
-                        if (effect) {                            
+                        if (effect) {
                             effect.resolve(payload.value);
                         }
                         break;
@@ -236,7 +236,7 @@ const createActorWebworker = () => new Worker (
                         }
                         break;
                     }
-                    case 'tell': {                        
+                    case 'tell': {
                         if (!busy) {
                             handleMessage(message);
                         } else {

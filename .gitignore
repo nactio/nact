@@ -58,3 +58,5 @@ typings/
 .env
 lib/
 lib
+compiled_test
+compiled_test/

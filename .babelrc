@@ -1,12 +1,3 @@
 {
-    "presets": [[
-            "env",
-            {
-                "targets": {
-                    "node": true                    
-                }
-            }      
-        ]],
-    "plugins": ["transform-object-rest-spread"]
-        
+    "presets": [["env", { "targets": { "node" : true }}], "stage-3"]        
 }
