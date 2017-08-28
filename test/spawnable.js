@@ -40,8 +40,18 @@ describe('Spawnable', function () {
 
     });
 
+    it('shutdowns automatically when a function is not returned', async function(){
+
+    });
+
   });
 
+  describe('#spawnSimple()', function () {
+    it('shutdowns automatically when function returns false', async function(){
+      system.spawnSimple('')
+    });
+
+  });
 
 
   // describe.skip('#spawnSimple()');
