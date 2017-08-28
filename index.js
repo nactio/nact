@@ -27,8 +27,8 @@ let askActor = system.spawnSimple((msg) => {
 // testActor.tell({});
 // // testActor.stop();
 
-askActor.ask(1000, 1000)
-    .then(result => { console.log(result); askActor.stop(); });
+// askActor.ask(1000, 1000)
+//     .then(result => { console.log(result); askActor.stop(); });
     
 pingActor.tell('PONG', pongActor.path);
 

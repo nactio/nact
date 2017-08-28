@@ -1,8 +1,7 @@
-import { should as createShould } from 'chai';
-import { start } from '../lib';
-import { Promise } from 'bluebird';
+const { should } = require('chai').should();
+const { start } = require('../lib');
+const { Promise } = require('bluebird');
 const delay = Promise.delay;
-const should = createShould();
 
 describe('Spawnable', function () {
   let system = start();
