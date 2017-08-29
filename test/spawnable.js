@@ -3,12 +3,12 @@ const { start } = require('../lib');
 const { Promise } = require('bluebird');
 const delay = Promise.delay;
 
-describe('Spawnable', function () {
+describe('Actor', function () {
   let system = start();
 
-  describe('#spawn()', function () {
-    it('registers and deregisters children from inside and outside the actor', async function () {
-      let child = system.spawnSimple(() => tell(sender, children), 'testChildActor');
+  describe('spawning', function () {
+    it('registers and deregisters children with parent upon startup and shutdown', async function () {
+      let child = system.spawn(() => tell(sender, children), 'testChildActor');
       
       system.children.should.have.key('testChildActor');      
       
@@ -46,13 +46,13 @@ describe('Spawnable', function () {
 
   });
 
-  describe('#spawnSimple()', function () {
+  describe('#spawn()', function () {
     it('shutdowns automatically when function returns false', async function(){
-      system.spawnSimple('')
+      let actor = system.spawn((msg)=> !!msg);
     });
 
   });
 
 
-  // describe.skip('#spawnSimple()');
+  // describe.skip('#spawn()');
 });
