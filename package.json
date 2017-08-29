@@ -4,7 +4,7 @@
   "description": "Mulithreaded implementation of the actor model for node",
   "main": "index.js",
   "scripts": {
-    "test": "mocha ./test/**/*.js"
+    "test": "mocha ./test/*.js"
   },
   "author": "Nick Cuthbert (https://github.com/ncthbrt)",
   "license": "Apache-2.0",
