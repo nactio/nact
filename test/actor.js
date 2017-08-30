@@ -1,6 +1,12 @@
-const { should } = require('chai').should();
+const chai = require('chai');
+const chaiAsPromised = require("chai-as-promised");
+chai.use(chaiAsPromised);
+const should = chai.should();
+
 const { start } = require('../lib');
 const { Promise } = require('bluebird');
+
+
 const delay = Promise.delay;
 
 const spawnChildrenEchoer = (parent, name) => parent.spawnFixed(() => tell(sender, [...children.keys()]), name);
@@ -155,7 +161,19 @@ describe('Actor', function () {
   });
 
   describe('#ask()', function () {
+    let system = undefined;
+    beforeEach(() => system = start());
+    afterEach(() => system.terminate());
 
+    it(`should reject a promise if the actor hasn't responded with the given timespan`, function () {
+      let actor = system.spawnFixed(
+        async (msg) => { await delay(200); tell(sender, 'done'); },
+        'test',
+        { delay: { f: (actor, length) => delay(length), async: true } }
+      );
+      return actor.ask('test', 50).should.be.rejectedWith(Error, 'Ask Timeout');
+
+    });
   });
 
   describe('#<effect>()', function () {
