@@ -2,12 +2,29 @@
   "name": "nact",
   "version": "0.1.0",
   "description": "Mulithreaded implementation of the actor model for node",
-  "main": "index.js",
+  "main": "lib/index.js",
   "scripts": {
     "test": "mocha ./test/*.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/ncthbrt/nact"
+  },
+  "keywords": [
+    "actors",
+    "actor-model",
+    "distributed-systems",
+    "multithreading",
+    "threading",
+    "parallel",
+    "akka",
+    "akka.net"
+  ],
   "author": "Nick Cuthbert (https://github.com/ncthbrt)",
   "license": "Apache-2.0",
+  "bugs": {
+    "url": "http://github.com/ncthbrt/nact/issues"
+  },  
   "dependencies": {
     "bluebird": "^3.5.0",
     "webworker-threads": "^0.7.13"
