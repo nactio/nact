@@ -52,14 +52,14 @@ describe('Actor', function () {
     it('is invoked automatically when a fixed function returns false', async function () {
       let child = system.spawnFixed(() => false, 'testActor');
       child.tell();
-      await retry(()=> child.isStopped.should.be.true, 8, 100);                  
+      await retry(()=> child.isStopped.should.be.true, 12, 100);                  
       system.children.should.not.include('testActor');
     });
 
     it('is invoked automatically when a function is not returned', async function () {
       let child = system.spawn(() => (msg) => { }, 'testActor');
       child.tell();
-      await retry(()=> child.isStopped.should.be.true, 8, 100);            
+      await retry(()=> child.isStopped.should.be.true, 12, 100);                  
       system.children.should.not.include('testActor');
     });
 
