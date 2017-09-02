@@ -3,6 +3,17 @@ A multithreaded actor system for node.js.
 
 [![Build Status](https://travis-ci.org/ncthbrt/nact.svg?branch=master)](https://travis-ci.org/ncthbrt/nact)
 
+> Note:\
+> This project is still in the early phases. Any and all feedback,
+> comments and suggestions are welcome. Please open an issue if you
+> find anything unclear or misleading in the documentation. 
+> 
+> PRs and ideas for performance improvements and scaleout will also 
+> be hugely appreciated, especially if we can avoid rolling our own 
+> clustering solution. For single node performance for example, 
+> it may for example be necessary to fork webworker-threads to optimise 
+> for actor access patterns.  
+
 ## Introduction
 
 In the late 80s, Erisson needed a language in which to program the next generation of telephone exchanges. The language needed to be distributed by design, highly available, and fault tolerant. A team consisting initially of Joe Armstrong, Mike Williams and Robert Virding came up with an elegant solution: [Erlang](erlang.org). 
@@ -20,11 +31,31 @@ NAct is an implementation of the Actor Model for Node.js. It is inspired by the 
 NAct achieves fault tolerance and parallelism  through the use of [Node Webworker Threads](https://github.com/audreyt/node-webworker-threads). Webworker Threads allow full utilisation of a server's CPU while isolating workers from their peers. A design decision of WebWorker threads is that it disallows `require()` from within actors and so a unique aspect of NAct is its effect system, which will be explained in depth later in this README.
 
 ## Getting Started
-<aside class="notice">
-Each example is hosted on glitch. To see source code, click on one of the 
-links below:
 
-[![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/https://nact-getting-started.glitch.me)
+NAct has only been tested to work on Node 8 and above. You can install NAct in your project by invoking the following:
+
+```bash
+    npm install --save nact
+```
+
+Once installed, you need to import the start function, which starts and 
+then returns the actor sytem.
+
+```js
+const { start } = require('nact');
+const system = start();
+```
+
+Once you have a reference to the system, it is now possible to create our
+first actor. To create an actor you have to `spawn` it. 
+
+> Note:\
+> Each example is hosted on glitch. 
+> To see source code, click on buttons like the one below.
+> This particular button demonstrates the greeter example above\
+> [![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/https://nact-getting-started.glitch.me)
 </aside>
+
+
 
 
