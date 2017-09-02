@@ -8,9 +8,7 @@ A multithreaded actor system for node.js.
 > comments and suggestions are welcome. Please open an issue if you
 > find anything unclear or misleading in the documentation. 
 > 
-> PRs and ideas for performance improvements and scaleout will also 
-> be hugely appreciated, especially if we can avoid rolling our own 
-> clustering solution. For single node performance for example, 
+> PRs and ideas for performance improvements and enabling clustering/scaleout > will also be hugely appreciated. For single node performance for example, 
 > it may for example be necessary to fork webworker-threads to optimise 
 > for actor access patterns.  
 
@@ -26,11 +24,18 @@ A connection between a single user's mobile app and the servers is represented a
 
 The relative simplicity (even though it of course misses out some important production details) of this system is exactly the sort of use case Erlang was created for. The trouble is that Erlang, while excellent for some use cases, isn't in my opinion a general purpose enough language, which has had an impact on its ecosystem and libaries. 
 
-NAct is an implementation of the Actor Model for Node.js. It is inspired by the approaches taken by [Akka](getakka.net) (available on the JVM and the CLR) and Erlang. The initial release is focused on providing a good experience on a single node, though later releases will focus on enabling scaleout.
+NAct is an implementation of the Actor Model for Node.js. It is inspired by the approaches taken by [Akka](getakka.net) (available on the JVM and the CLR) and Erlang. The initial release is focused on providing a good experience on a single node, though later releases will focus on enabling clustering and scaleout.
 
 NAct achieves fault tolerance and parallelism  through the use of [Node Webworker Threads](https://github.com/audreyt/node-webworker-threads). Webworker Threads allow full utilisation of a server's CPU while isolating workers from their peers. A design decision of WebWorker threads is that it disallows `require()` from within actors and so a unique aspect of NAct is its effect system, which will be explained in depth later in this README.
 
 ## Getting Started
+
+> Note:\
+> Each example is hosted on glitch. 
+> To see source code, click on buttons like the one below.
+> This particular button demonstrates the greeter example below\
+
+[![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/https://nact-gettingstarted-greeter.glitch.me)
 
 NAct has only been tested to work on Node 8 and above. You can install NAct in your project by invoking the following:
 
@@ -47,15 +52,112 @@ const system = start();
 ```
 
 Once you have a reference to the system, it is now possible to create our
-first actor. To create an actor you have to `spawn` it. 
+first actor. To create an actor you have to `spawn` it.  As is traditional,
+let us create an actor which says hello when a message is sent to it. Since 
+this actor doesn't require any state, we can use the simpler `spawnFixed` function. 
 
-> Note:\
-> Each example is hosted on glitch. 
-> To see source code, click on buttons like the one below.
-> This particular button demonstrates the greeter example above\
-> [![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/https://nact-getting-started.glitch.me)
-</aside>
+```js
+    const greeterActor = system.spawnFixed((msg) => console.log(`Hello ${msg.name}`), 'greeter');
+```
 
+The first argument to `spawnFixed` is a function which is invoked when a message is received. It is important to note that this function cannot reference anything outside the scope of the function. This is because the actor is running in a separate thread and thus can't share memory with the main process. 
+
+The second argument to `spawnFixed` is the name of the actor,
+which in this case is `'greeter'`. The name field is optional, and 
+if ommitted, the actor is automatically assigned a name by the system.
+
+To communicate with the greeter, we need to `tell` it who we are:
+
+```js
+    greeterActor.tell({ name: 'Erlich Bachman' });
+```
+
+This should print `Hello Erlich Bachman` to the console. 
+
+To complete this example, we need to shutdown our system. We can do this
+by calling `system.stop();`
+
+## State
+
+[![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/https://nact-gettingstarted-counter.glitch.me)
+
+Most actors aren't very useful without state. But  `spawnFixed` makes it near impossible to create stateful actors. The solution is to use the `spawn` function instead. `spawn` has nearly the same function signature as `spawnFixed` however the fundamental difference is that `spawn` takes 
+in a function which has no arguments and returns another function.
+
+The returned function is used to handle next message and should itself return a function which is used for the message after that (and so on). When no function is returned, the actor is stopped as no further processing may occur.
+
+This may sound quite confusing, but could be likened to an asynchronous `reduce`.  A simple example to demonstrate the use of `spawn` is a counter actor. The counter should be able to hold the current count and up receipt of a message add the value to the count and then log it.
+
+We want to be able to do the following:
+
+```js
+counterActor.tell(1); // logs 1
+counterActor.tell(-1); // logs 0
+counterActor.tell(1); // logs 1
+```
+Assuming we've already created our system, we could implement the counter as follows:
+
+```js
+let counterActor = system.spawn(
+  () => {
+    const counter = (count) => (msg) => {
+       const nextCount = count+msg;
+       console.log(nextCount);
+       return counter(nextCount);
+    };
+    return counter(0);
+  },
+  'counter'
+);
+```
+Here we pass in a function and then inside the scope of this function,
+define a [higher order function](https://en.wikipedia.org/wiki/Higher-order_function) which takes in the current count and then returns a function which is able to handle the actual message. This returns the counter function with an updated count.
+
+Again you can play around with this concept if you click the glitch button at the top of this section.
+
+## Asking instead of telling
+
+[![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/https://nact-gettingstarted-ask.glitch.me)
+
+Up till now, we've only been passing messages to actors inside the system, but what if we want to pass messages _out_? 
+
+`ask()` is the primary means of interacting with actors from outside the actor system (actors have no such problem as they can simply `tell` one another) 
+
+Ask behaves very similarly to tell, except that it has a second parameter which is a timeout in milliseconds. Ask creates a virtual actor for the request and when this virtual actor receives a message, the promise is resolved. 
+
+> Note:
+> It is best practise to specify a timeout in a production system to ensure 
+> that promises do not remain unresolved indefitely.
+
+Inside the real actor, we have access to a number of global variables and functions, two of which are `tell()` and `sender`. The `tell()` inside the actor behaves very similarly to `actor.tell()` outside it, with the important difference that the first argument to the `tell()` function inside the actor is the recipient. `sender` is just that, the entity that dispatched the message. Putting the two toghether we can resolve the ask with a `tell(sender,<MESSAGE_HERE>)`
+
+The glitch example in this section builds upon the counter example, but instead of simply printing the result, returns the updated count to the sender.
+
+## Communication between actors
+
+[![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/https://nact-gettingstarted-multi.glitch.me)
+
+We've been looking at examples with single actors, but actors are a part of a _system_. And systems are very sad things if they are made up of just one element. Let us use another traditional test activity PingPong, to demonstrate how actors can communcation with one another. 
+
+In the example below, the ping and pong actors log the message they've received and then tell the sender their name. To start off this perfect
+match, we tell the pingActor the pong actor's name and use `tell's` second parameter to specify the sender as being the pongActor (all actors have a name and path property).
+
+```js
+let pingActor = system.spawnFixed(msg=>{ console.log(msg); tell(sender, name); }, 'ping'); 
+
+let pongActor = system.spawnFixed(msg=>{ console.log(msg); tell(sender, name); }, 'pong'); 
+
+pingActor.tell(pongActor.name, pongActor.path);
+```
+In the sample, the system is terminated after 5 seconds to give glitch a break.
+
+## Effects
+
+## Actor Lifecycle
+
+## Hierachy and Supervision 
+
+## Actor Paths
 
 
 
