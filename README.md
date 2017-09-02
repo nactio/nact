@@ -15,10 +15,16 @@ A connection between a single user's mobile app and the servers is represented a
 
 The relative simplicity (even though it of course misses out some important production details) of this system is exactly the sort of use case Erlang was created for. The trouble is that Erlang, while excellent for some use cases, isn't in my opinion a general purpose enough language, which has had an impact on its ecosystem and libaries. 
 
-NAct is an implementation of the Actor Model in Node.js. It is inspired by the approaches taken by [Akka](getakka.net) (available on the JVM and the CLR) and Erlang. The initial release is focused on providing a good experience on a single node, though later releases will focus on enabling scaleout.
+NAct is an implementation of the Actor Model for Node.js. It is inspired by the approaches taken by [Akka](getakka.net) (available on the JVM and the CLR) and Erlang. The initial release is focused on providing a good experience on a single node, though later releases will focus on enabling scaleout.
 
 NAct achieves fault tolerance and parallelism  through the use of [Node Webworker Threads](https://github.com/audreyt/node-webworker-threads). Webworker Threads allow full utilisation of a server's CPU while isolating workers from their peers. A design decision of WebWorker threads is that it disallows `require()` from within actors and so a unique aspect of NAct is its effect system, which will be explained in depth later in this README.
 
 ## Getting Started
+<aside class="notice">
+Each example is hosted on glitch. To see source code, click on one of the 
+links below:
 
 [![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/https://nact-getting-started.glitch.me)
+</aside>
+
+
