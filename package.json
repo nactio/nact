@@ -13,12 +13,10 @@
   "keywords": [
     "actors",
     "actor-model",
-    "distributed-systems",
-    "multithreading",
-    "threading",
-    "parallel",
+    "distributed-systems",        
     "akka",
-    "akka.net"
+    "akka.net",
+    "non-blocking"
   ],
   "author": "Nick Cuthbert (https://github.com/ncthbrt)",
   "license": "Apache-2.0",
