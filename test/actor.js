@@ -162,9 +162,9 @@ describe('Actor', function () {
     it('should allow statful behaviour via trampolining', async function () {
       let actor = system.spawn(() => {
         let initialState = '';
-        let f = (state) => (msg, { tell, sender }) => {
+        let f = (state) => function (msg) {
           if (msg.type === 'query') {
-            tell(sender, state);
+            this.tell(this.sender, state);
             return f(state);
           } else if (msg.type === 'append') {
             return f(state + msg.payload);
@@ -192,7 +192,7 @@ describe('Actor', function () {
       let child = system.spawnFixed(async function (msg) {
         let result = await getMockValue();
         this.tell(this.sender, result);
-      }, 'testActor', {  });
+      }, 'testActor');
 
       let result = await child.ask();
       result.should.equal(2);
