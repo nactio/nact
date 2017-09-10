@@ -8,9 +8,8 @@ A multithreaded actor system for node.js.
 > comments and suggestions are welcome. Please open an issue if you
 > find anything unclear or misleading in the documentation. 
 > 
-> PRs and ideas for performance improvements and enabling clustering/scaleout > will also be hugely appreciated. For single node performance for example, 
-> it may for example be necessary to fork webworker-threads to optimise 
-> for actor access patterns.  
+> PRs and ideas for performance improvements, enabling clustering/scaleout and persistence
+> will also be hugely appreciated.
 
 ## Introduction
 
@@ -24,9 +23,7 @@ A connection between a single user's mobile app and the servers is represented a
 
 The relative simplicity (even though it of course misses out some important production details) of this system is exactly the sort of use case Erlang was created for. The trouble is that Erlang, while excellent for some use cases, isn't in my opinion a general purpose enough language, which has had an impact on its ecosystem and libaries. 
 
-NAct is an implementation of the Actor Model for Node.js. It is inspired by the approaches taken by [Akka](getakka.net) (available on the JVM and the CLR) and Erlang. The initial release is focused on providing a good experience on a single node, though later releases will focus on enabling clustering and scaleout.
-
-NAct achieves fault tolerance and parallelism  through the use of [Node Webworker Threads](https://github.com/audreyt/node-webworker-threads). Webworker Threads allow full utilisation of a server's CPU while isolating workers from their peers. A design decision of WebWorker threads is that it disallows `require()` from within actors and so a unique aspect of NAct is its effect system, which will be explained in depth later in this README.
+NAct is an implementation of the Actor Model for Node.js. It is inspired by the approaches taken by [Akka](getakka.net) (available on the JVM and the CLR) and Erlang. The initial release is focused on providing a good experience on a single node, though later releases will focus on enabling clustering and scaleout. 
 
 ## Getting Started
 
@@ -150,8 +147,6 @@ let pongActor = system.spawnFixed(msg=>{ console.log(msg); tell(sender, name); }
 pingActor.tell(pongActor.name, pongActor.path);
 ```
 In the sample, the system is terminated after 5 seconds to give glitch a break.
-
-## Effects
 
 ## Actor Lifecycle
 
