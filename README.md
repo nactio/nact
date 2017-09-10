@@ -3,7 +3,8 @@ A multithreaded actor system for node.js.
 
 [![Build Status](https://travis-ci.org/ncthbrt/nact.svg?branch=master)](https://travis-ci.org/ncthbrt/nact)
 
-> Note:\
+> Note:
+>
 > This project is still in the early phases. Any and all feedback,
 > comments and suggestions are welcome. Please open an issue if you
 > find anything unclear or misleading in the documentation. 
@@ -27,10 +28,11 @@ NAct is an implementation of the Actor Model for Node.js. It is inspired by the 
 
 ## Getting Started
 
-> Note:\
+> Note:
+> 
 > Each example is hosted on glitch. 
 > To see source code, click on buttons like the one below.
-> This particular button demonstrates the greeter example below\
+> This particular button demonstrates the greeter example below
 
 [![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/https://nact-gettingstarted-greeter.glitch.me)
 
@@ -54,7 +56,7 @@ let us create an actor which says hello when a message is sent to it. Since
 this actor doesn't require any state, we can use the simpler `spawnFixed` function. 
 
 ```js
-    const greeterActor = system.spawnFixed((msg) => console.log(`Hello ${msg.name}`), 'greeter');
+const greeterActor = system.spawnFixed((msg) => console.log(`Hello ${msg.name}`), 'greeter');
 ```
 
 The first argument to `spawnFixed` is a function which is invoked when a message is received. It is important to note that this function cannot reference anything outside the scope of the function. This is because the actor is running in a separate thread and thus can't share memory with the main process. 
@@ -66,7 +68,7 @@ if ommitted, the actor is automatically assigned a name by the system.
 To communicate with the greeter, we need to `tell` it who we are:
 
 ```js
-    greeterActor.tell({ name: 'Erlich Bachman' });
+greeterActor.tell({ name: 'Erlich Bachman' });
 ```
 
 This should print `Hello Erlich Bachman` to the console. 
@@ -112,23 +114,6 @@ define a [higher order function](https://en.wikipedia.org/wiki/Higher-order_func
 
 Again you can play around with this concept if you click the glitch button at the top of this section.
 
-## Asking instead of telling
-
-[![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/https://nact-gettingstarted-ask.glitch.me)
-
-Up till now, we've only been passing messages to actors inside the system, but what if we want to pass messages _out_? 
-
-`ask()` is the primary means of interacting with actors from outside the actor system (actors have no such problem as they can simply `tell` one another) 
-
-Ask behaves very similarly to tell, except that it has a second parameter which is a timeout in milliseconds. Ask creates a virtual actor for the request and when this virtual actor receives a message, the promise is resolved. 
-
-> Note:
-> It is best practise to specify a timeout in a production system to ensure 
-> that promises do not remain unresolved indefitely.
-
-Inside the real actor, we have access to a number of global variables and functions, two of which are `tell()` and `sender`. The `tell()` inside the actor behaves very similarly to `actor.tell()` outside it, with the important difference that the first argument to the `tell()` function inside the actor is the recipient. `sender` is just that, the entity that dispatched the message. Putting the two toghether we can resolve the ask with a `tell(sender,<MESSAGE_HERE>)`
-
-The glitch example in this section builds upon the counter example, but instead of simply printing the result, returns the updated count to the sender.
 
 ## Communication between actors
 
@@ -139,16 +124,46 @@ We've been looking at examples with single actors, but actors are a part of a _s
 In the example below, the ping and pong actors log the message they've received and then tell the sender their name. To start off this perfect
 match, we tell the pingActor the pong actor's name and use `tell's` second parameter to specify the sender as being the pongActor (all actors have a name and path property).
 
+> Note:
+>
+> In `pingActor`, we use an arrow function. Thus to issue commands from inside the actor, we need to accept a second argument: the actor context.
+>
+> In the `pongActor`, we are using function form, and while it too can accept the context as a second argument, `this` is also set to the context.
+
+
 ```js
-let pingActor = system.spawnFixed(msg=>{ console.log(msg); tell(sender, name); }, 'ping'); 
+let pingActor = system.spawnFixed((msg, ctx)=>{ console.log(msg); ctx.tell(ctx.sender, ctx.name); }, 'ping'); 
 
-let pongActor = system.spawnFixed(msg=>{ console.log(msg); tell(sender, name); }, 'pong'); 
+let pongActor = system.spawnFixed(function(msg){ console.log(msg); this.tell(this.sender, this.name); }, 'pong'); 
 
-pingActor.tell(pongActor.name, pongActor.path);
+pingActor.tell(pongActor.name(), pongActor);
 ```
+
 In the sample, the system is terminated after 5 seconds to give glitch a break.
 
+
+## Asking instead of telling
+
+[![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/https://nact-gettingstarted-ask.glitch.me)
+
+We've only been passing messages to actors inside the system, but what if we want to pass messages _out_? 
+
+`ask()` is the primary means of interacting with actors from outside the actor system (actors have no such problem as they can simply `tell` one another) 
+
+Ask behaves very similarly to tell, except that it has a second parameter (a timeout in milliseconds. Ask creates a virtual actor for the request and when this virtual actor receives a message, the promise is resolved. 
+
+> Note:
+> It is best practise to specify a timeout in a production system to ensure 
+> that promises do not remain unresolved indefitely.
+
+Inside the real actor, we have access to a number of global variables and functions, two of which are `tell()` and `sender`. The `tell()` inside the actor behaves very similarly to `actor.tell()` outside it, with the important difference that the first argument to the `tell()` function inside the actor is the recipient. `sender` is just that, the entity that dispatched the message. Putting the two toghether we can resolve the ask with a `tell(sender, <MESSAGE_HERE>)`
+
+The glitch example in this section builds upon the counter example, but instead of simply printing the result, returns the updated count to the sender.
+
+
 ## Actor Lifecycle
+
+Actor
 
 ## Hierachy and Supervision 
 

@@ -4,7 +4,8 @@
   "description": "Mulithreaded implementation of the actor model for node",
   "main": "lib/index.js",
   "scripts": {
-    "test": "mocha ./test/*.js"
+    "test": "nyc mocha ./test/*.js",
+    "coverage": "nyc report --reporter=text-lcov | coveralls"    
   },
   "repository": {
     "type": "git",
@@ -13,7 +14,7 @@
   "keywords": [
     "actors",
     "actor-model",
-    "distributed-systems",        
+    "distributed-systems",
     "akka",
     "akka.net",
     "non-blocking"
@@ -30,6 +31,8 @@
   "devDependencies": {
     "chai": "^4.1.1",
     "chai-as-promised": "^7.1.1",
-    "mocha": "^3.5.0"
+    "coveralls": "^2.13.1",
+    "mocha": "^3.5.0",
+    "nyc": "^11.2.1"
   }
 }
