@@ -86,7 +86,7 @@ describe('Actor', function () {
       grandchild1.isStopped().should.be.true;
       grandchild2.isStopped().should.be.true;
 
-      system.terminate();
+      system.terminate();      
       system.children().should.be.empty;
       actor.isStopped().should.be.true;
       child2.isStopped().should.be.true;
