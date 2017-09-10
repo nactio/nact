@@ -27,11 +27,92 @@ const retry = async (assertion, remainingAttempts, retryInterval = 0) => {
 
 describe('Actor', function () {
 
+  describe('properties', function () {
+    let system = undefined;
+    beforeEach(() => system = start());
+    afterEach(() => system.terminate());
+
+    it('should have parent property', function () {
+      let child = system.spawnFixed(ignore);
+      child.parent().should.not.be.undefined;
+    });
+
+  });
+
+  describe('actor-function', function () {
+    let system = undefined;
+    beforeEach(() => system = start());
+    afterEach(() => system.terminate());
+
+    it('allows promises to resolve inside actor', async function () {
+      const getMockValue = () => Promise.resolve(2);
+      let child = system.spawnFixed(async function (msg) {
+        let result = await getMockValue();
+        this.tell(this.sender, result);
+      }, 'testActor');
+
+      let result = await child.ask();
+      result.should.equal(2);
+    });
+
+    it('allows statful behaviour via trampolining', async function () {
+      let actor = system.spawn(() => {
+        let initialState = '';
+        let f = (state) => function (msg) {
+          if (msg.type === 'query') {
+            this.tell(this.sender, state);
+            return f(state);
+          } else if (msg.type === 'append') {
+            return f(state + msg.payload);
+          }
+        };
+        return f(initialState);
+      });
+
+      actor.tell({ payload: 'Hello ', type: 'append' });
+      actor.tell({ payload: 'World. ', type: 'append' });
+      actor.tell({ payload: 'The time has come!!', type: 'append' });
+      let result = await actor.ask({ type: 'query' });
+      result.should.equal('Hello World. The time has come!!');
+    });
+
+    it('evalutes in order when returning a promise from the actor function', async function () {
+      let child = system.spawnFixed(async function (msg) {
+        if (msg === 2) {
+          await delay(10);
+        }
+        this.tell(this.sender, msg);
+      }, 'testActor');
+
+      let result1 = await child.ask(1);
+      let result2 = await child.ask(2);
+      let result3 = await child.ask(3);
+      result1.should.equal(1);
+      result2.should.equal(2);
+      result3.should.equal(3);
+    });
+
+    it('should automatically terminate if error is thrown', async function () {
+      // TODO: Possibly not the most sensible error policy. 
+      // Really need to think about how supervision and error handling work
+      let child = system.spawnFixed((msg) => { throw new Error('testError') }, 'testActor');
+      child.tell();
+      await retry(() => child.isStopped().should.be.true, 12, 10);
+    });
+  })
+
   describe('#stop()', function () {
 
     let system = undefined;
     beforeEach(() => system = start());
     afterEach(() => system.terminate());
+
+    it('should prevent children from being spawned after being called', function () {
+      let child = system.spawnFixed(ignore);
+      child.stop();
+      (() => child.spawnFixed(ignore)).should.throw(Error);
+      (() => child.spawnFixed(() => ignore)).should.throw(Error);
+    });
 
     it('stops children when parent is stopped', async function () {
       let actor = spawnChildrenEchoer(system);
@@ -73,6 +154,13 @@ describe('Actor', function () {
     beforeEach(() => system = start());
     afterEach(() => system.terminate());
 
+    it('should prevent children from being spawned after being called', function () {
+      let child = system.spawnFixed(() => console.log('spawning'));
+      child.terminate();
+      (() => child.spawnFixed(() => console.log('spawning'))).should.throw(Error);
+      (() => child.spawn(() => () => console.log('spawning'))).should.throw(Error);
+    });
+
     it('terminates children when parent is terminated', async function () {
       let actor = spawnChildrenEchoer(system);
       let child1 = spawnChildrenEchoer(actor, 'child1');
@@ -86,10 +174,11 @@ describe('Actor', function () {
       grandchild1.isStopped().should.be.true;
       grandchild2.isStopped().should.be.true;
 
-      system.terminate();      
+      system.terminate();
       system.children().should.be.empty;
       actor.isStopped().should.be.true;
       child2.isStopped().should.be.true;
+
     });
 
   });
@@ -106,6 +195,11 @@ describe('Actor', function () {
       child.name.should.not.be.undefined;
     });
 
+    it('should prevent a child with the same name from being spawned', function () {
+      let child = system.spawnFixed(ignore);
+      child.spawnFixed(ignore, 'grandchild');
+      (() => child.spawnFixed(ignore, 'grandchild')).should.throw(Error);
+    });
 
     it('correctly registers children upon startup', async function () {
       let child = spawnChildrenEchoer(system, 'testChildActor');
@@ -119,15 +213,15 @@ describe('Actor', function () {
       children.should.have.members(['testGrandchildActor']);
 
       let grandchild2 = child.spawnFixed(ignore, 'testGrandchildActor2');
-      children = await child.ask();      
+      children = await child.ask();
       child.children().should.have.keys('testGrandchildActor2', 'testGrandchildActor');
-      children.should.have.members(['testGrandchildActor2', 'testGrandchildActor']);      
+      children.should.have.members(['testGrandchildActor2', 'testGrandchildActor']);
     });
 
     it('can be invoked from within actor', async function () {
       let actor = system.spawnFixed((msg, ctx) => {
-        if (msg === 'spawn') {          
-            ctx.spawnFixed((msg) => { }, 'child1');          
+        if (msg === 'spawn') {
+          ctx.spawnFixed((msg) => { }, 'child1');
         } else {
           ctx.tell(ctx.sender, [...ctx.children.keys()]);
         }
@@ -144,14 +238,20 @@ describe('Actor', function () {
     beforeEach(() => system = start());
     afterEach(() => system.terminate());
 
+    it(`should reject a promise if actor has already stopped`, function () {
+      let actor = system.spawnFixed(ignore);
+      actor.stop();
+      return delay(5).then(()=>actor.ask()).should.be.rejectedWith(Error, 'Actor stopped. Ask can never resolve');
+    });
+
     it(`should reject a promise if the actor hasn't responded with the given timespan`, function () {
       let actor = system.spawnFixed(
         async (msg, ctx) => { await delay(10); ctx.tell(ctx.sender, 'done'); },
         'test'
       );
       return actor.ask('test', 1).should.be.rejectedWith(Error, 'Ask Timeout');
-
     });
+
   });
 
   describe('#tell()', function () {
@@ -159,59 +259,23 @@ describe('Actor', function () {
     beforeEach(() => system = start());
     afterEach(() => system.terminate());
 
-    it('should allow statful behaviour via trampolining', async function () {
-      let actor = system.spawn(() => {
-        let initialState = '';
-        let f = (state) => function (msg) {
-          if (msg.type === 'query') {
-            this.tell(this.sender, state);
-            return f(state);
-          } else if (msg.type === 'append') {
-            return f(state + msg.payload);
-          }
-        };
-        return f(initialState);
+    it('telling inside actor with non addressable recipient type should throw error', async function () {
+      let child = system.spawnFixed(function (msg) {
+        try {
+          this.tell({}, 'test');
+        } catch (e) {
+          this.tell(this.sender, e);
+        }
       });
-
-      actor.tell({ payload: 'Hello ', type: 'append' });
-      actor.tell({ payload: 'World. ', type: 'append' });
-      actor.tell({ payload: 'The time has come!!', type: 'append' });
-      let result = await actor.ask({ type: 'query' });
-      result.should.equal('Hello World. The time has come!!');
+      let result = await child.ask();
+      result.should.be.an('error');
     });
 
-    it('should be able to message other actors', async function () {
+    it('should be able to tell other actors', async function () {
       let child1 = system.spawnFixed(function (msg) { this.tell(msg, this.sender); });
       let child2 = system.spawnFixed(function (msg) { this.tell(msg, 'hello from child2'); });
       let result = await child1.ask(child2);
       result.should.equal('hello from child2');
-    });
-
-    it('allows promises to resolve inside actor', async function () {
-      const getMockValue = () => Promise.resolve(2);
-      let child = system.spawnFixed(async function (msg) {
-        let result = await getMockValue();
-        this.tell(this.sender, result);
-      }, 'testActor');
-
-      let result = await child.ask();
-      result.should.equal(2);
-    });
-
-    it('evalutes in order when returning a promise from the actor function', async function () {
-      let child = system.spawnFixed(async function(msg) {
-        if (msg === 2) {
-          await delay(10);
-        }
-        this.tell(this.sender, msg);
-      }, 'testActor');
-
-      let result1 = await child.ask(1);
-      let result2 = await child.ask(2);
-      let result3 = await child.ask(3);
-      result1.should.equal(1);
-      result2.should.equal(2);
-      result3.should.equal(3);
     });
 
   });
