@@ -7,7 +7,7 @@ const { Promise } = require('bluebird');
 const delay = Promise.delay;
 
 const spawnChildrenEchoer = (parent, name) => parent.spawnFixed(() => tell(sender, [...children.keys()]), name);
-const ignore = () => { };
+const ignore = () => {};
 
 const retry = async (assertion, remainingAttempts, retryInterval = 0) => {
   if (remainingAttempts <= 1) {
