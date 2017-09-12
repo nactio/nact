@@ -92,10 +92,18 @@ describe('Actor', function () {
       result3.should.equal(3);
     });
 
+    it('should automatically terminate with failure if non function/falsy type is returned', async function () {
+      // TODO: Possibly not the most sensible error policy. 
+      // Really need to think about how supervision and error handling work
+      let child = system.spawn((msg) => () => 1);
+      child.tell();
+      await retry(() => child.isStopped().should.be.true, 12, 10);
+    });
+
     it('should automatically terminate if error is thrown', async function () {
       // TODO: Possibly not the most sensible error policy. 
       // Really need to think about how supervision and error handling work
-      let child = system.spawnFixed((msg) => { throw new Error('testError') }, 'testActor');
+      let child = system.spawnFixed((msg) => { throw new Error('testError') });
       child.tell();
       await retry(() => child.isStopped().should.be.true, 12, 10);
     });
@@ -138,14 +146,14 @@ describe('Actor', function () {
       child.tell();
       await retry(() => child.isStopped().should.be.true, 12, 10);
       system.children().should.not.include('testActor');
-    }).timeout(3000);
+    });
 
     it('is invoked automatically when a function is not returned', async function () {
       let child = system.spawn(() => (msg) => { }, 'testActor');
       child.tell();
       await retry(() => child.isStopped().should.be.true, 12, 10);
       system.children().should.not.include('testActor');
-    }).timeout(3000);
+    });
 
   });
 
@@ -230,7 +238,7 @@ describe('Actor', function () {
       let children = await actor.ask('query');
       children.should.have.members(['child1']);
       actor.children().should.have.keys('child1');
-    }).timeout(6000);
+    });
   });
 
   describe('#ask()', function () {
@@ -241,7 +249,7 @@ describe('Actor', function () {
     it(`should reject a promise if actor has already stopped`, function () {
       let actor = system.spawnFixed(ignore);
       actor.stop();
-      return delay(5).then(()=>actor.ask()).should.be.rejectedWith(Error, 'Actor stopped. Ask can never resolve');
+      return delay(5).then(() => actor.ask()).should.be.rejectedWith(Error, 'Actor stopped. Ask can never resolve');
     });
 
     it(`should reject a promise if the actor hasn't responded with the given timespan`, function () {
