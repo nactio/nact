@@ -115,6 +115,14 @@ describe('Actor', function () {
       child.tell();
       await retry(() => child.isStopped().should.be.true, 12, 10);
     });
+
+    it('should automatically terminate if rejcected promise is thrown', async function () {
+      // TODO: Possibly not the most sensible error policy. 
+      // Really need to think about how supervision and error handling work
+      let child = system.spawnFixed((msg) => Promise.reject(new Error('testError')));
+      child.tell();
+      await retry(() => child.isStopped().should.be.true, 12, 10);
+    });
   })
 
   describe('#stop()', function () {
@@ -254,14 +262,15 @@ describe('Actor', function () {
       let actor = system.spawnFixed((msg, ctx) => {
         if (msg === 'spawn') {
           ctx.spawnFixed((msg) => { }, 'child1');
+          ctx.spawn((msg) => { }, 'child2');
         } else {
           ctx.tell(ctx.sender, [...ctx.children.keys()]);
         }
       }, 'test');
       actor.tell('spawn');
       let children = await actor.ask('query');
-      children.should.have.members(['child1']);
-      actor.children().should.have.keys('child1');
+      children.should.have.members(['child1','child2']);
+      actor.children().should.have.keys('child1','child2');
     });
   });
 

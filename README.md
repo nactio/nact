@@ -201,4 +201,11 @@ Children can be stopped from inside the actor by calling `child.stop()`
 
 NAct empowers parent actors to monitor their children. This is strictly on an opt in basis.
 If a child crashes and a parent has opted into receiving death messages, the message handler 
-of the parent actor will be called. An actor has an option to restart this child 
+of the parent actor will be called with the following payload.
+
+```js
+{ type: 'CHILD_FAILED', child, exception, failure_context }
+``` 
+
+This message gives the actor an opportunity to recover from the failure. They could for example call `child.restart()`, 
+
