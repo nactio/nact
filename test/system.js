@@ -8,7 +8,7 @@ const { Nobody } = require('../lib/nobody');
 const { Promise } = require('bluebird');
 const delay = Promise.delay;
 
-const ignore = () => { };
+const ignore = () => {};
 
 describe('System', function () {
     describe('#deadLetter', function () {
@@ -18,6 +18,12 @@ describe('System', function () {
 
         it('currently does nothing', function () {
             new Nobody(system).tell('test');
+        });
+
+        it('currently does nothing', function () {
+            let actor = system.spawnFixed(ignore);
+            actor.stop();
+            actor.tell('test');
         });
     });
 
@@ -68,6 +74,11 @@ describe('System', function () {
             system.stop();
             (() => system.spawnFixed(() => console.log('spawning'))).should.throw(Error);
             (() => system.spawn(() => () => console.log('spawning'))).should.throw(Error);
+        });
+
+        it('should register as being stopped', function () {
+            system.stop();
+            system.isStopped().should.be.true;
         });
     });
 

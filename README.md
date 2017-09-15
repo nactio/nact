@@ -112,10 +112,9 @@ let counterActor = system.spawn(
 );
 ```
 Here we pass in a function and then inside the scope of this function,
-define a [higher order function](https://en.wikipedia.org/wiki/Higher-order_function) which takes in the current count and then returns a function which is able to handle the actual message. This returns the counter function with an updated count.
+define a [higher order function](https://en.wikipedia.org/wiki/Higher-order_function) which takes in the current count and then returns a function which is able to handle the actual message. This function when invoked, prints out hte latest count and then returns itself with an updated count.
 
 Again you can play around with this concept if you click the glitch button at the top of this section.
-
 
 ## Communication between actors
 
@@ -163,13 +162,44 @@ Inside the real actor, we have access to a number of global variables and functi
 The glitch example in this section builds upon the counter example, but instead of simply printing the result, returns the updated count to the sender.
 
 
-## Actor Lifecycle
+## Actor Hierachy and Lifecycle 
 
-Actor
+One of the more important features of an actor system is its hierachy. Actors can have child actors. The lifecycle of a child actor is tied to that of its parent. If a parent actor is shutdown or terminates, all children in the tree are shut down. This hierachy, combined with [supervision](./#supervision), allows for robust error handling and recovery. 
 
-## Hierachy and Supervision 
+You can spawn children for a given actor outside the actor function by invoking spawn/spawnFixed on the actor object. Inside the actor function, the context object allowing spawning as follows:
 
-## Actor Paths
+```js
+let actor = system.spawnFixed(function(msg){
+  this.spawn(()=>function f(msg){ console.log('I\m a child actor'); return f; }, 'child');
+});
+```
 
+To stop an actor, you can call stop on the actor object e.g. `actor.stop()`. If you want to immediately terminate the actor, you can call `actor.terminate()`. These two methods are quite ungraceful, and often a better alternative is to shutdown the actor from the inside. If you spawned the actor using spawnFixed, you can stop the actor function after receiving a message, by returning `false`. If you instead created the actor using the spawn command, stopping the actor is as simple as not returning the next handler function.
 
+Using spawn:
+```js
+let actor = system.spawn(() => function(msg,ctx){
+  console.log('I\m shutting down now');
+  // No next function is returned, hence the actor shuts down.
+});
+```
 
+Using spawnFixed:
+```js
+let actor = system.spawnFixed(function(msg){
+  console.log('I\m shutting down now');
+});
+```
+
+An actor by default is also terminated when it throws an exception, unless an actor is taken by a supervisor.
+
+To check whether an actor is stopped, you can call `isStopped()` on the actor object. You can obtain a Map of an actor's children by calling children() on the actor object or `ctx.children` from inside the actor function.
+Likewise, to get the parent of an actor you can call `parent()` on the actor object or `parent` on the context object.
+
+Children can be stopped from inside the actor by calling `child.stop()`
+
+## Supervision 
+
+NAct empowers parent actors to monitor their children. This is strictly on an opt in basis.
+If a child crashes and a parent has opted into receiving death messages, the message handler 
+of the parent actor will be called. An actor has an option to restart this child 

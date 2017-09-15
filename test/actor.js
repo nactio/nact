@@ -49,11 +49,19 @@ describe('Actor', function () {
       let child = system.spawnFixed(async function (msg) {
         let result = await getMockValue();
         this.tell(this.sender, result);
-      }, 'testActor');
+      });
 
       let result = await child.ask();
       result.should.equal(2);
     });
+
+    it('allows promises to resolve as false inside an actor created with spawnFixed, subsequently teriminating it.', async function () {      
+      let child = system.spawnFixed(() => Promise.resolve(false));
+
+      child.tell();
+      await retry(() => child.isStopped().should.be.true, 12, 10);
+    });
+
 
     it('allows statful behaviour via trampolining', async function () {
       let actor = system.spawn(() => {
@@ -155,6 +163,14 @@ describe('Actor', function () {
       system.children().should.not.include('testActor');
     });
 
+    it('should be able to be invoked multiple times', async function () {
+      let child = system.spawn(ignore);
+      child.stop();
+      await retry(() => child.isStopped().should.be.true, 12, 10);
+      child.stop();
+      child.isStopped().should.be.true;
+    });
+
   });
 
   describe('#terminate()', function () {
@@ -167,6 +183,14 @@ describe('Actor', function () {
       child.terminate();
       (() => child.spawnFixed(() => console.log('spawning'))).should.throw(Error);
       (() => child.spawn(() => () => console.log('spawning'))).should.throw(Error);
+    });
+
+    it('should be able to be invoked multiple times', async function () {
+      let child = system.spawn(ignore);
+      child.terminate();
+      await retry(() => child.isStopped().should.be.true, 12, 10);
+      child.terminate();
+      child.isStopped().should.be.true;
     });
 
     it('terminates children when parent is terminated', async function () {
