@@ -11,22 +11,7 @@ const delay = Promise.delay;
 const ignore = () => {};
 
 describe('System', function () {
-    describe('#deadLetter', function () {
-        let system = undefined;
-        beforeEach(() => system = start());
-        afterEach(() => system.terminate());
-
-        it('currently does nothing', function () {
-            new Nobody(system).tell('test');
-        });
-
-        it('currently does nothing', function () {
-            let actor = system.spawnFixed(ignore);
-            actor.stop();
-            actor.tell('test');
-        });
-    });
-
+    
     describe('#spawn()', function () {
         let system = undefined;
         beforeEach(() => system = start());
@@ -38,7 +23,7 @@ describe('System', function () {
         });
     });
 
-    describe('#resolveActorFromPath()', function () {
+    describe('#tryFindActorFromPath()', function () {
         let system = undefined;
         beforeEach(() => system = start());
         afterEach(() => system.terminate());
@@ -47,21 +32,21 @@ describe('System', function () {
             let child1 = system.spawnFixed(ignore, 'child1');
             let child2 = child1.spawnFixed(ignore, 'child2');
             let child3 = child2.spawnFixed(ignore, 'child3');
-            system.resolveActorFromPath(new LocalPath(['child1', 'child2', 'child3'])).should.equal(child3);
+            system.tryFindActorFromPath(new LocalPath(['child1', 'child2', 'child3'])).should.equal(child3);
         });
 
         it('should return undefined if the actor at the given path does not exist', function () {
             let child1 = system.spawnFixed(ignore, 'child1');
             let child2 = child1.spawnFixed(ignore, 'child2');
             let child3 = child2.spawnFixed(ignore, 'child3');
-            should.not.exist(system.resolveActorFromPath(new LocalPath(['child1', 'child2', 'child3', 'child4'])));
+            should.not.exist(system.tryFindActorFromPath(new LocalPath(['child1', 'child2', 'child3', 'child4'])));
         });
 
         it('should throw a TypeError if the path is not of a supported type', function () {
             let child1 = system.spawnFixed(ignore, 'child1');
             let child2 = child1.spawnFixed(ignore, 'child2');
             let child3 = child2.spawnFixed(ignore, 'child3');
-            (() => system.resolveActorFromPath({ localParts: ['child1', 'child2', 'child3', 'child4'] })).should.throw(TypeError);
+            (() => system.tryFindActorFromPath({ localParts: ['child1', 'child2', 'child3', 'child4'] })).should.throw(TypeError);
         });
     });
 

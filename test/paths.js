@@ -1,6 +1,6 @@
 const { should } = require('chai').should();
 const { expect } = require('chai');
-const { LocalPath, TempPath } = require('../lib/paths');
+const { LocalPath } = require('../lib/paths');
 
 describe('LocalPath', function () {
     describe('#isValidName()', function () {
