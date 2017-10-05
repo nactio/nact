@@ -4,6 +4,8 @@ A multithreaded actor system for node.js.
 [![Build Status](https://travis-ci.org/ncthbrt/nact.svg?branch=master)](https://travis-ci.org/ncthbrt/nact)
 [![Coverage Status](https://coveralls.io/repos/github/ncthbrt/nact/badge.svg?branch=master)](https://coveralls.io/github/ncthbrt/nact?branch=master)
 
+[![js-semistandard-style](https://cdn.rawgit.com/flet/semistandard/master/badge.svg)](https://github.com/Flet/semistandard)
+
 > Note:
 >
 > This project is still in the early phases. Any and all feedback,
@@ -178,7 +180,7 @@ To stop an actor, you can call stop on the actor object e.g. `actor.stop()`. If 
 Using spawn:
 ```js
 let actor = system.spawn(() => function(msg,ctx){
-  console.log('I\m shutting down now');
+  console.log('I\'m shutting down now');
   // No next function is returned, hence the actor shuts down.
 });
 ```
@@ -187,6 +189,7 @@ Using spawnFixed:
 ```js
 let actor = system.spawnFixed(function(msg){
   console.log('I\m shutting down now');
+  return false;
 });
 ```
 

@@ -1,12 +1,12 @@
+/* eslint-env mocha */
+/* eslint-disable no-unused-expressions */
 const chai = require('chai');
-const chaiAsPromised = require("chai-as-promised");
+const chaiAsPromised = require('chai-as-promised');
 chai.use(chaiAsPromised);
-const should = chai.should();
+chai.should();
 const { start } = require('../lib');
 const { Promise } = require('bluebird');
 const { LocalPath } = require('../lib/paths');
-const { ActorReference } = require('../lib/references');
-const { Actor } = require('../lib/actor');
 const delay = Promise.delay;
 
 const spawnChildrenEchoer = (parent, name) => parent.spawnFixed((msg, { sender, children, tell }) => {
@@ -29,8 +29,8 @@ const retry = async (assertion, remainingAttempts, retryInterval = 0) => {
 };
 
 describe('ActorReference', function () {
-  let system = undefined;
-  beforeEach(() => system = start());
+  let system;
+  beforeEach(() => { system = start(); });
   afterEach(() => system.terminate());
 
   it('should have name, path, parent, properties', function () {
@@ -41,13 +41,12 @@ describe('ActorReference', function () {
     child.name.should.be.a('string');
     child.path.should.be.instanceOf(LocalPath);
   });
-
 });
 
 describe('Actor', function () {
   describe('actor-function', function () {
-    let system = undefined;
-    beforeEach(() => system = start());
+    let system;
+    beforeEach(() => { system = start(); });
     afterEach(() => system.terminate());
 
     it('allows promises to resolve inside actor', async function () {
@@ -105,7 +104,7 @@ describe('Actor', function () {
     });
 
     it('should automatically terminate with failure if non function/falsy type is returned', async function () {
-      // TODO: Possibly not the most sensible error policy. 
+      // TODO: Possibly not the most sensible error policy.
       // Really need to think about how supervision and error handling work
       let child = system.spawn((msg) => () => 1);
       child.tell();
@@ -113,9 +112,9 @@ describe('Actor', function () {
     });
 
     it('should automatically terminate if error is thrown', async function () {
-      // TODO: Possibly not the most sensible error policy. 
+      // TODO: Possibly not the most sensible error policy.
       // Really need to think about how supervision and error handling work
-      let child = system.spawnFixed((msg) => { throw new Error('testError') });
+      let child = system.spawnFixed((msg) => { throw new Error('testError'); });
       child.tell();
       await retry(() => child.isStopped().should.be.true, 12, 10);
     });
@@ -125,13 +124,11 @@ describe('Actor', function () {
       child.tell();
       await retry(() => child.isStopped().should.be.true, 12, 10);
     });
-
-  })
+  });
 
   describe('#stop()', function () {
-
-    let system = undefined;
-    beforeEach(() => system = start());
+    let system;
+    beforeEach(() => { system = start(); });
     afterEach(() => system.terminate());
 
     it('should prevent children from being spawned after being called', function () {
@@ -183,16 +180,15 @@ describe('Actor', function () {
 
     it('should ignore subsequent tells', async function () {
       let child = system.spawnFixed(() => { throw new Error('Should not be triggered'); });
-      child.stop();      
-      await retry(() => child.isStopped().should.be.true, 12, 10);      
+      child.stop();
+      await retry(() => child.isStopped().should.be.true, 12, 10);
       child.tell('test');
     });
-
   });
 
   describe('#terminate()', function () {
-    let system = undefined;
-    beforeEach(() => system = start());
+    let system;
+    beforeEach(() => { system = start(); });
     afterEach(() => system.terminate());
 
     it('should prevent children from being spawned after being called', function () {
@@ -227,15 +223,12 @@ describe('Actor', function () {
       system.children().should.be.empty;
       actor.isStopped().should.be.true;
       child2.isStopped().should.be.true;
-
     });
-
   });
 
   describe('#spawn()', function () {
-
-    let system = undefined;
-    beforeEach(() => system = start());
+    let system;
+    beforeEach(() => { system = start(); });
     afterEach(() => system.terminate());
 
     it('automatically names an actor if a name is not provided', function () {
@@ -256,12 +249,12 @@ describe('Actor', function () {
       let children = await child.ask();
       children.should.be.empty;
 
-      let grandchild = child.spawnFixed(ignore, 'testGrandchildActor');
+      child.spawnFixed(ignore, 'testGrandchildActor');
       child.children().should.have.keys('testGrandchildActor');
       children = await child.ask();
       children.should.have.members(['testGrandchildActor']);
 
-      let grandchild2 = child.spawnFixed(ignore, 'testGrandchildActor2');
+      child.spawnFixed(ignore, 'testGrandchildActor2');
       children = await child.ask();
       child.children().should.have.keys('testGrandchildActor2', 'testGrandchildActor');
       children.should.have.members(['testGrandchildActor2', 'testGrandchildActor']);
@@ -284,8 +277,8 @@ describe('Actor', function () {
   });
 
   describe('#ask()', function () {
-    let system = undefined;
-    beforeEach(() => system = start());
+    let system;
+    beforeEach(() => { system = start(); });
     afterEach(() => system.terminate());
 
     it(`should reject a promise if actor has already stopped`, function () {
@@ -309,13 +302,11 @@ describe('Actor', function () {
       );
       return actor.ask('test', 30).should.be.fulfilled;
     });
-
-
   });
 
   describe('#tell()', function () {
-    let system = undefined;
-    beforeEach(() => system = start());
+    let system;
+    beforeEach(() => { system = start(); });
     afterEach(() => system.terminate());
 
     it('telling inside actor with non addressable recipient type should throw error', async function () {
@@ -336,7 +327,5 @@ describe('Actor', function () {
       let result = await child1.ask(child2);
       result.should.equal('hello from child2');
     });
-
   });
-
 });
