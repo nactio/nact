@@ -3,6 +3,7 @@ A multithreaded actor system for node.js.
 
 [![Build Status](https://travis-ci.org/ncthbrt/nact.svg?branch=master)](https://travis-ci.org/ncthbrt/nact)
 [![Coverage Status](https://coveralls.io/repos/github/ncthbrt/nact/badge.svg?branch=master)](https://coveralls.io/github/ncthbrt/nact?branch=master)
+[![Dependencies](https://david-dm.org/ncthbrt/nact.svg?branch=master)](https://david-dm.org/ncthbrt/nact)
 
 [![js-semistandard-style](https://cdn.rawgit.com/flet/semistandard/master/badge.svg)](https://github.com/Flet/semistandard)
 
