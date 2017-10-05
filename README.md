@@ -207,8 +207,8 @@ If a child crashes and a parent has opted into receiving death messages, the mes
 of the parent actor will be called with the following payload.
 
 ```js
-{ type: 'CHILD_FAILED', child, exception, failure_context }
-``` 
+return { type: 'CHILD_FAILED', child, exception, failure_context }
+```
 
 This message gives the actor an opportunity to recover from the failure. They could for example call `child.restart()`, 
 

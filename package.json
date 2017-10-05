@@ -6,6 +6,7 @@
   "scripts": {
     "test": "yarn run lint && nyc --reporter=html mocha ./test/*.js",
     "lint": "semistandard",
+    "lint-docs": "semistandard --plugin markdown '**/*.md'",
     "coverage": "nyc report --reporter=text-lcov | coveralls",
     "prepush": "yarn run test"
   },
@@ -35,10 +36,10 @@
   "devDependencies": {
     "chai": "^4.1.1",
     "chai-as-promised": "^7.1.1",
-    "coveralls": "^2.13.1",
+    "coveralls": "^3.0.0",
     "eslint": "^4.8.0",
     "husky": "^0.14.3",
-    "mocha": "^3.5.0",
+    "mocha": "^4.0.0",
     "nyc": "^11.2.1",
     "semistandard": "^11.0.0"
   }
