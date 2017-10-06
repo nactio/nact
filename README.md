@@ -60,12 +60,13 @@ let us create an actor which says hello when a message is sent to it. Since
 this actor doesn't require any state, we can use the simpler `spawnFixed` function. 
 
 ```js
-const greeterActor = system.spawnFixed((msg) => console.log(`Hello ${msg.name}`), 'greeter');
+const greeterActor = spawnFixed(system, (msg) => console.log(`Hello ${msg.name}`), 'greeter');
 ```
+The first argument to `spawnFixed` is the parent, which is in this case the actor system. The hierarchy section will go into more detail about this.
 
-The first argument to `spawnFixed` is a function which is invoked when a message is received. It is important to note that this function cannot reference anything outside the scope of the function. This is because the actor is running in a separate thread and thus can't share memory with the main process. 
+The second argument to `spawnFixed` is a function which is invoked when a message is received. It is important to note that this function cannot reference anything outside the scope of the function. This is because the actor is running in a separate thread and thus can't share memory with the main process. 
 
-The second argument to `spawnFixed` is the name of the actor,
+The third argument to `spawnFixed` is the name of the actor,
 which in this case is `'greeter'`. The name field is optional, and 
 if ommitted, the actor is automatically assigned a name by the system.
 
@@ -101,7 +102,8 @@ counterActor.tell(1); // logs 1
 Assuming we've already created our system, we could implement the counter as follows:
 
 ```js
-let counterActor = system.spawn(
+let counterActor = spawn(
+  system,
   () => {
     const counter = (count) => (msg) => {
        const nextCount = count+msg;
@@ -135,9 +137,9 @@ match, we tell the pingActor the pong actor's name and use `tell's` second param
 
 
 ```js
-let pingActor = system.spawnFixed((msg, ctx)=>{ console.log(msg); ctx.tell(ctx.sender, ctx.name); }, 'ping'); 
+let pingActor = spawnFixed(system, (msg, ctx)=>{ console.log(msg); ctx.tell(ctx.sender, ctx.name); }, 'ping'); 
 
-let pongActor = system.spawnFixed(function(msg){ console.log(msg); this.tell(this.sender, this.name); }, 'pong'); 
+let pongActor = spawnFixed(system, function(msg){ console.log(msg); this.tell(this.sender, this.name); }, 'pong'); 
 
 pingActor.tell(pongActor.name(), pongActor);
 ```
@@ -171,30 +173,32 @@ One of the more important features of an actor system is its hierachy. Actors ca
 You can spawn children for a given actor outside the actor function by invoking spawn/spawnFixed on the actor object. Inside the actor function, the context object allowing spawning as follows:
 
 ```js
-let actor = system.spawnFixed(function(msg){
-  this.spawn(()=>function f(msg){ console.log('I\m a child actor'); return f; }, 'child');
-});
+let actor = spawnFixed (
+  system, 
+  function(msg){ spawn(this.self, ()=>function f(msg){ console.log('I\m a child actor'); return f; }, 'child'); }
+);
 ```
 
 To stop an actor, you can call stop on the actor object e.g. `actor.stop()`. If you want to immediately terminate the actor, you can call `actor.terminate()`. These two methods are quite ungraceful, and often a better alternative is to shutdown the actor from the inside. If you spawned the actor using spawnFixed, you can stop the actor function after receiving a message, by returning `false`. If you instead created the actor using the spawn command, stopping the actor is as simple as not returning the next handler function.
 
 Using spawn:
 ```js
-let actor = system.spawn(() => function(msg,ctx){
-  console.log('I\'m shutting down now');
+let actor = spawn(
+  system, 
   // No next function is returned, hence the actor shuts down.
-});
+  () => function(msg,ctx){ console.log('I\'m shutting down now'); }
+);
 ```
 
 Using spawnFixed:
 ```js
-let actor = system.spawnFixed(function(msg){
-  console.log('I\m shutting down now');
-  return false;
-});
+let actor = spawnFixed(
+  system,
+  function(msg){ console.log('I\m shutting down now'); return false; }
+);
 ```
 
-An actor by default is also terminated when it throws an exception, unless an actor is taken by a supervisor.
+An actor by default is also terminated when it throws an exception, unless an action is taken by a supervisor.
 
 To check whether an actor is stopped, you can call `isStopped()` on the actor object. You can obtain a Map of an actor's children by calling children() on the actor object or `ctx.children` from inside the actor function.
 Likewise, to get the parent of an actor you can call `parent()` on the actor object or `parent` on the context object.
@@ -211,5 +215,4 @@ of the parent actor will be called with the following payload.
 return { type: 'CHILD_FAILED', child, exception, failure_context }
 ```
 
-This message gives the actor an opportunity to recover from the failure. They could for example call `child.restart()`, 
-
+This message gives the actor an opportunity to recover from the failure. They could for example call `child.restart()`

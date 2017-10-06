@@ -4,7 +4,8 @@
   "description": "Mulithreaded implementation of the actor model for node",
   "main": "lib/index.js",
   "scripts": {
-    "test": "yarn run lint && nyc --reporter=html mocha ./test/*.js",
+    "test": "yarn run lint && nyc mocha ./test/*.js",
+    "interactive-cover": "nyc --reporter=html mocha ./test/*.js",
     "lint": "semistandard",
     "coverage": "nyc report --reporter=text-lcov | coveralls",
     "prepush": "yarn run test"
