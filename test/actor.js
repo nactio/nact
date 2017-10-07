@@ -299,13 +299,13 @@ describe('Actor', function () {
       return actor.ask('test', 1).should.be.rejectedWith(Error, 'Ask Timeout');
     });
 
-    it(`should resolve the promise if the actor has responded with the given timespan, clearing the timeout`, function () {
+    it(`should resolve the promise if the actor has responded with the given timespan, clearing the timeout`, async function () {
       let actor = spawnFixed(
         system,
         async (msg, ctx) => { await delay(10); ctx.tell(ctx.sender, 'done'); },
         'test'
       );
-      return actor.ask('test', 30).should.be.fulfilled;
+      (await actor.ask('test', 50)).should.equal('done');
     });
   });
 

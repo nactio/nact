@@ -1,8 +1,6 @@
 /* eslint-env mocha */
 /* eslint-disable no-unused-expressions */
 const chai = require('chai');
-const chaiAsPromised = require('chai-as-promised');
-chai.use(chaiAsPromised);
 const should = chai.should();
 const { start, spawn, spawnFixed } = require('../lib');
 const { LocalPath } = require('../lib/paths');
@@ -10,6 +8,13 @@ const { LocalPath } = require('../lib/paths');
 const ignore = () => {};
 
 describe('System', function () {
+  describe('#start()', function () {
+    it('should disallow persistent engines which do not inherit from AbstractPersistentActor', function () {
+      (() => start({ persistenceEngine: 'a' })).should.throw(Error);
+      (() => start({ persistenceEngine: { events: ignore, persist: Promise.resolve } })).should.throw(Error);
+    });
+  });
+
   describe('#spawn()', function () {
     let system;
     beforeEach(() => { system = start(); });
