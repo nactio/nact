@@ -1,3 +1,6 @@
 {
-    "javascript.validate.enable": false
+    "javascript.validate.enable": false,
+    "standard.semistandard": true,
+    "standard.enable": true,
+    "standard.autoFixOnSave": true
 }
