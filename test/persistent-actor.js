@@ -28,25 +28,12 @@ const retry = async (assertion, remainingAttempts, retryInterval = 0) => {
   }
 };
 
-const concatenativeFunction = (initialState) => {
-  const f = (state) => (msg, ctx) => {
-    ctx.tell(ctx.sender, state + msg);
-    return f(state + msg);
+const concatenativeFunction = (initialState, additionalActions = ignore) =>
+  async function (state = initialState, msg) {
+    this.tell(this.sender, state + msg);
+    await Promise.resolve(additionalActions(state, msg, this));
+    return state + msg;
   };
-  return () => f(initialState);
-};
-
-const persistentConcatenativeFunction = (initialState, additionalActions) => {
-  const f = (state) => async (msg, ctx) => {
-    if (!ctx.recovering) {
-      ctx.tell(ctx.sender, state + msg);
-    }
-    additionalActions && (await Promise.resolve(additionalActions(msg, ctx)));
-    return f(state + msg);
-  };
-  return () => f(initialState);
-};
-// End helpers
 
 describe('PersistentActor', () => {
   let system;
@@ -88,7 +75,7 @@ describe('PersistentActor', () => {
     system = start({ persistenceEngine });
     const actor = spawnPersistent(
         system,
-        persistentConcatenativeFunction(''),
+        concatenativeFunction(''),
         'test'
       );
     actor.tell('1');
@@ -102,7 +89,7 @@ describe('PersistentActor', () => {
     system = start({ persistenceEngine });
     const actor = spawnPersistent(
         system,
-        persistentConcatenativeFunction('', (msg, ctx) => !ctx.recovering && ctx.persist(msg)),
+        concatenativeFunction('', (state, msg, ctx) => !ctx.recovering && ctx.persist(msg)),
         'test'
       );
     actor.tell('a');
@@ -118,7 +105,7 @@ describe('PersistentActor', () => {
     system = start({ persistenceEngine });
     const actor = spawnPersistent(
         system,
-        persistentConcatenativeFunction(''),
+        concatenativeFunction(''),
         'test'
       );
     await retry(() => actor.isStopped().should.be.true, 5, 10);
@@ -132,7 +119,7 @@ describe('PersistentActor', () => {
     system = start({ persistenceEngine });
     const actor = spawnPersistent(
       system,
-      persistentConcatenativeFunction(''),
+      concatenativeFunction(''),
       'frog'
     );
     await retry(() => actor.isStopped().should.be.true, 5, 10);
