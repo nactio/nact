@@ -1,4 +1,4 @@
-const { AbstractPersistenceEngine } = require('../lib/persistence-engine');
+const { AbstractPersistenceEngine } = require('../lib/extensions/persistence');
 const { Observable } = require('rxjs');
 
 class MockPersistenceEngine extends AbstractPersistenceEngine {

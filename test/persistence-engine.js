@@ -2,7 +2,7 @@
 /* eslint-disable no-unused-expressions */
 const chai = require('chai');
 chai.should();
-const { PersistedEvent, AbstractPersistenceEngine } = require('../lib/persistence-engine');
+const { PersistedEvent, AbstractPersistenceEngine } = require('../lib/extensions/persistence');
 
 describe('PersistedEvent', function () {
   it('should be immutable', function () {
