@@ -47,7 +47,11 @@ describe('Actor', function () {
   describe('actor-function', function () {
     let system;
     beforeEach(() => { system = start(); });
-    afterEach(() => system.terminate());
+    afterEach(() => {
+      system.terminate();
+      // reset console
+      delete console.error;
+    });
 
     it('allows promises to resolve inside actor', async function () {
       const getMockValue = () => Promise.resolve(2);
@@ -107,22 +111,21 @@ describe('Actor', function () {
     });
 
     it('should automatically terminate with failure if non function/falsy type is returned', async function () {
-      // TODO: Possibly not the most sensible error policy.
-      // Really need to think about how supervision and error handling work
+      console.error = ignore;
       let child = spawn(system, (msg) => () => 1);
       child.tell();
       await retry(() => child.isStopped().should.be.true, 12, 10);
     });
 
     it('should automatically terminate if error is thrown', async function () {
-      // TODO: Possibly not the most sensible error policy.
-      // Really need to think about how supervision and error handling work
+      console.error = ignore;
       let child = spawnFixed(system, (msg) => { throw new Error('testError'); });
       child.tell();
       await retry(() => child.isStopped().should.be.true, 12, 10);
     });
 
     it('should automatically terminate if rejected promise is thrown', async function () {
+      console.error = ignore;
       let child = spawnFixed(system, (msg) => Promise.reject(new Error('testError')));
       child.tell();
       await retry(() => child.isStopped().should.be.true, 12, 10);
@@ -132,7 +135,11 @@ describe('Actor', function () {
   describe('#stop()', function () {
     let system;
     beforeEach(() => { system = start(); });
-    afterEach(() => system.terminate());
+    afterEach(() => {
+      system.terminate();
+      // reset console
+      delete console.error;
+    });
 
     it('should prevent children from being spawned after being called', function () {
       let child = spawnFixed(system, ignore);
@@ -192,7 +199,11 @@ describe('Actor', function () {
   describe('#terminate()', function () {
     let system;
     beforeEach(() => { system = start(); });
-    afterEach(() => system.terminate());
+    afterEach(() => {
+      system.terminate();
+      // reset console
+      delete console.error;
+    });
 
     it('should prevent children from being spawned after being called', function () {
       let child = spawnFixed(system, () => console.log('spawning'));
@@ -232,7 +243,11 @@ describe('Actor', function () {
   describe('#spawn()', function () {
     let system;
     beforeEach(() => { system = start(); });
-    afterEach(() => system.terminate());
+    afterEach(() => {
+      system.terminate();
+      // reset console
+      delete console.error;
+    });
 
     it('automatically names an actor if a name is not provided', function () {
       let child = spawnFixed(system, (msg) => msg);
@@ -290,13 +305,14 @@ describe('Actor', function () {
       return delay(5).then(() => actor.ask()).should.be.rejectedWith(Error, 'Actor stopped. Ask can never resolve');
     });
 
-    it(`should reject a promise if the actor hasn't responded with the given timespan`, function () {
+    it(`should reject a promise if the actor hasn't responded with the given timespan`, async function () {
       let actor = spawnFixed(
         system,
         async (msg, ctx) => { await delay(10); ctx.tell(ctx.sender, 'done'); },
         'test'
       );
-      return actor.ask('test', 1).should.be.rejectedWith(Error, 'Ask Timeout');
+      (await (actor.ask('test', 1).catch(x => x))).should.be.instanceOf(Error);
+      // return actor.ask('test', 1).should.be.rejectedWith(Error, 'Ask Timeout');
     });
 
     it(`should resolve the promise if the actor has responded with the given timespan, clearing the timeout`, async function () {

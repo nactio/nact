@@ -3,13 +3,31 @@
 const chai = require('chai');
 chai.should();
 const { MockPersistenceEngine } = require('./mock-persistence-engine');
+const { BrokenPersistenceEngine } = require('./broken-persistence-engine');
+const { PartiallyBrokenPersistenceEngine } = require('./partially-broken-persistence-engine');
 const { start, spawnPersistent } = require('../lib');
 const { PersistedEvent } = require('../lib/persistence-engine');
 const chaiAsPromised = require('chai-as-promised');
 chai.use(chaiAsPromised);
+const { Promise } = require('bluebird');
+const delay = Promise.delay;
 
 // Begin helpers
 const ignore = () => {};
+
+const retry = async (assertion, remainingAttempts, retryInterval = 0) => {
+  if (remainingAttempts <= 1) {
+    return assertion();
+  } else {
+    try {
+      assertion();
+    } catch (e) {
+      await delay(retryInterval);
+      await retry(assertion, remainingAttempts - 1, retryInterval);
+    }
+  }
+};
+
 const concatenativeFunction = (initialState) => {
   const f = (state) => (msg, ctx) => {
     ctx.tell(ctx.sender, state + msg);
@@ -33,7 +51,11 @@ const persistentConcatenativeFunction = (initialState, additionalActions) => {
 describe('PersistentActor', () => {
   let system;
 
-  afterEach(() => system.stop());
+  afterEach(function () {
+    // reset console
+    delete console.error;
+    system && system.stop();
+  });
 
   it('should startup normally if no previous events', async function () {
     const persistenceEngine = new MockPersistenceEngine();
@@ -69,7 +91,10 @@ describe('PersistentActor', () => {
         persistentConcatenativeFunction(''),
         'test'
       );
-    (await actor.ask('')).should.equal(expectedResult);
+    actor.tell('1');
+    actor.tell('2');
+    actor.tell('3');
+    (await actor.ask('')).should.equal(expectedResult + '123');
   });
 
   it('should be able to persist events', async () => {
@@ -85,5 +110,31 @@ describe('PersistentActor', () => {
     actor.tell('c');
     (await actor.ask('d')).should.equal('abcd');
     persistenceEngine._events.get('test').map(x => x.data).should.deep.equal(['a', 'b', 'c', 'd']);
+  });
+
+  it('should signal an error if creating restore stream fails', async () => {
+    console.error = ignore;
+    const persistenceEngine = new BrokenPersistenceEngine();
+    system = start({ persistenceEngine });
+    const actor = spawnPersistent(
+        system,
+        persistentConcatenativeFunction(''),
+        'test'
+      );
+    await retry(() => actor.isStopped().should.be.true, 5, 10);
+  });
+
+  it('should signal an error if restore stream fails midway through recovery', async () => {
+    console.error = ignore;
+    const expectedResult = 'icelandiscold';
+    const events = [...expectedResult].map((evt, i) => new PersistedEvent(evt, i + 1, 'frog'));
+    const persistenceEngine = new PartiallyBrokenPersistenceEngine({ frog: events }, 5);
+    system = start({ persistenceEngine });
+    const actor = spawnPersistent(
+      system,
+      persistentConcatenativeFunction(''),
+      'frog'
+    );
+    await retry(() => actor.isStopped().should.be.true, 5, 10);
   });
 });
