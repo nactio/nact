@@ -8,7 +8,6 @@ A multithreaded actor system for node.js.
 [![npm](https://img.shields.io/npm/v/nact.svg?style=flat-square)](https://www.npmjs.com/package/nact) [![js-semistandard-style](https://img.shields.io/badge/code%20style-semistandard-blue.svg?style=flat-square)](https://github.com/Flet/semistandard) 
 
 
-
 ## Sponsored by 
 
 [![Root Logo](./root-logo.svg)](https://root.co.za)
