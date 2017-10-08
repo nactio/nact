@@ -213,15 +213,3 @@ To check whether an actor is stopped, you can call `isStopped()` on the actor ob
 Likewise, to get the parent of an actor you can call `parent()` on the actor object or `parent` on the context object.
 
 Children can be stopped from inside the actor by calling `child.stop()`
-
-## Supervision 
-
-NAct empowers parent actors to monitor their children. This is strictly on an opt in basis.
-If a child crashes and a parent has opted into receiving death messages, the message handler 
-of the parent actor will be called with the following payload.
-
-```js
-return { type: 'CHILD_FAILED', child, exception, failure_context }
-```
-
-This message gives the actor an opportunity to recover from the failure. They could for example call `child.restart()`
