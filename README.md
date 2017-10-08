@@ -15,6 +15,10 @@ A multithreaded actor system for node.js.
 > 
 > PRs and ideas for performance improvements, enabling clustering/scaleout and persistence
 > will also be hugely appreciated.
+>
+> The api surface is still in a state of flux. While this note is in place, it probably isn't 
+> advisable to build on NAct. The API should stabilise quite shortly, but it has been challenging 
+> creating an API which is both flexible and familiar to javascript users.   
 
 ## Introduction
 
