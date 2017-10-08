@@ -5,8 +5,7 @@ chai.should();
 const { MockPersistenceEngine } = require('./mock-persistence-engine');
 const { BrokenPersistenceEngine } = require('./broken-persistence-engine');
 const { PartiallyBrokenPersistenceEngine } = require('./partially-broken-persistence-engine');
-const { start, spawnPersistent } = require('../lib');
-const { PersistedEvent } = require('../lib/persistence-engine');
+const { start, persistence: { spawnPersistent, configurePersistence, PersistedEvent } } = require('../lib');
 const chaiAsPromised = require('chai-as-promised');
 chai.use(chaiAsPromised);
 const { Promise } = require('bluebird');
@@ -35,6 +34,19 @@ const concatenativeFunction = (initialState, additionalActions = ignore) =>
     return state + msg;
   };
 
+// End helpers
+
+describe('#persistence', () => {
+  it('should disallow persistence engines which do not inherit from AbstractPersistenceEngine', function () {
+    (() => configurePersistence(0)({})).should.throw(Error);
+    (() => configurePersistence('1')({})).should.throw(Error);
+    (() => configurePersistence(Symbol('AbstractPersistenceEngine'))({})).should.throw(Error);
+    (() => configurePersistence([])({})).should.throw(Error);
+    (() => configurePersistence({})({})).should.throw(Error);
+    (() => configurePersistence({ events: ignore, persist: ignore })({})).should.throw(Error);
+  });
+});
+
 describe('PersistentActor', () => {
   let system;
 
@@ -46,7 +58,7 @@ describe('PersistentActor', () => {
 
   it('should startup normally if no previous events', async function () {
     const persistenceEngine = new MockPersistenceEngine();
-    system = start({ persistenceEngine });
+    system = start(configurePersistence(persistenceEngine));
     const actor = spawnPersistent(
       system,
       concatenativeFunction(''),
@@ -59,7 +71,7 @@ describe('PersistentActor', () => {
 
   it('must have a persistentKey of type string', async () => {
     const persistenceEngine = new MockPersistenceEngine();
-    system = start({ persistenceEngine });
+    system = start(configurePersistence(persistenceEngine));
     (() => spawnPersistent(system, ignore, undefined)).should.throw(Error);
     (() => spawnPersistent(system, ignore, null)).should.throw(Error);
     (() => spawnPersistent(system, ignore, 1)).should.throw(Error);
@@ -72,7 +84,7 @@ describe('PersistentActor', () => {
     const expectedResult = '1234567890';
     const events = [...expectedResult].map((evt, i) => new PersistedEvent(evt, i + 1, 'test'));
     const persistenceEngine = new MockPersistenceEngine({ test: events });
-    system = start({ persistenceEngine });
+    system = start(configurePersistence(persistenceEngine));
     const actor = spawnPersistent(
         system,
         concatenativeFunction(''),
@@ -86,7 +98,7 @@ describe('PersistentActor', () => {
 
   it('should be able to persist events', async () => {
     const persistenceEngine = new MockPersistenceEngine();
-    system = start({ persistenceEngine });
+    system = start(configurePersistence(persistenceEngine));
     const actor = spawnPersistent(
         system,
         concatenativeFunction('', (state, msg, ctx) => !ctx.recovering && ctx.persist(msg)),
@@ -102,7 +114,7 @@ describe('PersistentActor', () => {
   it('should signal an error if creating restore stream fails', async () => {
     console.error = ignore;
     const persistenceEngine = new BrokenPersistenceEngine();
-    system = start({ persistenceEngine });
+    system = start(configurePersistence(persistenceEngine));
     const actor = spawnPersistent(
         system,
         concatenativeFunction(''),
@@ -116,7 +128,7 @@ describe('PersistentActor', () => {
     const expectedResult = 'icelandiscold';
     const events = [...expectedResult].map((evt, i) => new PersistedEvent(evt, i + 1, 'frog'));
     const persistenceEngine = new PartiallyBrokenPersistenceEngine({ frog: events }, 5);
-    system = start({ persistenceEngine });
+    system = start(configurePersistence(persistenceEngine));
     const actor = spawnPersistent(
       system,
       concatenativeFunction(''),
