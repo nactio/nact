@@ -11,7 +11,7 @@ A multithreaded actor system for node.js.
 
 ## Sponsored by 
 
-![[Root Logo][./root-logo.svg]](https://root.co.za)
+[![Root Logo](./root-logo.svg)](https://root.co.za)
 
 > Note:
 >
