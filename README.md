@@ -1,15 +1,11 @@
 # NAct
-A multithreaded actor system for node.js. 
+An idiomatic actor system for Node.js 
 
 <!-- Badges -->
 [![Travis branch](https://img.shields.io/travis/ncthbrt/nact/master.svg?style=flat-square)]()
 [![Coveralls](https://img.shields.io/coveralls/ncthbrt/nact.svg?style=flat-square)]() [![Dependencies](https://david-dm.org/ncthbrt/nact.svg?branch=master&style=flat-square)](https://david-dm.org/ncthbrt/nact) 
 
 [![npm](https://img.shields.io/npm/v/nact.svg?style=flat-square)](https://www.npmjs.com/package/nact) [![js-semistandard-style](https://img.shields.io/badge/code%20style-semistandard-blue.svg?style=flat-square)](https://github.com/Flet/semistandard) 
-
-
-## Sponsored by 
-[![Root Logo](https://raw.githubusercontent.com/ncthbrt/nact/master/root-logo.svg?sanitize=true)](https://root.co.za)
 
 > Note:
 >
@@ -19,10 +15,12 @@ A multithreaded actor system for node.js.
 > 
 > PRs and ideas for performance improvements, enabling clustering/scaleout and persistence
 > will also be hugely appreciated.
->
-> The api surface is still in a state of flux. While this note is in place, it probably isn't 
-> advisable to build on NAct. The API should stabilise quite shortly, but it has been challenging 
-> creating an API which is both flexible and familiar to javascript users.   
+
+  
+
+## Sponsored by 
+[![Root Logo](https://raw.githubusercontent.com/ncthbrt/nact/master/root-logo.svg?sanitize=true)](https://root.co.za)
+
 
 ## Introduction
 
