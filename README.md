@@ -1,5 +1,5 @@
 # NAct
-A multithreaded actor system for node.js. 
+An idiomatic actor system for Node.js 
 
 <!-- Badges -->
 [![Travis branch](https://img.shields.io/travis/ncthbrt/nact/master.svg?style=flat-square)]()
