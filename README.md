@@ -1,5 +1,5 @@
-# NAct
 ![NAct Logo](https://raw.githubusercontent.com/ncthbrt/nact/master/assets/logo.svg?sanitize=true)
+
 An idiomatic actor system for Node.js 
 
 <!-- Badges -->
