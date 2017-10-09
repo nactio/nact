@@ -1,7 +1,7 @@
 const { AbstractPersistenceEngine } = require('../lib/extensions/persistence');
 
 class BrokenPersistenceEngine extends AbstractPersistenceEngine {
-  events (persistenceKey, offset, limit) {
+  events (persistenceKey, offset, limit, tags) {
     throw new Error('Elvis has left the building');
   }
 

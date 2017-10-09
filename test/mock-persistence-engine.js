@@ -7,7 +7,7 @@ class MockPersistenceEngine extends AbstractPersistenceEngine {
     this._events = events;
   }
 
-  events (persistenceKey, offset = 0, limit) {
+  events (persistenceKey, offset = 0, limit, tags) {
     const persistedEvents = (this._events[persistenceKey] || []);
     const slice = persistedEvents.slice(offset, limit ? offset + limit : undefined);
     return Observable.from(slice);

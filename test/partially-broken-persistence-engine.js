@@ -11,7 +11,7 @@ class PartiallyBrokenPersistenceEngine extends AbstractPersistenceEngine {
     this.maxFailures = maxFailures;
   }
 
-  events (persistenceKey, offset = 0, limit) {
+  events (persistenceKey, offset = 0, limit, tags) {
     const persistedEvents = (this._events[persistenceKey] || []);
     const slice = persistedEvents.slice(offset, limit ? offset + limit : undefined);
     return Observable.from(slice).map((item, index) => {
