@@ -9,8 +9,7 @@ A multithreaded actor system for node.js.
 
 
 ## Sponsored by 
-
-[![Root Logo](./root-logo.svg)](https://root.co.za)
+[![Root Logo](https://raw.githubusercontent.com/ncthbrt/nact/master/root-logo.svg?sanitize=true)](https://root.co.za)
 
 > Note:
 >
