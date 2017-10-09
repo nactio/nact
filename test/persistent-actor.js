@@ -5,7 +5,8 @@ chai.should();
 const { MockPersistenceEngine } = require('./mock-persistence-engine');
 const { BrokenPersistenceEngine } = require('./broken-persistence-engine');
 const { PartiallyBrokenPersistenceEngine } = require('./partially-broken-persistence-engine');
-const { start, persistence: { spawnPersistent, configurePersistence, PersistedEvent } } = require('../lib');
+const { start } = require('../lib');
+const { spawnPersistent, configurePersistence, PersistedEvent } = require('../lib/extensions/persistence');
 const chaiAsPromised = require('chai-as-promised');
 chai.use(chaiAsPromised);
 const { Promise } = require('bluebird');
@@ -29,7 +30,7 @@ const retry = async (assertion, remainingAttempts, retryInterval = 0) => {
 
 const concatenativeFunction = (initialState, additionalActions = ignore) =>
   async function (state = initialState, msg) {
-    this.tell(this.sender, state + msg);
+    this.dispatch(this.sender, state + msg);
     await Promise.resolve(additionalActions(state, msg, this));
     return state + msg;
   };
@@ -64,9 +65,9 @@ describe('PersistentActor', () => {
       concatenativeFunction(''),
       'test'
     );
-    actor.tell('a');
-    actor.tell('b');
-    (await actor.ask('c')).should.equal('abc');
+    actor.dispatch('a');
+    actor.dispatch('b');
+    (await actor.query('c')).should.equal('abc');
   });
 
   it('must have a persistentKey of type string', async () => {
@@ -90,10 +91,10 @@ describe('PersistentActor', () => {
         concatenativeFunction(''),
         'test'
       );
-    actor.tell('1');
-    actor.tell('2');
-    actor.tell('3');
-    (await actor.ask('')).should.equal(expectedResult + '123');
+    actor.dispatch('1');
+    actor.dispatch('2');
+    actor.dispatch('3');
+    (await actor.query('')).should.equal(expectedResult + '123');
   });
 
   it('should be able to persist events', async () => {
@@ -104,10 +105,10 @@ describe('PersistentActor', () => {
         concatenativeFunction('', (state, msg, ctx) => !ctx.recovering && ctx.persist(msg)),
         'test'
       );
-    actor.tell('a');
-    actor.tell('b');
-    actor.tell('c');
-    (await actor.ask('d')).should.equal('abcd');
+    actor.dispatch('a');
+    actor.dispatch('b');
+    actor.dispatch('c');
+    (await actor.query('d')).should.equal('abcd');
     persistenceEngine._events.get('test').map(x => x.data).should.deep.equal(['a', 'b', 'c', 'd']);
   });
 

@@ -12,7 +12,7 @@ const delay = Promise.delay;
 const spawnChildrenEchoer = (parent, name) =>
   spawnStateless(
     parent,
-    function (msg) { this.tell(this.sender, [...this.children.keys()]); },
+    function (msg) { this.dispatch(this.sender, [...this.children.keys()]); },
     name
   );
 
@@ -62,11 +62,11 @@ describe('Actor', function () {
         system,
         async function (msg) {
           let result = await getMockValue();
-          this.tell(this.sender, result);
+          this.dispatch(this.sender, result);
         }
       );
 
-      let result = await child.ask();
+      let result = await child.query();
       result.should.equal(2);
     });
 
@@ -75,7 +75,7 @@ describe('Actor', function () {
         system,
          function (state = '', msg) {
            if (msg.type === 'query') {
-             this.tell(this.sender, state);
+             this.dispatch(this.sender, state);
              return state;
            } else if (msg.type === 'append') {
              return state + msg.payload;
@@ -83,10 +83,10 @@ describe('Actor', function () {
          }
       );
 
-      actor.tell({ payload: 'Hello ', type: 'append' });
-      actor.tell({ payload: 'World. ', type: 'append' });
-      actor.tell({ payload: 'The time has come!!', type: 'append' });
-      let result = await actor.ask({ type: 'query' });
+      actor.dispatch({ payload: 'Hello ', type: 'append' });
+      actor.dispatch({ payload: 'World. ', type: 'append' });
+      actor.dispatch({ payload: 'The time has come!!', type: 'append' });
+      let result = await actor.query({ type: 'query' });
       result.should.equal('Hello World. The time has come!!');
     });
 
@@ -97,14 +97,14 @@ describe('Actor', function () {
           if (msg === 2) {
             await delay(10);
           }
-          this.tell(this.sender, msg);
+          this.dispatch(this.sender, msg);
         },
         'testActor'
       );
 
-      let result1 = await child.ask(1);
-      let result2 = await child.ask(2);
-      let result3 = await child.ask(3);
+      let result1 = await child.query(1);
+      let result2 = await child.query(2);
+      let result3 = await child.query(3);
       result1.should.equal(1);
       result2.should.equal(2);
       result3.should.equal(3);
@@ -113,14 +113,14 @@ describe('Actor', function () {
     it('should automatically stop if error is thrown', async function () {
       console.error = ignore;
       let child = spawnStateless(system, (msg) => { throw new Error('testError'); });
-      child.tell();
+      child.dispatch();
       await retry(() => child.isStopped().should.be.true, 12, 10);
     });
 
     it('should automatically stop if rejected promise is thrown', async function () {
       console.error = ignore;
       let child = spawnStateless(system, (msg) => Promise.reject(new Error('testError')));
-      child.tell();
+      child.dispatch();
       await retry(() => child.isStopped().should.be.true, 12, 10);
     });
   });
@@ -161,7 +161,7 @@ describe('Actor', function () {
 
     it('is invoked automatically when the next state is not returned', async function () {
       let child = spawn(system, ignore, 'testActor');
-      child.tell();
+      child.dispatch();
       await retry(() => child.isStopped().should.be.true, 12, 10);
       system.children().should.not.include('testActor');
     });
@@ -174,11 +174,11 @@ describe('Actor', function () {
       child.isStopped().should.be.true;
     });
 
-    it('should ignore subsequent tells', async function () {
+    it('should ignore subsequent dispatchs', async function () {
       let child = spawnStateless(system, () => { throw new Error('Should not be triggered'); });
       child.stop();
       await retry(() => child.isStopped().should.be.true, 12, 10);
-      child.tell('test');
+      child.dispatch('test');
     });
   });
 
@@ -206,16 +206,16 @@ describe('Actor', function () {
     it('correctly registers children upon startup', async function () {
       let child = spawnChildrenEchoer(system, 'testChildActor');
       system.children().should.have.keys('testChildActor');
-      let children = await child.ask();
+      let children = await child.query();
       children.should.be.empty;
 
       spawnStateless(child, ignore, 'testGrandchildActor');
       child.children().should.have.keys('testGrandchildActor');
-      children = await child.ask();
+      children = await child.query();
       children.should.have.members(['testGrandchildActor']);
 
       spawnStateless(child, ignore, 'testGrandchildActor2');
-      children = await child.ask();
+      children = await child.query();
       child.children().should.have.keys('testGrandchildActor2', 'testGrandchildActor');
       children.should.have.members(['testGrandchildActor2', 'testGrandchildActor']);
     });
@@ -226,17 +226,17 @@ describe('Actor', function () {
           spawnStateless(this.self, ignore, 'child1');
           spawn(this.self, ignore, 'child2');
         } else {
-          this.tell(this.sender, [...this.children.keys()]);
+          this.dispatch(this.sender, [...this.children.keys()]);
         }
       }, 'test');
-      actor.tell('spawn');
-      let children = await actor.ask('query');
+      actor.dispatch('spawn');
+      let children = await actor.query('query');
       children.should.have.members(['child1', 'child2']);
       actor.children().should.have.keys('child1', 'child2');
     });
   });
 
-  describe('#ask()', function () {
+  describe('#query()', function () {
     let system;
     beforeEach(() => { system = start(); });
     afterEach(() => system.stop());
@@ -244,49 +244,49 @@ describe('Actor', function () {
     it(`should reject a promise if actor has already stopped`, async function () {
       let actor = spawnStateless(system, ignore);
       actor.stop();
-      await delay(5).then(() => actor.ask()).should.be.rejectedWith(Error, 'Actor stopped. Ask can never resolve');
+      await delay(5).then(() => actor.query()).should.be.rejectedWith(Error, 'Actor stopped. Query can never resolve');
     });
 
     it(`should reject a promise if the actor hasn't responded with the given timespan`, async function () {
       let actor = spawnStateless(
         system,
-        async (msg, ctx) => { await delay(10); ctx.tell(ctx.sender, 'done'); },
+        async (msg, ctx) => { await delay(10); ctx.dispatch(ctx.sender, 'done'); },
         'test'
       );
-      (await (actor.ask('test', 1).catch(x => x))).should.be.instanceOf(Error);
+      (await (actor.query('test', 1).catch(x => x))).should.be.instanceOf(Error);
     });
 
     it(`should resolve the promise if the actor has responded with the given timespan, clearing the timeout`, async function () {
       let actor = spawnStateless(
         system,
-        async (msg, ctx) => { await delay(10); ctx.tell(ctx.sender, 'done'); },
+        async (msg, ctx) => { await delay(10); ctx.dispatch(ctx.sender, 'done'); },
         'test'
       );
-      (await actor.ask('test', 50)).should.equal('done');
+      (await actor.query('test', 50)).should.equal('done');
     });
   });
 
-  describe('#tell()', function () {
+  describe('#dispatch()', function () {
     let system;
     beforeEach(() => { system = start(); });
     afterEach(() => system.stop());
 
-    it('telling inside actor with non addressable recipient type should throw error', async function () {
+    it('dispatching inside actor with non addressable recipient type should throw error', async function () {
       let child = spawnStateless(system, function (msg) {
         try {
-          this.tell({}, 'test');
+          this.dispatch({}, 'test');
         } catch (e) {
-          this.tell(this.sender, e);
+          this.dispatch(this.sender, e);
         }
       });
-      let result = await child.ask();
+      let result = await child.query();
       result.should.be.an('error');
     });
 
-    it('should be able to tell other actors', async function () {
-      let child1 = spawnStateless(system, function (msg) { this.tell(msg, this.sender); });
-      let child2 = spawnStateless(system, function (msg) { this.tell(msg, 'hello from child2'); });
-      let result = await child1.ask(child2);
+    it('should be able to dispatch other actors', async function () {
+      let child1 = spawnStateless(system, function (msg) { this.dispatch(msg, this.sender); });
+      let child2 = spawnStateless(system, function (msg) { this.dispatch(msg, 'hello from child2'); });
+      let result = await child1.query(child2);
       result.should.equal('hello from child2');
     });
   });

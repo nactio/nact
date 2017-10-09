@@ -156,15 +156,15 @@ pingActor.tell(pongActor.name(), pongActor);
 In the sample, the system is terminated after 5 seconds to give glitch a break.
 
 
-## Asking instead of telling
+## Querying instead of Dispatching
 
 [![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/https://nact-gettingstarted-ask.glitch.me)
 
 We've only been passing messages to actors inside the system, but what if we want to pass messages _out_? 
 
-`ask()` is the primary means of interacting with actors from outside the actor system (actors have no such problem as they can simply `tell` one another) 
+`query()` is the primary means of interacting with actors from outside the actor system (actors have no such problem as they can simply `tell` one another) 
 
-Ask behaves very similarly to tell, except that it has a second parameter (a timeout in milliseconds. Ask creates a virtual actor for the request and when this virtual actor receives a message, the promise is resolved. 
+Query behaves very similarly to tell, except that it has a second parameter (a timeout in milliseconds. Ask creates a virtual actor for the request and when this virtual actor receives a message, the promise is resolved. 
 
 > Note:
 > It is best practise to specify a timeout in a production system to ensure 
