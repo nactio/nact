@@ -29,9 +29,11 @@ const retry = async (assertion, remainingAttempts, retryInterval = 0) => {
 };
 
 const concatenativeFunction = (initialState, additionalActions = ignore) =>
-  async function (state = initialState, msg) {
-    this.dispatch(this.sender, state + msg);
-    await Promise.resolve(additionalActions(state, msg, this));
+  async function (state = initialState, msg, ctx) {
+    if (!ctx.recovering) {
+      ctx.dispatch(ctx.sender, state + msg);
+    }
+    await Promise.resolve(additionalActions(state, msg, ctx));
     return state + msg;
   };
 
@@ -109,7 +111,7 @@ describe('PersistentActor', () => {
     actor.dispatch('b');
     actor.dispatch('c');
     (await actor.query('d')).should.equal('abcd');
-    persistenceEngine._events.get('test').map(x => x.data).should.deep.equal(['a', 'b', 'c', 'd']);
+    persistenceEngine._events['test'].map(x => x.data).should.deep.equal(['a', 'b', 'c', 'd']);
   });
 
   it('should signal an error if creating restore stream fails', async () => {
@@ -136,5 +138,27 @@ describe('PersistentActor', () => {
       'frog'
     );
     await retry(() => actor.isStopped().should.be.true, 5, 10);
+  });
+
+  it('should be able to restore and then persist new events (with correct seqNumbers)', async () => {
+    const previousState = 'icelandiscold';
+    const previousEvents = [...previousState].map((evt, i) => new PersistedEvent(evt, i + 1, 'iceland'));
+    const persistenceEngine = new MockPersistenceEngine({ iceland: previousEvents });
+    system = start(configurePersistence(persistenceEngine));
+    const actor = spawnPersistent(
+        system,
+        concatenativeFunction('', (state, msg, ctx) => {
+          if (!ctx.recovering) {
+            console.log('persisting');
+            return ctx.persist(msg);
+          }
+        }),
+        'iceland'
+      );
+    actor.dispatch(', very cold indeed');
+    await retry(() =>
+      persistenceEngine._events['iceland'].map((evt, i) => evt.sequenceNumber === i + 1)
+                       .should.deep.equal(new Array(previousState.length + 1).fill(true))
+    , 5, 20);
   });
 });
