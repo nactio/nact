@@ -10,13 +10,8 @@ An idiomatic actor system for Node.js
 
 > Note:
 >
-> This project is still in the early phases. Any and all feedback,
-> comments and suggestions are welcome. Please open an issue if you
+> Any and all feedback, comments and suggestions are welcome. Please open an issue if you
 > find anything unclear or misleading in the documentation. 
-> 
-> PRs and ideas for performance improvements, enabling clustering/scaleout and persistence
-> will also be hugely appreciated.
-
   
 
 ## Sponsored by 
