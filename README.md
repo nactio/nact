@@ -1,4 +1,4 @@
-![NAct Logo](https://raw.githubusercontent.com/ncthbrt/nact/master/assets/logo.svg?sanitize=true)
+![nact Logo](https://raw.githubusercontent.com/ncthbrt/nact/master/assets/logo.svg?sanitize=true)
 
 An idiomatic actor system for Node.js 
 
@@ -6,50 +6,52 @@ An idiomatic actor system for Node.js
 [![Travis branch](https://img.shields.io/travis/ncthbrt/nact/master.svg?style=flat-square)]()
 [![Coveralls](https://img.shields.io/coveralls/ncthbrt/nact.svg?style=flat-square)]() [![Dependencies](https://david-dm.org/ncthbrt/nact.svg?branch=master&style=flat-square)](https://david-dm.org/ncthbrt/nact) 
 
-[![npm](https://img.shields.io/npm/v/nact.svg?style=flat-square)](https://www.npmjs.com/package/nact) [![js-semistandard-style](https://img.shields.io/badge/code%20style-semistandard-blue.svg?style=flat-square)](https://github.com/Flet/semistandard) 
+[![npm](https://img.shields.io/npm/v/nact.svg?style=flat-square)](https://www.npmjs.com/package/nact) 
+[![js-semistandard-style](https://img.shields.io/badge/code%20style-semistandard-blue.svg?style=flat-square)](https://github.com/Flet/semistandard) 
 
 > Note:
 >
 > Any and all feedback, comments and suggestions are welcome. Please open an issue if you
 > find anything unclear or misleading in the documentation. 
-  
 
-## Sponsored by 
+# Sponsored by 
 [![Root Logo](https://raw.githubusercontent.com/ncthbrt/nact/master/root-logo.svg?sanitize=true)](https://root.co.za)
 
+# Introduction
+Nact is an implementation of the Actor Model for Node.js. It is inspired by the approaches taken by [Akka](getakka.net) 
+(available on the JVM and the CLR) and Erlang. Additionally it attempts to provide a familiar interface to users coming 
+from Redux. One of the goals of the project is to provide a simple way to create and reason about µ-services and event 
+driven architectures in Node.js.
 
-## Introduction
+The Actor Model describes a system made up of a set of entities called actors. An actor could be described as an 
+independently running packet of state. Actors communicate solely by passing messages to one another. 
+Actors can also create more actors. This explanation may sound overly simplified but it really isn't! 
 
-In the late 80s, Erisson needed a language in which to program the next generation of telephone exchanges. The language needed to be distributed by design, highly available, and fault tolerant. A team consisting initially of Joe Armstrong, Mike Williams and Robert Virding came up with an elegant solution: [Erlang](erlang.org). 
+Actors Systems have been used to construct hugely scalable, highly available and performant systems (such as WhatsApp, 
+Twitter, and Flipkart), but that doesn't mean it is only for people or companies with big problems. Microservice 
+architectures are extremely popular right now, but a common grievance is the difficultly in determining your system's 
+bounded contexts, along with increased operational complexity. Nact (and more broadly Actor Systems in general) is 
+designed to solve these problems.
 
-Erlang was inpsired by a mathematical formalism of distributed systems called the [actor model](http://www.brianstorti.com/the-actor-model/). The actor model describes distributed systems as a set of indepently running processes called actors. Actors communicate through message passing and can create, destroy and supervise the lifecycle of child actors. Whenever an actor is sent a message, it is added to its mailbox queue. An actor can retrieve a single message from the front of its mailbox at a time, and in response, perform some side effect, or send messages to other actors. If an actor behaves badly, the integrity of the system is preserved as actors are partitioned from one another.
+Creating a new type of actor is a very lightweight operation in contrast to creating a whole new web api and deployment,
+and due to the magic of [location transparency](https://doc.akka.io/docs/akka/2.5.4/java/general/remoting.html) and that
+actors share no state, it would be trivial to move this actor to a new server when a server starts to show strain. As 
+actors are usually more strongly encapsulated than a procedural architecture, it also means that the spaghetti you might 
+see is far less likely to happen. These benefits (as you'll see) don't even come with more cognitive overhead. 
+In short, Actor Systems are an excellent alternative to a purely RESTful µ-services architecture.
 
-A concrete example one could use is Whatsapp (which was known at some point to have been using Erlang on its servers). While their codebase is closed, a naive implemenation of their group chat feature could be as follows:
+# The basics
 
-A connection between a single user's mobile app and the servers is represented as an actor. This actor can receive two types of messages: A `send` message from the user which contains the message contents and a group or user id to which the message is addressed. The other message is a `receive` message, which contains the sender and group id and message contents. The `receive` message is forwarded to the mobile client, while the `send` message is passed to an actor representing the user or group to which the message is addressed. The actor stores the references to all actors involved in the group conversation and whenever it receives a `send` message, it maps it to a message of type `receive` and sends it to all group member actors. 
+## Setup and first actor
 
-The relative simplicity (even though it of course misses out some important production details) of this system is exactly the sort of use case Erlang was created for. The trouble is that Erlang, while excellent for some use cases, isn't in my opinion a general purpose enough language, which has had an impact on its ecosystem and libaries. 
-
-NAct is an implementation of the Actor Model for Node.js. It is inspired by the approaches taken by [Akka](getakka.net) (available on the JVM and the CLR) and Erlang. The initial release is focused on providing a good experience on a single node, though later releases will focus on enabling clustering and scaleout. 
-
-## Getting Started
-
-> Note:
-> 
-> Each example is hosted on glitch. 
-> To see source code, click on buttons like the one below.
-> This particular button demonstrates the greeter example below
-
-[![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/https://nact-gettingstarted-greeter.glitch.me)
-
-NAct has only been tested to work on Node 8 and above. You can install NAct in your project by invoking the following:
+Nact has only been tested to work on Node 8 and above. You can install nact in your project by invoking the following:
 
 ```bash
     npm install --save nact
 ```
 
 Once installed, you need to import the start function, which starts and 
-then returns the actor sytem.
+then returns the actor system.
 
 ```js
 const { start } = require('nact');
@@ -59,23 +61,26 @@ const system = start();
 Once you have a reference to the system, it is now possible to create our
 first actor. To create an actor you have to `spawn` it.  As is traditional,
 let us create an actor which says hello when a message is sent to it. Since 
-this actor doesn't require any state, we can use the simpler `spawnFixed` function. 
+this actor doesn't require any state, we can use the simpler `spawnStateless` function. 
 
 ```js
-const greeterActor = spawnFixed(system, (msg) => console.log(`Hello ${msg.name}`), 'greeter');
+const greeter = spawnStateless(system, (msg, ctx) => console.log(`Hello ${msg.name}`), 'greeter');
 ```
-The first argument to `spawnFixed` is the parent, which is in this case the actor system. The hierarchy section will go into more detail about this.
 
-The second argument to `spawnFixed` is a function which is invoked when a message is received. It is important to note that this function cannot reference anything outside the scope of the function. This is because the actor is running in a separate thread and thus can't share memory with the main process. 
+The first argument to `spawnStateless` is the parent, which is in this case the actor system. 
+The hierarchy section will go into more detail about this.
 
-The third argument to `spawnFixed` is the name of the actor,
-which in this case is `'greeter'`. The name field is optional, and 
-if ommitted, the actor is automatically assigned a name by the system.
+The second argument to `spawnStateless` is a function which is invoked when a message is received. It is important to 
+note that this function cannot reference anything outside the scope of the function. This is because the actor is 
+running in a separate thread and thus can't share memory with the main process. 
 
-To communicate with the greeter, we need to `tell` it who we are:
+The third argument to `spawnStateless` is the name of the actor, which in this case is `'greeter'`. The name field is 
+optional, and if omitted, the actor is automatically assigned a name by the system.
+
+To communicate with the greeter, we need to `dispatch` a message to it informing it who we are:
 
 ```js
-greeterActor.tell({ name: 'Erlich Bachman' });
+greeter.dispatch({ name: 'Erlich Bachman' });
 ```
 
 This should print `Hello Erlich Bachman` to the console. 
@@ -83,126 +88,45 @@ This should print `Hello Erlich Bachman` to the console.
 To complete this example, we need to shutdown our system. We can do this
 by calling `system.stop();`
 
-## State
+## Stateful Actors
 
-[![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/https://nact-gettingstarted-counter.glitch.me)
+One of the major advantages of an actor system is that it offers a safe way of creating stateful services. A stateful
+actor is created using the ```spawn`` function.
 
-Most actors aren't very useful without state. But  `spawnFixed` makes it near impossible to create stateful actors. The solution is to use the `spawn` function instead. `spawn` has nearly the same function signature as `spawnFixed` however the fundamental difference is that `spawn` takes 
-in a function which has no arguments and returns another function.
-
-The returned function is used to handle next message and should itself return a function which is used for the message after that (and so on). When no function is returned, the actor is stopped as no further processing may occur.
-
-This may sound quite confusing, but could be likened to an asynchronous `reduce`.  A simple example to demonstrate the use of `spawn` is a counter actor. The counter should be able to hold the current count and up receipt of a message add the value to the count and then log it.
-
-We want to be able to do the following:
+In this example, the state is initialized to an empty object. Each time a message is received by the actor, the current
+state is passed in as the first argument to the actor.  Whenever the actor encounters a name it hasn't encountered yet,
+it returns a copy of previous state with the name added. If it has already encountered the name it simply returns the 
+unchanged current state. The return value is used as the next state.
 
 ```js
-counterActor.tell(1); // logs 1
-counterActor.tell(-1); // logs 0
-counterActor.tell(1); // logs 1
-```
-Assuming we've already created our system, we could implement the counter as follows:
-
-```js
-let counterActor = spawn(
-  system,
-  () => {
-    const counter = (count) => (msg) => {
-       const nextCount = count+msg;
-       console.log(nextCount);
-       return counter(nextCount);
-    };
-    return counter(0);
-  },
-  'counter'
-);
-```
-Here we pass in a function and then inside the scope of this function,
-define a [higher order function](https://en.wikipedia.org/wiki/Higher-order_function) which takes in the current count and then returns a function which is able to handle the actual message. This function when invoked, prints out hte latest count and then returns itself with an updated count.
-
-Again you can play around with this concept if you click the glitch button at the top of this section.
-
-## Communication between actors
-
-[![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/https://nact-gettingstarted-multi.glitch.me)
-
-We've been looking at examples with single actors, but actors are a part of a _system_. And systems are very sad things if they are made up of just one element. Let us use another traditional test activity PingPong, to demonstrate how actors can communcation with one another. 
-
-In the example below, the ping and pong actors log the message they've received and then tell the sender their name. To start off this perfect
-match, we tell the pingActor the pong actor's name and use `tell's` second parameter to specify the sender as being the pongActor (all actors have a name and path property).
-
-> Note:
->
-> In `pingActor`, we use an arrow function. Thus to issue commands from inside the actor, we need to accept a second argument: the actor context.
->
-> In the `pongActor`, we are using function form, and while it too can accept the context as a second argument, `this` is also set to the context.
-
-
-```js
-let pingActor = spawnFixed(system, (msg, ctx)=>{ console.log(msg); ctx.tell(ctx.sender, ctx.name); }, 'ping'); 
-
-let pongActor = spawnFixed(system, function(msg){ console.log(msg); this.tell(this.sender, this.name); }, 'pong'); 
-
-pingActor.tell(pongActor.name(), pongActor);
+const statefulGreeter = spawn(system, (state = {}, msg, ctx) => {
+  const hasPreviouslyGreetedMe = state[msg.name] !== undefined;
+  if(hasPreviouslyGreetedMe) {
+    console.log(`Hello again ${msg.name}.`);  
+    return state;
+  } else {
+    console.log(`Good to meet you, ${msg.name}. I am the stateful-greeter service!`);
+    return { ...state, [msg.name]: true };
+  }
+}, 'stateful-greeter');
 ```
 
-In the sample, the system is terminated after 5 seconds to give glitch a break.
+## Querying
 
+Actor systems need to interact with the outside world
 
-## Querying instead of Dispatching
+## Hierarchy
 
-[![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/https://nact-gettingstarted-ask.glitch.me)
+Actors can create child actors of their own, and accordingly every actor has a parent. Up till now we've been creating 
+actors which are children of the actor system (which is a pseudo actor). However in a real system, this would be 
+considered an anti pattern, for much the same reasons as placing all your code in a single file is an anti-pattern. 
+By exploiting the actor hierarchy, you can enforce a separation of concerns and encapsulate system functionality, while
+providing a coherent means of dealing with failure.
 
-We've only been passing messages to actors inside the system, but what if we want to pass messages _out_? 
+In this example
 
-`query()` is the primary means of interacting with actors from outside the actor system (actors have no such problem as they can simply `tell` one another) 
+## Actor Context
 
-Query behaves very similarly to tell, except that it has a second parameter (a timeout in milliseconds. Ask creates a virtual actor for the request and when this virtual actor receives a message, the promise is resolved. 
+Stateful and Stateful Actors take in a the context parameter
 
-> Note:
-> It is best practise to specify a timeout in a production system to ensure 
-> that promises do not remain unresolved indefitely.
-
-Inside the real actor, we have access to a number of global variables and functions, two of which are `tell()` and `sender`. The `tell()` inside the actor behaves very similarly to `actor.tell()` outside it, with the important difference that the first argument to the `tell()` function inside the actor is the recipient. `sender` is just that, the entity that dispatched the message. Putting the two toghether we can resolve the ask with a `tell(sender, <MESSAGE_HERE>)`
-
-The glitch example in this section builds upon the counter example, but instead of simply printing the result, returns the updated count to the sender.
-
-
-## Actor Hierachy and Lifecycle 
-
-One of the more important features of an actor system is its hierachy. Actors can have child actors. The lifecycle of a child actor is tied to that of its parent. If a parent actor is shutdown or terminates, all children in the tree are shut down. This hierachy, combined with [supervision](./#supervision), allows for robust error handling and recovery. 
-
-You can spawn children for a given actor outside the actor function by invoking spawn/spawnFixed on the actor object. Inside the actor function, the context object allowing spawning as follows:
-
-```js
-let actor = spawnFixed (
-  system, 
-  function(msg){ spawn(this.self, ()=>function f(msg){ console.log('I\m a child actor'); return f; }, 'child'); }
-);
-```
-
-To stop an actor, you can call stop on the actor object e.g. `actor.stop()`. If you want to immediately terminate the actor, you can call `actor.terminate()`. These two methods are quite ungraceful, and often a better alternative is to shutdown the actor from the inside. If you spawned the actor using spawnFixed, you can stop the actor function after receiving a message, by returning `false`. If you instead created the actor using the spawn command, stopping the actor is as simple as not returning the next handler function.
-
-Using spawn:
-```js
-let actor = spawn(
-  system, 
-  // No next function is returned, hence the actor shuts down.
-  () => function(msg,ctx){ console.log('I\'m shutting down now'); }
-);
-```
-
-Using spawnFixed:
-```js
-let actor = spawnFixed(
-  system,
-  function(msg){ console.log('I\m shutting down now'); return false; }
-);
-```
-
-An actor by default is also terminated when it throws an exception, unless an action is taken by a supervisor.
-
-To check whether an actor is stopped, you can call `isStopped()` on the actor object. You can obtain a Map of an actor's children by calling children() on the actor object or `ctx.children` from inside the actor function.
-Likewise, to get the parent of an actor you can call `parent()` on the actor object or `parent` on the context object.
-
-Children can be stopped from inside the actor by calling `child.stop()`
+## Persistent actor
