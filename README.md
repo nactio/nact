@@ -1,55 +1,80 @@
-![NAct Logo](https://raw.githubusercontent.com/ncthbrt/nact/master/assets/logo.svg?sanitize=true)
+![nact Logo](https://raw.githubusercontent.com/ncthbrt/nact/master/assets/logo.svg?sanitize=true)
 
-An idiomatic actor system for Node.js 
+**nact ⇒ node.js + actors**\
+*your services have never been so µ*
+
 
 <!-- Badges -->
 [![Travis branch](https://img.shields.io/travis/ncthbrt/nact/master.svg?style=flat-square)]()
 [![Coveralls](https://img.shields.io/coveralls/ncthbrt/nact.svg?style=flat-square)]() [![Dependencies](https://david-dm.org/ncthbrt/nact.svg?branch=master&style=flat-square)](https://david-dm.org/ncthbrt/nact) 
 
-[![npm](https://img.shields.io/npm/v/nact.svg?style=flat-square)](https://www.npmjs.com/package/nact) [![js-semistandard-style](https://img.shields.io/badge/code%20style-semistandard-blue.svg?style=flat-square)](https://github.com/Flet/semistandard) 
+[![npm](https://img.shields.io/npm/v/nact.svg?style=flat-square)](https://www.npmjs.com/package/nact) 
+[![js-semistandard-style](https://img.shields.io/badge/code%20style-semistandard-blue.svg?style=flat-square)](https://github.com/Flet/semistandard) 
+[![we are reactive](https://img.shields.io/badge/we_are-reactive-blue.svg?style=flat-square)](https://www.reactivemanifesto.org/)
 
 > Note:
 >
 > Any and all feedback, comments and suggestions are welcome. Please open an issue if you
 > find anything unclear or misleading in the documentation. 
-  
 
-## Sponsored by 
+# Sponsored by 
 [![Root Logo](https://raw.githubusercontent.com/ncthbrt/nact/master/root-logo.svg?sanitize=true)](https://root.co.za)
 
+# Table of Contents
+  * [Introduction](#introduction)
+  * [Core Concepts](#the-basics)
+    * [Getting Started](#getting-started)
+    * [Stateful Actors](#stateful-actors)
+    * [Actor Communication](#actor-communication)
+    * [Querying](#querying)
+    * [Hierarchy](#hierarchy)
+  * [Persistence](#persistence)
+  * [API](#api)
+    * [System Reference](#system-reference)
+    * [Actor Reference](#actor-reference)
+    * [Internal Context](#internal-context)
 
-## Introduction
+# Introduction
+Nact is an implementation of the actor model for Node.js. It is inspired by the approaches taken by [Akka](getakka.net)
+and [Erlang](https://erlang.com). Additionally it attempts to provide a familiar interface to users coming from Redux. 
+The goal of the project is to provide a simple way to create and reason about µ-services and asynchronous event driven 
+architectures in Node.js.
 
-In the late 80s, Erisson needed a language in which to program the next generation of telephone exchanges. The language needed to be distributed by design, highly available, and fault tolerant. A team consisting initially of Joe Armstrong, Mike Williams and Robert Virding came up with an elegant solution: [Erlang](erlang.org). 
+The actor model describes a system made up of a set of entities called actors. An actor could be described as an 
+independently running packet of state. Actors communicate solely by passing messages to one another. 
+Actors can also create more actors. This explanation may sound overly simplified but it really isn't! 
 
-Erlang was inpsired by a mathematical formalism of distributed systems called the [actor model](http://www.brianstorti.com/the-actor-model/). The actor model describes distributed systems as a set of indepently running processes called actors. Actors communicate through message passing and can create, destroy and supervise the lifecycle of child actors. Whenever an actor is sent a message, it is added to its mailbox queue. An actor can retrieve a single message from the front of its mailbox at a time, and in response, perform some side effect, or send messages to other actors. If an actor behaves badly, the integrity of the system is preserved as actors are partitioned from one another.
+Actor systems have been used to drive hugely scalable, highly available systems (such as WhatsApp and
+Twitter), but that doesn't mean it is exclusively for companies with big problems and even bigger pockets. 
 
-A concrete example one could use is Whatsapp (which was known at some point to have been using Erlang on its servers). While their codebase is closed, a naive implemenation of their group chat feature could be as follows:
+Microservice architectures are extremely popular right now, but a common grievance is the difficultly in determining your system's 
+bounded contexts, along with increased operational complexity. Nact is designed to solve these problems:
 
-A connection between a single user's mobile app and the servers is represented as an actor. This actor can receive two types of messages: A `send` message from the user which contains the message contents and a group or user id to which the message is addressed. The other message is a `receive` message, which contains the sender and group id and message contents. The `receive` message is forwarded to the mobile client, while the `send` message is passed to an actor representing the user or group to which the message is addressed. The actor stores the references to all actors involved in the group conversation and whenever it receives a `send` message, it maps it to a message of type `receive` and sends it to all group member actors. 
+  * Creating a new type of actor is a very lightweight operation in contrast to creating a whole new web api and 
+    deployment, and due to the magic of [location transparency](https://doc.akka.io/docs/akka/2.5.4/java/general/remoting.html) 
+    and that actors share no state, it would be trivial to move this actor to a new server when a server starts to show 
+    strain (i.e. no premature optimization)
+  * As actors are usually more strongly encapsulated than a procedural architecture, it means that the spaghetti you 
+    might see in a monolithic system is far less likely to happen in the first place. 
+    
+These benefits make actor systems a compelling alternative to a purely RESTful µ-services architecture.
 
-The relative simplicity (even though it of course misses out some important production details) of this system is exactly the sort of use case Erlang was created for. The trouble is that Erlang, while excellent for some use cases, isn't in my opinion a general purpose enough language, which has had an impact on its ecosystem and libaries. 
-
-NAct is an implementation of the Actor Model for Node.js. It is inspired by the approaches taken by [Akka](getakka.net) (available on the JVM and the CLR) and Erlang. The initial release is focused on providing a good experience on a single node, though later releases will focus on enabling clustering and scaleout. 
+# The basics
 
 ## Getting Started
+[![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/nact-stateless-greeter)
 
-> Note:
-> 
-> Each example is hosted on glitch. 
-> To see source code, click on buttons like the one below.
-> This particular button demonstrates the greeter example below
+> Tip: The remix buttons like the one above, allow you to try out the samples in this guide and make changes to them. 
+> Playing around with the code is probably the  
 
-[![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/https://nact-gettingstarted-greeter.glitch.me)
-
-NAct has only been tested to work on Node 8 and above. You can install NAct in your project by invoking the following:
+Nact has only been tested to work on Node 8 and above. You can install nact in your project by invoking the following:
 
 ```bash
     npm install --save nact
 ```
 
 Once installed, you need to import the start function, which starts and 
-then returns the actor sytem.
+then returns the actor system.
 
 ```js
 const { start } = require('nact');
@@ -59,150 +84,302 @@ const system = start();
 Once you have a reference to the system, it is now possible to create our
 first actor. To create an actor you have to `spawn` it.  As is traditional,
 let us create an actor which says hello when a message is sent to it. Since 
-this actor doesn't require any state, we can use the simpler `spawnFixed` function. 
+this actor doesn't require any state, we can use the simpler `spawnStateless` function. 
 
 ```js
-const greeterActor = spawnFixed(system, (msg) => console.log(`Hello ${msg.name}`), 'greeter');
+const greeter = spawnStateless(
+  system, // parent
+  (msg, ctx) => console.log(`Hello ${msg.name}`), // function
+  'greeter' // name
+);
 ```
-The first argument to `spawnFixed` is the parent, which is in this case the actor system. The hierarchy section will go into more detail about this.
 
-The second argument to `spawnFixed` is a function which is invoked when a message is received. It is important to note that this function cannot reference anything outside the scope of the function. This is because the actor is running in a separate thread and thus can't share memory with the main process. 
+The first argument to `spawnStateless` is the parent, which is in this case the actor system. 
+The hierarchy section will go into more detail about this.
 
-The third argument to `spawnFixed` is the name of the actor,
-which in this case is `'greeter'`. The name field is optional, and 
-if ommitted, the actor is automatically assigned a name by the system.
+The second argument to `spawnStateless` is a function which is invoked when a message is received.
 
-To communicate with the greeter, we need to `tell` it who we are:
+The third argument to `spawnStateless` is the name of the actor, which in this case is `'greeter'`. The name field is 
+optional, and if omitted, the actor is automatically assigned a name by the system.
+
+To communicate with the greeter, we need to `dispatch` a message to it informing it who we are:
 
 ```js
-greeterActor.tell({ name: 'Erlich Bachman' });
+greeter.dispatch({ name: 'Erlich Bachman' });
 ```
 
 This should print `Hello Erlich Bachman` to the console. 
 
 To complete this example, we need to shutdown our system. We can do this
-by calling `system.stop();`
+by calling `system.stop()`
 
-## State
+## Stateful Actors
+[![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/nact-stateful-greeter)
 
-[![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/https://nact-gettingstarted-counter.glitch.me)
+One of the major advantages of an actor system is that it offers a safe way of creating stateful services. A stateful
+actor is created using the `spawn` function.
 
-Most actors aren't very useful without state. But  `spawnFixed` makes it near impossible to create stateful actors. The solution is to use the `spawn` function instead. `spawn` has nearly the same function signature as `spawnFixed` however the fundamental difference is that `spawn` takes 
-in a function which has no arguments and returns another function.
-
-The returned function is used to handle next message and should itself return a function which is used for the message after that (and so on). When no function is returned, the actor is stopped as no further processing may occur.
-
-This may sound quite confusing, but could be likened to an asynchronous `reduce`.  A simple example to demonstrate the use of `spawn` is a counter actor. The counter should be able to hold the current count and up receipt of a message add the value to the count and then log it.
-
-We want to be able to do the following:
+In this example, the state is initialized to an empty object. Each time a message is received by the actor, the current
+state is passed in as the first argument to the actor.  Whenever the actor encounters a name it hasn't encountered yet,
+it returns a copy of previous state with the name added. If it has already encountered the name it simply returns the 
+unchanged current state. The return value is used as the next state.
 
 ```js
-counterActor.tell(1); // logs 1
-counterActor.tell(-1); // logs 0
-counterActor.tell(1); // logs 1
-```
-Assuming we've already created our system, we could implement the counter as follows:
-
-```js
-let counterActor = spawn(
-  system,
-  () => {
-    const counter = (count) => (msg) => {
-       const nextCount = count+msg;
-       console.log(nextCount);
-       return counter(nextCount);
-    };
-    return counter(0);
+const statefulGreeter = spawn(
+  system, 
+  (state = {}, msg, ctx) => {
+    const hasPreviouslyGreetedMe = state[msg.name] !== undefined;
+    if(hasPreviouslyGreetedMe) {
+      console.log(`Hello again ${msg.name}.`);  
+      return state;
+    } else {
+      console.log(
+        `Good to meet you, ${msg.name}.\nI am the stateful-greeter service!`
+      );
+      return { ...state, [msg.name]: true };
+    }
   },
-  'counter'
-);
-```
-Here we pass in a function and then inside the scope of this function,
-define a [higher order function](https://en.wikipedia.org/wiki/Higher-order_function) which takes in the current count and then returns a function which is able to handle the actual message. This function when invoked, prints out hte latest count and then returns itself with an updated count.
-
-Again you can play around with this concept if you click the glitch button at the top of this section.
-
-## Communication between actors
-
-[![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/https://nact-gettingstarted-multi.glitch.me)
-
-We've been looking at examples with single actors, but actors are a part of a _system_. And systems are very sad things if they are made up of just one element. Let us use another traditional test activity PingPong, to demonstrate how actors can communcation with one another. 
-
-In the example below, the ping and pong actors log the message they've received and then tell the sender their name. To start off this perfect
-match, we tell the pingActor the pong actor's name and use `tell's` second parameter to specify the sender as being the pongActor (all actors have a name and path property).
-
-> Note:
->
-> In `pingActor`, we use an arrow function. Thus to issue commands from inside the actor, we need to accept a second argument: the actor context.
->
-> In the `pongActor`, we are using function form, and while it too can accept the context as a second argument, `this` is also set to the context.
-
-
-```js
-let pingActor = spawnFixed(system, (msg, ctx)=>{ console.log(msg); ctx.tell(ctx.sender, ctx.name); }, 'ping'); 
-
-let pongActor = spawnFixed(system, function(msg){ console.log(msg); this.tell(this.sender, this.name); }, 'pong'); 
-
-pingActor.tell(pongActor.name(), pongActor);
-```
-
-In the sample, the system is terminated after 5 seconds to give glitch a break.
-
-
-## Querying instead of Dispatching
-
-[![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/https://nact-gettingstarted-ask.glitch.me)
-
-We've only been passing messages to actors inside the system, but what if we want to pass messages _out_? 
-
-`query()` is the primary means of interacting with actors from outside the actor system (actors have no such problem as they can simply `tell` one another) 
-
-Query behaves very similarly to tell, except that it has a second parameter (a timeout in milliseconds. Ask creates a virtual actor for the request and when this virtual actor receives a message, the promise is resolved. 
-
-> Note:
-> It is best practise to specify a timeout in a production system to ensure 
-> that promises do not remain unresolved indefitely.
-
-Inside the real actor, we have access to a number of global variables and functions, two of which are `tell()` and `sender`. The `tell()` inside the actor behaves very similarly to `actor.tell()` outside it, with the important difference that the first argument to the `tell()` function inside the actor is the recipient. `sender` is just that, the entity that dispatched the message. Putting the two toghether we can resolve the ask with a `tell(sender, <MESSAGE_HERE>)`
-
-The glitch example in this section builds upon the counter example, but instead of simply printing the result, returns the updated count to the sender.
-
-
-## Actor Hierachy and Lifecycle 
-
-One of the more important features of an actor system is its hierachy. Actors can have child actors. The lifecycle of a child actor is tied to that of its parent. If a parent actor is shutdown or terminates, all children in the tree are shut down. This hierachy, combined with [supervision](./#supervision), allows for robust error handling and recovery. 
-
-You can spawn children for a given actor outside the actor function by invoking spawn/spawnFixed on the actor object. Inside the actor function, the context object allowing spawning as follows:
-
-```js
-let actor = spawnFixed (
-  system, 
-  function(msg){ spawn(this.self, ()=>function f(msg){ console.log('I\m a child actor'); return f; }, 'child'); }
+  'stateful-greeter'
 );
 ```
 
-To stop an actor, you can call stop on the actor object e.g. `actor.stop()`. If you want to immediately terminate the actor, you can call `actor.terminate()`. These two methods are quite ungraceful, and often a better alternative is to shutdown the actor from the inside. If you spawned the actor using spawnFixed, you can stop the actor function after receiving a message, by returning `false`. If you instead created the actor using the spawn command, stopping the actor is as simple as not returning the next handler function.
+If no state is returned or the state returned is `undefined` or `null`, stateful actors automatically shut down.
 
-Using spawn:
+## Actor Communication
+[![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/nact-ping-pong)
+
+An actor alone is a somewhat useless construct; actors need to work together. Actors can send messages to one another by
+using the dispatch method found on the context object. 
+
+In this example, the actors Ping and Pong are playing a perfect ping-pong match. 
+To start the match, we dispatch a message to Ping as Pong. 
+
+> Note: Ping is behaving in an asynchronous manner, however it won't handle the next message until the previous 
+> execution has fully resolved.
+
 ```js
-let actor = spawn(
-  system, 
-  // No next function is returned, hence the actor shuts down.
-  () => function(msg,ctx){ console.log('I\'m shutting down now'); }
-);
+const delay = (time) => new Promise((res) => setTimeout(res, time));
+
+const ping = spawnStateless(system, async (msg, ctx) =>  {
+  console.log(msg);
+  // ping: Pong is a little slow. So I'm giving myself a little handicap :P
+  await delay(500);
+  ctx.dispatch(ctx.sender, ctx.name);
+}, 'ping');
+
+const pong = spawnStateless(system, (msg, ctx) =>  {
+  console.log(msg);
+  ctx.dispatch(ctx.sender, ctx.name);
+}, 'pong');
+
+ping.dispatch('begin', pong);
+```
+This produces the following console output:
+
+``` 
+begin
+ping
+pong
+ping
+pong
+ping
+etc...
 ```
 
-Using spawnFixed:
+## Querying
+
+[![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/nact-contacts-1)
+
+
+Actor systems don't live in a vacuum, they need to be available to the outside world.
+Commonly actor systems are fronted by REST APIs or RPC frameworks. REST and RPC style access patterns are blocking: 
+a request comes in, it is processed, and finally returned to the sender using the original connection. To help bridge 
+nact's non blocking nature, references to actors have a `query` function. Query returns a promise.
+
+Similar to `dispatch`, `query` pushes a message on to an actor's mailbox, but differs in that it also creates a virtual 
+actor. When this virtual actor receives a message, the promise returned by the query resolves. 
+
+In addition to the message, `query` also takes in a timeout value measured in milliseconds. If a query takes longer than 
+this time to resolve, it times out and the promise is rejected. A time bounded query is very important in a production 
+system; it ensures that a failing subsystem does not cause cascading faults as queries queue up and stress available 
+system resources.
+
+In this example, we'll create a simple single user in-memory address book system. To make it more realistic, we'll host
+it as an express app. You'll need to install `express`, `body-parser`, `uuid` and of course `nact` using npm to get 
+going.
+
+> Note: We'll expand on this example in later sections.
+
+What are the basic requirements of a basic address book API? It should be able to:
+ - Create a new contact 
+ - Fetch all contacts
+ - Fetch a specific contact
+ - Update an existing contact
+ - Delete a contact
+
+To implement this functionality, we'll need to create the following endpoints:
+  - POST `/api/contacts` - Create a new contact 
+  - GET `/api/contacts` - Fetch all contacts
+  - GET `/api/contacts` - Fetch a specific contact
+  - PATCH `/api/contacts/:contact_id` - Update an existing contact
+  - DELETE `/api/contacts/:contact_id` - Delete a contact
+
+Here are the stubs for setting up the server and endpoints:
+
 ```js
-let actor = spawnFixed(
+const express = require('express');
+const app = express();
+const bodyParser = require('body-parser');
+
+app.use(bodyParser.json());
+
+app.get('/api/contacts', (req,res) => { /* Fetch all contacts */ });
+app.get('/api/contacts/:contact_id', (req,res) => { /* Fetch a specific contact */ });
+app.post('/api/contacts', (req,res) => { /* Create a new contact */ });
+app.patch('/api/contacts/:contact_id', (req,res) => { /* Update an existing contact */ });
+app.delete('api/contacts/:contact_id', (req,res) => { /* Delete a contact */ });
+
+app.listen(process.env.PORT || 3000, function () {
+  console.log('Address book listening on port 3000!');
+});
+```
+
+Because actor are message driven, let us define the message types used between the express api and actor system:
+
+```js
+ const ContactProtocolTypes = {
+   GET_CONTACTS: 'GET_CONTACTS',
+   GET_CONTACT: 'GET_CONTACT',
+   UPDATE_CONTACT: 'UPDATE_CONTACT',
+   REMOVE_CONTACT: 'REMOVE_CONTACT',
+   CREATE_CONTACT: 'CREATE_CONTACT',
+   // Operation sucessful
+   SUCCESS: 'SUCCESS',
+   // And finally if the contact is not found
+   NOT_FOUND: 'NOT_FOUND'
+ };
+```
+Our contacts actor will need to handle each message type:
+
+```js
+const uuid = require('uuid/v4');
+
+const contactsService = spawn(
   system,
-  function(msg){ console.log('I\m shutting down now'); return false; }
+  (state = { contacts:{} }, msg, ctx) => {    
+    if(msg.type === GET_CONTACTS) {
+        // Return all the contacts as an array
+        ctx.dispatch(ctx.sender, { payload: Object.values(state.contacts), type: SUCCESS });
+    } else if (msg.type === CREATE_CONTACT) {
+        const newContact = { id: uuid(), ...msg.payload };
+        const nextState = { contacts: { ...state.contacts, [newContact.id]: newContact } };
+        ctx.dispatch(ctx.sender, { type: SUCCESS, payload: newContact });
+        return nextState;
+    } else {
+        // All these message types require an existing contact
+        // So check if the contact exists
+        const contact = state.contacts[msg.contactId];
+        if (contact) {            
+            switch(msg.type) {
+              case GET_CONTACT: {
+                ctx.dispatch(ctx.sender, { payload: contact, type: SUCCESS });
+                break;
+              }
+              case REMOVE_CONTACT: {
+                // Create a new state with the contact value to undefined
+                const nextState = { ...state.contacts, [contact.id]: undefined };
+                ctx.dispatch(ctx.sender, { type: SUCCESS, payload: contact });
+                return nextState;                 
+              }
+              case UPDATE_CONTACT:  {
+                // Create a new state with the previous fields of the contact merged with the updated ones
+                const updatedContact = {...contact, ...msg.payload };
+                const nextState = { ...state.contacts, [contact.id]: updatedContact };
+                ctx.dispatch(ctx.sender, { type: SUCCESS, payload: updatedContact });
+                return nextState;                 
+              }
+            }
+        } else {
+          // If it does not, dispatch a not found message to the sender
+          ctx.dispatch(ctx.sender, { type: NOT_FOUND, contactId: msg.contactId });
+        }
+    }      
+    // Return the current state if unchanged.
+    return state;
+  },
+  'contacts'
 );
 ```
 
-An actor by default is also terminated when it throws an exception, unless an action is taken by a supervisor.
+Now to wire up the contact service to the API controllers, we have create a query for each endpoint. For example here 
+is how to wire up the fetch a specific contact endpoint (the others are very similar):
 
-To check whether an actor is stopped, you can call `isStopped()` on the actor object. You can obtain a Map of an actor's children by calling children() on the actor object or `ctx.children` from inside the actor function.
-Likewise, to get the parent of an actor you can call `parent()` on the actor object or `parent` on the context object.
+```js
+app.get('/api/contacts/:contact_id', async (req,res) => { 
+  const contactId = req.params.contact_id;
+  const msg = { type: GET_CONTACT, contactId };
+  try {
+    const result = await contactService.query(msg, 250); // Set a 250ms timeout
+    switch(result.type) {
+      case SUCCESS: res.json(result.payload); break;
+      case NOT_FOUND: res.sendStatus(404); break;
+      default:
+        // This shouldn't ever happen, but means that something is really wrong in the application
+        console.error(JSON.stringify(result));
+        res.sendStatus(500);
+        break;
+    }
+  } catch (e) {
+    // 504 is the gateway timeout response code. Nact only throws on queries to a valid actor reference if the timeout 
+    // expires.
+    res.sendStatus(504);
+  }
+});
+```
+Now this is a bit of boilerplate for each endpoint, but could be refactored so as to extract the error handling into a 
+separate function. This would allow us to define the endpoints as follows:
+```js
 
-Children can be stopped from inside the actor by calling `child.stop()`
+app.get('/api/contacts', (req,res) => performQuery({ type: GET_CONTACTS }, res));
+
+app.get('/api/contacts/:contact_id', (req,res) => 
+  performQuery({ type: GET_CONTACT, contactId: req.params.contact_id }, res)
+);
+
+app.post('/api/contacts', (req,res) => performQuery({ type: CREATE_CONTACT, payload: req.body }, res));
+
+app.patch('/api/contacts/:contact_id', (req,res) => 
+  performQuery({ type: UPDATE_CONTACT, contactId: req.params.contact_id, payload: req.body }, res)
+);
+
+app.delete('api/contacts/:contact_id', (req,res) => 
+  performQuery({ type: REMOVE_CONTACT, contactId: req.params.contact_id }, res)
+);
+```
+
+This should leave you with a working but very basic contacts service. 
+
+## Hierarchy
+
+The application we made in the [Querying](#querying) section isn't very useful. For one it only supports a single user's 
+contacts and two it 
+
+Actors can create child actors of their own, and accordingly every actor has a parent. Up till now we've been creating 
+actors which are children of the actor system (which is a pseudo actor). However in a real system, this would be 
+considered an anti pattern, for much the same reasons as placing all your code in a single file is an anti-pattern. 
+By exploiting the actor hierarchy, you can enforce a separation of concerns and encapsulate system functionality, while
+providing a coherent means of dealing with failure.\
+
+![Alt text](https://raw.githubusercontent.com/ncthbrt/nact/master/assets/assets/hierarchy-diagram.svg?sanitize=true)
+
+# Persistence
+
+The contacts service we've been working on STILL isn't very useful. While we've extended the service to support multiple
+users, it has the unfortunate limitation that it loses the contacts each time the machine restarts. To remedy these 
+types of situations, nact extends stateful
+
+# API
+
+## System Reference
+## Actor Reference
+## Internal Context
