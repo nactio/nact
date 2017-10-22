@@ -370,7 +370,7 @@ considered an anti pattern, for much the same reasons as placing all your code i
 By exploiting the actor hierarchy, you can enforce a separation of concerns and encapsulate system functionality, while
 providing a coherent means of dealing with failure.\
 
-![Alt text](https://raw.githubusercontent.com/ncthbrt/nact/master/assets/assets/hierarchy-diagram.svg?sanitize=true)
+![Example of an Actor System Hierarchy](https://raw.githubusercontent.com/ncthbrt/nact/master/assets/hierarchy-diagram.svg?sanitize=true)
 
 # Persistence
 
