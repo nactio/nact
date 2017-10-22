@@ -35,6 +35,7 @@
     * [Internal Context](#internal-context)
 
 # Introduction
+
 Nact is an implementation of the actor model for Node.js. It is inspired by the approaches taken by [Akka](getakka.net)
 and [Erlang](https://erlang.com). Additionally it attempts to provide a familiar interface to users coming from Redux. 
 The goal of the project is to provide a simple way to create and reason about µ-services and asynchronous event driven 
@@ -47,8 +48,7 @@ Actors can also create more actors. This explanation may sound overly simplified
 Actor systems have been used to drive hugely scalable, highly available systems (such as WhatsApp and
 Twitter), but that doesn't mean it is exclusively for companies with big problems and even bigger pockets. 
 
-Microservice architectures are extremely popular right now, but a common grievance is the difficultly in determining your system's 
-bounded contexts, along with increased operational complexity. Nact is designed to solve these problems:
+Microservice architectures are extremely popular right now, but a common grievance is the difficultly in determining your system's bounded contexts, along with increased operational complexity. Nact is designed to solve these problems:
 
   * Creating a new type of actor is a very lightweight operation in contrast to creating a whole new web api and 
     deployment, and due to the magic of [location transparency](https://doc.akka.io/docs/akka/2.5.4/java/general/remoting.html) 
