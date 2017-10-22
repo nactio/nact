@@ -3,10 +3,6 @@
 **nact ⇒ node.js + actors**\
 *your services have never been so µ*
 
-> Note:
->
-> Any and all feedback, comments and suggestions are welcome. Please open an issue if you
-> find anything unclear or misleading in the documentation. 
 
 <!-- Badges -->
 [![Travis branch](https://img.shields.io/travis/ncthbrt/nact/master.svg?style=flat-square)]()
@@ -14,6 +10,12 @@
 
 [![npm](https://img.shields.io/npm/v/nact.svg?style=flat-square)](https://www.npmjs.com/package/nact) 
 [![js-semistandard-style](https://img.shields.io/badge/code%20style-semistandard-blue.svg?style=flat-square)](https://github.com/Flet/semistandard) 
+[![we are reactive](https://img.shields.io/badge/we_are-reactive-blue.svg?style=flat-square)](https://www.reactivemanifesto.org/)
+
+> Note:
+>
+> Any and all feedback, comments and suggestions are welcome. Please open an issue if you
+> find anything unclear or misleading in the documentation. 
 
 # Sponsored by 
 [![Root Logo](https://raw.githubusercontent.com/ncthbrt/nact/master/root-logo.svg?sanitize=true)](https://root.co.za)
@@ -33,18 +35,19 @@
     * [Internal Context](#internal-context)
 
 # Introduction
-Nact is an implementation of the actor model for Node.js. It is inspired by the approaches taken by [Akka](getakka.net) 
-(available on the JVM and the CLR) and [Erlang](https://erlang.com). Additionally it attempts to provide a familiar interface to users coming 
-from Redux. One of the goals of the project is to provide a simple way to create and reason about µ-services and event 
-driven architectures in Node.js.
+Nact is an implementation of the actor model for Node.js. It is inspired by the approaches taken by [Akka](getakka.net)
+and [Erlang](https://erlang.com). Additionally it attempts to provide a familiar interface to users coming from Redux. 
+The goal of the project is to provide a simple way to create and reason about µ-services and asynchronous event driven 
+architectures in Node.js.
 
 The actor model describes a system made up of a set of entities called actors. An actor could be described as an 
 independently running packet of state. Actors communicate solely by passing messages to one another. 
 Actors can also create more actors. This explanation may sound overly simplified but it really isn't! 
 
-Actor Systems have been used to drive hugely scalable, highly available and performant systems (such as WhatsApp, 
-Twitter, and Flipkart), but that doesn't mean it is only for people or companies with big problems. Microservice 
-architectures are extremely popular right now, but a common grievance is the difficultly in determining your system's 
+Actor systems have been used to drive hugely scalable, highly available systems (such as WhatsApp and
+Twitter), but that doesn't mean it is exclusively for companies with big problems and even bigger pockets. 
+
+Microservice architectures are extremely popular right now, but a common grievance is the difficultly in determining your system's 
 bounded contexts, along with increased operational complexity. Nact is designed to solve these problems:
 
   * Creating a new type of actor is a very lightweight operation in contrast to creating a whole new web api and 
@@ -54,7 +57,7 @@ bounded contexts, along with increased operational complexity. Nact is designed 
   * As actors are usually more strongly encapsulated than a procedural architecture, it means that the spaghetti you 
     might see in a monolithic system is far less likely to happen in the first place. 
     
-These benefits make Actor Systems a compelling alternative to a purely RESTful µ-services architecture.
+These benefits make actor systems a compelling alternative to a purely RESTful µ-services architecture.
 
 # The basics
 
@@ -360,14 +363,20 @@ This should leave you with a working but very basic contacts service.
 
 The application we made in the [Querying](#querying) section isn't very useful. For one it only supports a single user's 
 contacts and two it 
+
 Actors can create child actors of their own, and accordingly every actor has a parent. Up till now we've been creating 
 actors which are children of the actor system (which is a pseudo actor). However in a real system, this would be 
 considered an anti pattern, for much the same reasons as placing all your code in a single file is an anti-pattern. 
 By exploiting the actor hierarchy, you can enforce a separation of concerns and encapsulate system functionality, while
-providing a coherent means of dealing with failure.
+providing a coherent means of dealing with failure.\
 
+![Alt text](https://raw.githubusercontent.com/ncthbrt/nact/master/assets/assets/hierarchy-diagram.svg?sanitize=true)
 
 # Persistence
+
+The contacts service we've been working on STILL isn't very useful. While we've extended the service to support multiple
+users, it has the unfortunate limitation that it loses the contacts each time the machine restarts. To remedy these 
+types of situations, nact extends stateful
 
 # API
 
