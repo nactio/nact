@@ -368,9 +368,9 @@ Actors can create child actors of their own, and accordingly every actor has a p
 actors which are children of the actor system (which is a pseudo actor). However in a real system, this would be 
 considered an anti pattern, for much the same reasons as placing all your code in a single file is an anti-pattern. 
 By exploiting the actor hierarchy, you can enforce a separation of concerns and encapsulate system functionality, while
-providing a coherent means of dealing with failure.\
+providing a coherent means of dealing with failure.
 
-![Example of an Actor System Hierarchy](https://raw.githubusercontent.com/ncthbrt/nact/master/assets/hierarchy-diagram.svg?sanitize=true)
+<img height="500px" alt="Example of an Actor System Hierarchy" src="https://raw.githubusercontent.com/ncthbrt/nact/master/assets/hierarchy-diagram.svg?sanitize=true"/>
 
 # Persistence
 
