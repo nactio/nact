@@ -36,28 +36,19 @@
 
 # Introduction
 
-Nact is an implementation of the actor model for Node.js. It is inspired by the approaches taken by [Akka](getakka.net)
-and [Erlang](https://erlang.com). Additionally it attempts to provide a familiar interface to users coming from Redux. 
-The goal of the project is to provide a simple way to create and reason about µ-services and asynchronous event driven 
-architectures in Node.js.
+Nact is an implementation of the actor model for Node.js. It is inspired by the approaches taken by [Akka](getakka.net) and [Erlang](https://erlang.com). Additionally it attempts to provide a familiar interface to users coming from Redux. 
 
-The actor model describes a system made up of a set of entities called actors. An actor could be described as an 
-independently running packet of state. Actors communicate solely by passing messages to one another. 
-Actors can also create more actors. This explanation may sound overly simplified but it really isn't! 
+The goal of the project is to provide a simple way to create and reason about µ-services and asynchronous event driven architectures in Node.js.
 
-Actor systems have been used to drive hugely scalable, highly available systems (such as WhatsApp and
-Twitter), but that doesn't mean it is exclusively for companies with big problems and even bigger pockets. 
+The actor model describes a system made up of a set of entities called actors. An actor could be described as an independently running packet of state. Actors communicate solely by passing messages to one another.  Actors can also create more (child) actors. This explanation may sound overly simplified but it really isn't. 
 
-Microservice architectures are extremely popular right now, but a common grievance is the difficultly in determining your system's bounded contexts, along with increased operational complexity. Nact is designed to solve these problems:
+Actor systems have been used to drive hugely scalable and highly available systems (such as WhatsApp and Twitter), but that doesn't mean it is exclusively for companies with big problems and even bigger pockets. Architecting a system using actors should be an option for any developer considering considering a move to a µ-services architecture:
 
-  * Creating a new type of actor is a very lightweight operation in contrast to creating a whole new web api and 
-    deployment, and due to the magic of [location transparency](https://doc.akka.io/docs/akka/2.5.4/java/general/remoting.html) 
-    and that actors share no state, it would be trivial to move this actor to a new server when a server starts to show 
-    strain (i.e. no premature optimization)
-  * As actors are usually more strongly encapsulated than a procedural architecture, it means that the spaghetti you 
-    might see in a monolithic system is far less likely to happen in the first place. 
-    
-These benefits make actor systems a compelling alternative to a purely RESTful µ-services architecture.
+  * Creating a new type of actor is a very lightweight operation in contrast to creating a whole new microservice.
+  * [Location transparency](https://doc.akka.io/docs/akka/2.5.4/java/general/remoting.html) and no shared state mean that it is possible to defer decisions around where to deploy a subsystem, avoiding the commonly cited problem of prematurely choosing a [bounded context](https://vimeo.com/74589816).
+  * Using actors mean that means that the spaghetti you might see in a monolithic system is far less likely to happen in the first place as message passing creates extremely decoupled systems. 
+  * Actors are asynchronous by design and closely adhere to the principles enumerated in the [reactive manifesto](https://www.reactivemanifesto.org/)
+  * Actors deal well with both stateful and stateless designs, so creating a smart cache, an in-memory event store or a stateful worker is just as easy as creating a stateless repository layer without increasing infrastructural complexity.
 
 # The basics
 
@@ -65,7 +56,7 @@ These benefits make actor systems a compelling alternative to a purely RESTful �
 [![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/nact-stateless-greeter)
 
 > Tip: The remix buttons like the one above, allow you to try out the samples in this guide and make changes to them. 
-> Playing around with the code is probably the  
+> Playing around with the code is probably the best way to get to grips with the framework. 
 
 Nact has only been tested to work on Node 8 and above. You can install nact in your project by invoking the following:
 
@@ -73,18 +64,14 @@ Nact has only been tested to work on Node 8 and above. You can install nact in y
     npm install --save nact
 ```
 
-Once installed, you need to import the start function, which starts and 
-then returns the actor system.
+Once installed, you need to import the start function, which starts and then returns the actor system.
 
 ```js
 const { start } = require('nact');
 const system = start();
 ```
 
-Once you have a reference to the system, it is now possible to create our
-first actor. To create an actor you have to `spawn` it.  As is traditional,
-let us create an actor which says hello when a message is sent to it. Since 
-this actor doesn't require any state, we can use the simpler `spawnStateless` function. 
+Once you have a reference to the system, it is now possible to create our first actor. To create an actor you have to `spawn` it.  As is traditional, let us create an actor which says hello when a message is sent to it. Since this actor doesn't require any state, we can use the simpler `spawnStateless` function.
 
 ```js
 const greeter = spawnStateless(
@@ -94,13 +81,11 @@ const greeter = spawnStateless(
 );
 ```
 
-The first argument to `spawnStateless` is the parent, which is in this case the actor system. 
-The hierarchy section will go into more detail about this.
+The first argument to `spawnStateless` is the parent, which is in this case the actor system. The hierarchy section will go into more detail about this.
 
 The second argument to `spawnStateless` is a function which is invoked when a message is received.
 
-The third argument to `spawnStateless` is the name of the actor, which in this case is `'greeter'`. The name field is 
-optional, and if omitted, the actor is automatically assigned a name by the system.
+The third argument to `spawnStateless` is the name of the actor, which in this case is `'greeter'`. The name field is optional, and if omitted, the actor is automatically assigned a name by the system.
 
 To communicate with the greeter, we need to `dispatch` a message to it informing it who we are:
 
@@ -110,19 +95,14 @@ greeter.dispatch({ name: 'Erlich Bachman' });
 
 This should print `Hello Erlich Bachman` to the console. 
 
-To complete this example, we need to shutdown our system. We can do this
-by calling `system.stop()`
+To complete this example, we need to shutdown our system. We can do this by calling `system.stop()`
 
 ## Stateful Actors
 [![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/nact-stateful-greeter)
 
-One of the major advantages of an actor system is that it offers a safe way of creating stateful services. A stateful
-actor is created using the `spawn` function.
+One of the major advantages of an actor system is that it offers a safe way of creating stateful services. A stateful actor is created using the `spawn` function.
 
-In this example, the state is initialized to an empty object. Each time a message is received by the actor, the current
-state is passed in as the first argument to the actor.  Whenever the actor encounters a name it hasn't encountered yet,
-it returns a copy of previous state with the name added. If it has already encountered the name it simply returns the 
-unchanged current state. The return value is used as the next state.
+In this example, the state is initialized to an empty object. Each time a message is received by the actor, the current state is passed in as the first argument to the actor.  Whenever the actor encounters a name it hasn't encountered yet, it returns a copy of previous state with the name added. If it has already encountered the name it simply returns the unchanged current state. The return value is used as the next state.
 
 ```js
 const statefulGreeter = spawn(
@@ -148,11 +128,9 @@ If no state is returned or the state returned is `undefined` or `null`, stateful
 ## Actor Communication
 [![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/nact-ping-pong)
 
-An actor alone is a somewhat useless construct; actors need to work together. Actors can send messages to one another by
-using the dispatch method found on the context object. 
+An actor alone is a somewhat useless construct; actors need to work together. Actors can send messages to one another by using the dispatch method found on the context object. 
 
-In this example, the actors Ping and Pong are playing a perfect ping-pong match. 
-To start the match, we dispatch a message to Ping as Pong. 
+In this example, the actors Ping and Pong are playing a perfect ping-pong match. To start the match, we dispatch a message to Ping as Pong. 
 
 > Note: Ping is behaving in an asynchronous manner, however it won't handle the next message until the previous 
 > execution has fully resolved.
@@ -191,22 +169,13 @@ etc...
 [![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/nact-contacts-1)
 
 
-Actor systems don't live in a vacuum, they need to be available to the outside world.
-Commonly actor systems are fronted by REST APIs or RPC frameworks. REST and RPC style access patterns are blocking: 
-a request comes in, it is processed, and finally returned to the sender using the original connection. To help bridge 
-nact's non blocking nature, references to actors have a `query` function. Query returns a promise.
+Actor systems don't live in a vacuum, they need to be available to the outside world. Commonly actor systems are fronted by REST APIs or RPC frameworks. REST and RPC style access patterns are blocking: a request comes in, it is processed, and finally returned to the sender using the original connection. To help bridge nact's non blocking nature, references to actors have a `query` function. Query returns a promise.
 
-Similar to `dispatch`, `query` pushes a message on to an actor's mailbox, but differs in that it also creates a virtual 
-actor. When this virtual actor receives a message, the promise returned by the query resolves. 
+Similar to `dispatch`, `query` pushes a message on to an actor's mailbox, but differs in that it also creates a virtual actor. When this virtual actor receives a message, the promise returned by the query resolves. 
 
-In addition to the message, `query` also takes in a timeout value measured in milliseconds. If a query takes longer than 
-this time to resolve, it times out and the promise is rejected. A time bounded query is very important in a production 
-system; it ensures that a failing subsystem does not cause cascading faults as queries queue up and stress available 
-system resources.
+In addition to the message, `query` also takes in a timeout value measured in milliseconds. If a query takes longer than this time to resolve, it times out and the promise is rejected. A time bounded query is very important in a production system; it ensures that a failing subsystem does not cause cascading faults as queries queue up and stress available system resources.
 
-In this example, we'll create a simple single user in-memory address book system. To make it more realistic, we'll host
-it as an express app. You'll need to install `express`, `body-parser`, `uuid` and of course `nact` using npm to get 
-going.
+In this example, we'll create a simple single user in-memory address book system. To make it more realistic, we'll host it as an express app. You'll need to install `express`, `body-parser`, `uuid` and of course `nact` using npm to get going.
 
 > Note: We'll expand on this example in later sections.
 
@@ -311,8 +280,7 @@ const contactsService = spawn(
 );
 ```
 
-Now to wire up the contact service to the API controllers, we have create a query for each endpoint. For example here 
-is how to wire up the fetch a specific contact endpoint (the others are very similar):
+Now to wire up the contact service to the API controllers, we have create a query for each endpoint. For example here is how to wire up the fetch a specific contact endpoint (the others are very similar):
 
 ```js
 app.get('/api/contacts/:contact_id', async (req,res) => { 
@@ -336,8 +304,8 @@ app.get('/api/contacts/:contact_id', async (req,res) => {
   }
 });
 ```
-Now this is a bit of boilerplate for each endpoint, but could be refactored so as to extract the error handling into a 
-separate function. This would allow us to define the endpoints as follows:
+Now this is a bit of boilerplate for each endpoint, but could be refactored so as to extract the error handling into a separate function. This would allow us to define the endpoints as follows:
+
 ```js
 
 app.get('/api/contacts', (req,res) => performQuery({ type: GET_CONTACTS }, res));
@@ -361,25 +329,46 @@ This should leave you with a working but very basic contacts service.
 
 ## Hierarchy
 
-The application we made in the [Querying](#querying) section isn't very useful. For one it only supports a single user's 
-contacts and two it 
+The application we made in the [querying](#querying) section isn't very useful. For one it only supports a single user's  contacts and two it 
 
-Actors can create child actors of their own, and accordingly every actor has a parent. Up till now we've been creating 
-actors which are children of the actor system (which is a pseudo actor). However in a real system, this would be 
-considered an anti pattern, for much the same reasons as placing all your code in a single file is an anti-pattern. 
-By exploiting the actor hierarchy, you can enforce a separation of concerns and encapsulate system functionality, while
-providing a coherent means of dealing with failure.
+Actors can create child actors of their own, and accordingly every actor has a parent. Up till now we've been creating actors which are children of the actor system (which is a pseudo actor). However in a real system, this would be considered an anti pattern, for much the same reasons as placing all your code in a single file is an anti-pattern. By exploiting the actor hierarchy, you can enforce a separation of concerns and encapsulate system functionality, while providing a coherent means of dealing with failure and system shutdown. 
+
+
+
+
 
 <img height="500px" alt="Example of an Actor System Hierarchy" src="https://raw.githubusercontent.com/ncthbrt/nact/master/assets/hierarchy-diagram.svg?sanitize=true"/>
 
 # Persistence
 
-The contacts service we've been working on STILL isn't very useful. While we've extended the service to support multiple
-users, it has the unfortunate limitation that it loses the contacts each time the machine restarts. To remedy these 
-types of situations, nact extends stateful
+The contacts service we've been working on STILL isn't very useful. While we've extended the service to support multiple users, it has the unfortunate limitation that it loses the contacts each time the machine restarts. To remedy these types of situations, nact extends stateful actors by adding a few new methods. 
 
 # API
 
 ## System Reference
+stop
+path
+
 ## Actor Reference
+
+dispatch
+query
+stop
+
+path
+name
+parent
+
 ## Internal Context
+
+parent
+path
+self
+name
+children
+sender
+
+dispatch
+
+recovering
+​    
