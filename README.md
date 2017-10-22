@@ -1,6 +1,12 @@
 ![nact Logo](https://raw.githubusercontent.com/ncthbrt/nact/master/assets/logo.svg?sanitize=true)
 
-An idiomatic actor system for Node.js 
+**nact ⇒ node.js + actors**\
+*your services have never been so µ*
+
+> Note:
+>
+> Any and all feedback, comments and suggestions are welcome. Please open an issue if you
+> find anything unclear or misleading in the documentation. 
 
 <!-- Badges -->
 [![Travis branch](https://img.shields.io/travis/ncthbrt/nact/master.svg?style=flat-square)]()
@@ -9,13 +15,19 @@ An idiomatic actor system for Node.js
 [![npm](https://img.shields.io/npm/v/nact.svg?style=flat-square)](https://www.npmjs.com/package/nact) 
 [![js-semistandard-style](https://img.shields.io/badge/code%20style-semistandard-blue.svg?style=flat-square)](https://github.com/Flet/semistandard) 
 
-> Note:
->
-> Any and all feedback, comments and suggestions are welcome. Please open an issue if you
-> find anything unclear or misleading in the documentation. 
-
 # Sponsored by 
 [![Root Logo](https://raw.githubusercontent.com/ncthbrt/nact/master/root-logo.svg?sanitize=true)](https://root.co.za)
+
+# Table of Contents
+  * [Introduction](#introduction)
+  * [Core Concepts](#the-basics)
+    * [Getting Started](#getting-started)
+    * [Stateful Actors](#stateful-actors)
+    * [Actor Communication](#actor-communication)
+    * [Querying](#querying)
+    * [Hierarchy](#hierarchy)
+  * [Persistence](#persistence)
+  * [API](#api)
 
 # Introduction
 Nact is an implementation of the Actor Model for Node.js. It is inspired by the approaches taken by [Akka](getakka.net) 
@@ -42,7 +54,7 @@ In short, Actor Systems are an excellent alternative to a purely RESTful µ-serv
 
 # The basics
 
-## Setup and first actor
+## Getting Started
 
 Nact has only been tested to work on Node 8 and above. You can install nact in your project by invoking the following:
 
@@ -91,7 +103,7 @@ by calling `system.stop();`
 ## Stateful Actors
 
 One of the major advantages of an actor system is that it offers a safe way of creating stateful services. A stateful
-actor is created using the ```spawn`` function.
+actor is created using the `spawn` function.
 
 In this example, the state is initialized to an empty object. Each time a message is received by the actor, the current
 state is passed in as the first argument to the actor.  Whenever the actor encounters a name it hasn't encountered yet,
@@ -99,21 +111,77 @@ it returns a copy of previous state with the name added. If it has already encou
 unchanged current state. The return value is used as the next state.
 
 ```js
-const statefulGreeter = spawn(system, (state = {}, msg, ctx) => {
-  const hasPreviouslyGreetedMe = state[msg.name] !== undefined;
-  if(hasPreviouslyGreetedMe) {
-    console.log(`Hello again ${msg.name}.`);  
-    return state;
-  } else {
-    console.log(`Good to meet you, ${msg.name}. I am the stateful-greeter service!`);
-    return { ...state, [msg.name]: true };
-  }
-}, 'stateful-greeter');
+const statefulGreeter = spawn(
+  system, 
+  (state = {}, msg, ctx) => {
+    const hasPreviouslyGreetedMe = state[msg.name] !== undefined;
+    if(hasPreviouslyGreetedMe) {
+      console.log(`Hello again ${msg.name}.`);  
+      return state;
+    } else {
+      console.log(
+        `Good to meet you, ${msg.name}.
+         I am the stateful-greeter service!`
+      );
+      return { ...state, [msg.name]: true };
+    }
+  },
+  'stateful-greeter'
+);
+```
+
+If no state is returned or the state returned is `undefined` or `null`, stateful actors automatically shuts down.
+
+## Actor Communication
+
+An actor alone is a somewhat useless construct; actors need to work together. Actors can send messages to one another by
+using the dispatch method found on the context object. 
+
+In this example, the actors Ping and Pong are playing a perfect ping-pong match. 
+To start the match, we dispatch a message to Ping as Pong.
+
+```js
+const ping = spawnStateless(system, (msg, ctx) =>  {
+  console.log(msg);
+  ctx.dispatch(ctx.sender, ctx.name);
+}, 'ping');
+
+const pong = spawnStateless(system, (msg, ctx) =>  {
+  console.log(msg);
+  ctx.dispatch(ctx.sender, ctx.name);
+}, 'ping');
+
+ping.dispatch('begin', pong);
+```
+This produces the following console output:
+
+``` 
+begin
+ping
+pong
+ping
+pong
+ping
+etc...
 ```
 
 ## Querying
 
-Actor systems need to interact with the outside world
+Actor systems can't live in a vacuum, they need to be available to the outside world.
+Commonly Actor Systems are fronted by REST APIs or RPC frameworks. REST and RPC style access patterns are blocking: 
+a request comes in, it is processed, and finally returned to the sender using the original connection. To help bridge 
+nact's non blocking nature, references to actors have a `query` function. Query returns a promise.
+Similar to `dispatch`, `query` pushes a message on to an actor's mailbox, but differs in that it also creates a virtual 
+actor. When this virtual actor receives a message, the promise returned by the query resolves. 
+
+In addition to the message, `query` also takes in a timeout value measured in milliseconds. If a query takes longer than 
+this time to resolve, it times out and the promise is rejected. A time bounded query is very important in a production 
+system, as it ensures that a failing subsystem does not cause cascading faults as queries queue up and stress available 
+system resources.
+
+In this example, we'll create an in-memory address book system. To make it more realistic,
+we'll host it as an express app. 
+
 
 ## Hierarchy
 
@@ -129,4 +197,10 @@ In this example
 
 Stateful and Stateful Actors take in a the context parameter
 
-## Persistent actor
+# Persistence
+
+# API
+
+## System
+## Context Object
+## Actor Reference
