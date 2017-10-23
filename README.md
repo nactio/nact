@@ -312,7 +312,7 @@ app.get('/api/contacts/:contact_id', async (req,res) => {
   }
 });
 ```
-Now this is a bit of boilerplate for each endpoint, but could be refactored so as to extract the error handling into a separate function. This would allow us to define the endpoints as follows:
+Now this is a bit of boilerplate for each endpoint, but could be refactored so as to extract the error handling into a separate function (called `performQuery`, for the full definition, click on the glitch button). This would allow us to define the endpoints as follows:
 
 ```js
 
