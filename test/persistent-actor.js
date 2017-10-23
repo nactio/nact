@@ -5,8 +5,8 @@ chai.should();
 const { MockPersistenceEngine } = require('./mock-persistence-engine');
 const { BrokenPersistenceEngine } = require('./broken-persistence-engine');
 const { PartiallyBrokenPersistenceEngine } = require('./partially-broken-persistence-engine');
-const { start } = require('../lib');
-const { spawnPersistent, configurePersistence, PersistedEvent } = require('../lib/extensions/persistence');
+const { start, spawnPersistent, configurePersistence } = require('../lib');
+const { PersistedEvent } = require('../lib/extensions/persistence');
 const chaiAsPromised = require('chai-as-promised');
 chai.use(chaiAsPromised);
 const { Promise } = require('bluebird');
@@ -20,6 +20,7 @@ const isStopped = (reference) => {
     return true;
   }
 };
+
 // Begin helpers
 const ignore = () => {};
 

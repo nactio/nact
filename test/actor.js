@@ -1,6 +1,7 @@
 /* eslint-env mocha */
 /* eslint-disable no-unused-expressions */
 const chai = require('chai');
+// onCompleted
 const chaiAsPromised = require('chai-as-promised');
 chai.use(chaiAsPromised);
 chai.should();
@@ -305,6 +306,49 @@ describe('Actor', function () {
       let child2 = spawnStateless(system, function (msg) { this.dispatch(msg, 'hello from child2'); });
       let result = await child1.query(child2);
       result.should.equal('hello from child2');
+    });
+  });
+
+  describe('#state$', function () {
+    let system;
+    beforeEach(() => { system = start(); });
+    afterEach(() => system.stop());
+
+    it('should allow subscription to state changes', async function () {
+      let actor = spawn(system, (state, msg) => msg);
+      let arr = [];
+      actor.state$.subscribe(value => {
+        arr = [...arr, value];
+      });
+      actor.dispatch(1);
+      actor.dispatch(2);
+      actor.dispatch(3);
+      await retry(() => arr.should.deep.equal([undefined, 1, 2, 3]), 5, 10);
+    });
+
+    it('should allow only emit when state has changed', async function () {
+      let state1 = { hello: 'world' };
+      let state2 = { it_has: 'been fun' };
+
+      let actor = spawn(system, (state, msg) => msg);
+      let arr = [];
+      actor.state$.subscribe(value => {
+        arr = [...arr, value];
+      });
+      actor.dispatch(state1);
+      actor.dispatch(state1);
+      actor.dispatch(state2);
+      await retry(() => arr.should.deep.equal([undefined, state1, state2]), 5, 10);
+    });
+
+    it('should emit done when the actor is stopped', async function () {
+      let actor = spawn(system, (state, msg) => msg);
+      let observableClosed = false;
+      actor.state$.last().subscribe(x => { observableClosed = true; });
+      actor.dispatch(1);
+      actor.dispatch(2);
+      actor.stop();
+      await retry(() => observableClosed.should.be.true, 5, 10);
     });
   });
 });
