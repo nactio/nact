@@ -46,7 +46,7 @@ Actor systems have been used to drive hugely scalable and highly available syste
 
   * Creating a new type of actor is a very lightweight operation in contrast to creating a whole new microservice.
   * [Location transparency](https://doc.akka.io/docs/akka/2.5.4/java/general/remoting.html) and no shared state mean that it is possible to defer decisions around where to deploy a subsystem, avoiding the commonly cited problem of prematurely choosing a [bounded context](https://vimeo.com/74589816).
-  * Using actors mean that means that the spaghetti you might see in a monolithic system is far less likely to happen in the first place as message passing creates extremely decoupled systems. 
+  * Using actors mean that the spaghetti you might see in a monolithic system is far less likely to happen in the first place as message passing creates extremely decoupled systems. 
   * Actors are asynchronous by design and closely adhere to the principles enumerated in the [reactive manifesto](https://www.reactivemanifesto.org/)
   * Actors deal well with both stateful and stateless designs, so creating a smart cache, an in-memory event store or a stateful worker is just as easy as creating a stateless repository layer without increasing infrastructural complexity.
 
