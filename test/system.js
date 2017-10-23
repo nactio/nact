@@ -3,6 +3,15 @@
 const chai = require('chai');
 chai.should();
 const { start, spawnStateless, spawn } = require('../lib');
+const { applyOrThrowIfStopped } = require('../lib/references');
+
+const isStopped = (reference) => {
+  try {
+    return applyOrThrowIfStopped(reference).stopped;
+  } catch (e) {
+    return true;
+  }
+};
 
 const ignore = () => {};
 
@@ -31,7 +40,7 @@ describe('System', function () {
 
     it('should register as being stopped', function () {
       system.stop();
-      system.isStopped().should.be.true;
+      isStopped(system).should.be.true;
     });
   });
 });
