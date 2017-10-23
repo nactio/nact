@@ -323,7 +323,7 @@ describe('Actor', function () {
       actor.dispatch(1);
       actor.dispatch(2);
       actor.dispatch(3);
-      await retry(() => arr.should.deep.equal([undefined, 1, 2, 3]), 5, 10);
+      await retry(() => arr.should.deep.equal([1, 2, 3]), 5, 10);
     });
 
     it('should allow only emit when state has changed', async function () {
@@ -338,7 +338,7 @@ describe('Actor', function () {
       actor.dispatch(state1);
       actor.dispatch(state1);
       actor.dispatch(state2);
-      await retry(() => arr.should.deep.equal([undefined, state1, state2]), 5, 10);
+      await retry(() => arr.should.deep.equal([state1, state2]), 5, 10);
     });
 
     it('should emit done when the actor is stopped', async function () {
