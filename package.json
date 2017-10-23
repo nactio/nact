@@ -1,6 +1,6 @@
 {
   "name": "nact",
-  "version": "2.0.3",
+  "version": "2.1.0",
   "description": "Mulithreaded implementation of the actor model for node",
   "main": "lib/index.js",
   "scripts": {
