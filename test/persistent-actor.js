@@ -11,7 +11,15 @@ const chaiAsPromised = require('chai-as-promised');
 chai.use(chaiAsPromised);
 const { Promise } = require('bluebird');
 const delay = Promise.delay;
+const { applyOrThrowIfStopped } = require('../lib/references');
 
+const isStopped = (reference) => {
+  try {
+    return applyOrThrowIfStopped(reference).stopped;
+  } catch (e) {
+    return true;
+  }
+};
 // Begin helpers
 const ignore = () => {};
 
@@ -123,7 +131,7 @@ describe('PersistentActor', () => {
         concatenativeFunction(''),
         'test'
       );
-    await retry(() => actor.isStopped().should.be.true, 5, 10);
+    await retry(() => isStopped(actor).should.be.true, 5, 10);
   });
 
   it('should signal an error if restore stream fails midway through recovery', async () => {
@@ -137,7 +145,7 @@ describe('PersistentActor', () => {
       concatenativeFunction(''),
       'frog'
     );
-    await retry(() => actor.isStopped().should.be.true, 5, 10);
+    await retry(() => isStopped(actor).should.be.true, 5, 10);
   });
 
   it('should be able to restore and then persist new events (with correct seqNumbers)', async () => {
