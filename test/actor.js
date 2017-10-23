@@ -347,6 +347,7 @@ describe('Actor', function () {
       actor.state$.last().subscribe(x => { observableClosed = true; });
       actor.dispatch(1);
       actor.dispatch(2);
+      await delay(10);
       actor.stop();
       await retry(() => observableClosed.should.be.true, 5, 10);
     });
