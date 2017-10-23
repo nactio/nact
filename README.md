@@ -1,7 +1,6 @@
 ![nact Logo](https://raw.githubusercontent.com/ncthbrt/nact/master/assets/logo.svg?sanitize=true)
 
 **nact ⇒ node.js + actors**\
-
 *your services have never been so µ*
 
 
@@ -125,6 +124,14 @@ const statefulGreeter = spawn(
 ```
 
 If no state is returned or the state returned is `undefined` or `null`, stateful actors automatically shut down.
+
+Another feature of stateful actors is that you can subscribe to state changes by using the `state$` object. `state$` is a [RxJS](http://reactivex.io/rxjs/manual/index.html) observable stream, which makes it very composable. You can map, filter, combine, throttle and perform many other operations on the stream. For example, you could create a subscription to the statefulGreeter which prints a count of the number of unique names which have been greeted:
+
+```js
+statefulGreeter.state$
+               .map(state => Object.keys(state).length)
+               .subscribe(count => console.log(`The statefulGreeter has now greeted ${count} unique names`);
+```
 
 ## Actor Communication
 [![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/nact-ping-pong)
@@ -333,10 +340,6 @@ This should leave you with a working but very basic contacts service.
 The application we made in the [querying](#querying) section isn't very useful. For one it only supports a single user's  contacts and two it 
 
 Actors can create child actors of their own, and accordingly every actor has a parent. Up till now we've been creating actors which are children of the actor system (which is a pseudo actor). However in a real system, this would be considered an anti pattern, for much the same reasons as placing all your code in a single file is an anti-pattern. By exploiting the actor hierarchy, you can enforce a separation of concerns and encapsulate system functionality, while providing a coherent means of dealing with failure and system shutdown. 
-
-
-
-
 
 <img height="500px" alt="Example of an Actor System Hierarchy" src="https://raw.githubusercontent.com/ncthbrt/nact/master/assets/hierarchy-diagram.svg?sanitize=true"/>
 
