@@ -50,6 +50,9 @@ Actor systems have been used to drive hugely scalable and highly available syste
   * Actors are asynchronous by design and closely adhere to the principles enumerated in the [reactive manifesto](https://www.reactivemanifesto.org/)
   * Actors deal well with both stateful and stateless designs, so creating a smart cache, an in-memory event store or a stateful worker is just as easy as creating a stateless repository layer without increasing infrastructural complexity.
 
+> Note: While network transparency and clustering are planned features of the framework,
+> they have not been implemented yet.
+
 # The basics
 
 ## Getting Started
