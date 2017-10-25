@@ -81,7 +81,7 @@ const greeter = spawnStateless(
 );
 ```
 
-The first argument to `spawnStateless` is the parent, which is in this case the actor system. The [hierarchy](#Hierarchy) section will go into more detail about this.
+The first argument to `spawnStateless` is the parent, which is in this case the actor system. The [hierarchy](#hierarchy) section will go into more detail about this.
 
 The second argument to `spawnStateless` is a function which is invoked when a message is received.
 
