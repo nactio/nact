@@ -40,7 +40,7 @@ Nact is an implementation of the actor model for Node.js. It is inspired by the 
 
 The goal of the project is to provide a simple way to create and reason about µ-services and asynchronous event driven architectures in Node.js.
 
-The actor model describes a system made up of a set of entities called actors. An actor could be described as an independently running packet of state. Actors communicate solely by passing messages to one another.  Actors can also create more (child) actors. This explanation may sound overly simplified but it really isn't. 
+The actor model describes a system made up of a set of entities called actors. An actor could be described as an independently running packet of state. Actors communicate solely by passing messages to one another.  Actors can also create more (child) actors.
 
 Actor systems have been used to drive hugely scalable and highly available systems (such as WhatsApp and Twitter), but that doesn't mean it is exclusively for companies with big problems and even bigger pockets. Architecting a system using actors should be an option for any developer considering considering a move to a µ-services architecture:
 
@@ -81,7 +81,7 @@ const greeter = spawnStateless(
 );
 ```
 
-The first argument to `spawnStateless` is the parent, which is in this case the actor system. The hierarchy section will go into more detail about this.
+The first argument to `spawnStateless` is the parent, which is in this case the actor system. The [hierarchy](#Hierarchy) section will go into more detail about this.
 
 The second argument to `spawnStateless` is a function which is invoked when a message is received.
 
@@ -125,7 +125,7 @@ const statefulGreeter = spawn(
 
 If no state is returned or the state returned is `undefined` or `null`, stateful actors automatically shut down.
 
-Another feature of stateful actors is that you can subscribe to state changes by using the `state$` object. `state$` is a [RxJS](http://reactivex.io/rxjs/manual/index.html) observable stream, which makes it very composable. You can map, filter, combine, throttle and perform many other operations on the stream. For example, you could create a subscription to the statefulGreeter which prints a count of the number of unique names which have been greeted:
+Another feature of stateful actors is that you can subscribe to state changes by using the `state$` property. `state$` is a [RxJS](http://reactivex.io/rxjs/manual/index.html) observable stream, which makes it very composable. You can map, filter, combine, throttle and perform many other operations on the stream. For example, you could create a subscription to the statefulGreeter which prints a count of the number of unique names which have been greeted:
 
 ```js
 statefulGreeter.state$
