@@ -41,7 +41,7 @@ const retry = async (assertion, remainingAttempts, retryInterval = 0) => {
     return assertion();
   } else {
     try {
-      assertion();
+      await Promise.resolve(assertion());
     } catch (e) {
       await delay(retryInterval);
       await retry(assertion, remainingAttempts - 1, retryInterval);
@@ -76,11 +76,12 @@ describe('Actor', function () {
 
     it('allows promises to resolve inside actor', async function () {
       const getMockValue = () => Promise.resolve(2);
-      let child = spawnStateless(
+      let child = spawn(
         system,
-        async function (msg) {
+        async function (state = {}, msg) {
           let result = await getMockValue();
           this.sender.dispatch(result, this.self);
+          return state;
         }
       );
 
@@ -108,24 +109,67 @@ describe('Actor', function () {
       result.should.equal('Hello World. The time has come!!');
     });
 
-    it('evalutes in order when returning a promise from the actor function', async function () {
-      let child = spawnStateless(
+    it('evalutes in order when returning a promise from a stateful actor function', async function () {
+      let child = spawn(
         system,
-        async function (msg) {
-          if (msg === 2) {
-            await delay(10);
+        async function (state = {}, msg) {
+          if (msg.number === 2) {
+            await delay(30);
           }
-          this.sender.dispatch(msg, this.self);
+          msg.listener.dispatch({ number: msg.number });
+          return state;
         },
         'testActor'
       );
 
-      let result1 = await child.query(1);
-      let result2 = await child.query(2);
-      let result3 = await child.query(3);
-      result1.should.equal(1);
-      result2.should.equal(2);
-      result3.should.equal(3);
+      let listener = spawn(
+        system,
+        async function (state = [], msg) {
+          if (msg.number) {
+            return [...state, msg.number];
+          } else {
+            this.sender.dispatch(state);
+          }
+          return state;
+        },
+        'listener'
+      );
+
+      child.dispatch({ listener, number: 1 });
+      child.dispatch({ listener, number: 2 });
+      child.dispatch({ listener, number: 3 });
+      await retry(async () => (await listener.query({})).should.deep.equal([1, 2, 3]), 5, 10);
+    });
+
+    it('evalutes out of order when returning a promise from a stateless actor function', async function () {
+      let child = spawnStateless(
+        system,
+        async function (msg) {
+          if (msg.number === 2) {
+            await delay(30);
+          }
+          msg.listener.dispatch({ number: msg.number });
+        },
+        'testActor'
+      );
+
+      let listener = spawn(
+        system,
+        async function (state = [], msg) {
+          if (msg.number) {
+            return [...state, msg.number];
+          } else {
+            this.sender.dispatch(state);
+          }
+          return state;
+        },
+        'listener'
+      );
+
+      child.dispatch({ listener, number: 1 });
+      child.dispatch({ listener, number: 2 });
+      child.dispatch({ listener, number: 3 });
+      await retry(async () => (await listener.query({})).should.deep.equal([1, 3, 2]), 5, 10);
     });
 
     it('should automatically stop if error is thrown', async function () {
@@ -137,7 +181,7 @@ describe('Actor', function () {
 
     it('should automatically stop if rejected promise is thrown', async function () {
       console.error = ignore;
-      let child = spawnStateless(system, (msg) => Promise.reject(new Error('testError')));
+      let child = spawn(system, (state = {}, msg) => Promise.reject(new Error('testError')));
       child.dispatch();
       await retry(() => isStopped(child).should.be.true, 12, 10);
     });
@@ -157,6 +201,22 @@ describe('Actor', function () {
       child.stop();
       (() => spawnStateless(child, ignore)).should.throw(Error);
       (() => spawnStateless(child, () => ignore)).should.throw(Error);
+    });
+
+    it('should not process any more messages after being stopped', async function () {
+      let child = spawn(system, async (state = {}, msg, ctx) => {
+        if (msg === 1) {
+          await delay(20);
+        } else {
+          ctx.sender.dispatch(msg);
+        }
+        return state;
+      });
+      child.dispatch(1);
+      let resultPromise = child.query(2, 100);
+      await delay(20);
+      child.stop();
+      await resultPromise.should.be.rejectedWith(Error);
     });
 
     it('stops children when parent is stopped', async function () {

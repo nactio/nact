@@ -100,6 +100,9 @@ This should print `Hello Erlich Bachman` to the console.
 
 To complete this example, we need to shutdown our system. We can do this by calling `system.stop()`
 
+> Note: Stateless actors can service multiple requests at the same time. Statelessness means that the actor
+> does not have to cater for concurrency issues.
+
 ## Stateful Actors
 [![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/nact-stateful-greeter)
 
