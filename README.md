@@ -40,15 +40,18 @@ Nact is an implementation of the actor model for Node.js. It is inspired by the 
 
 The goal of the project is to provide a simple way to create and reason about µ-services and asynchronous event driven architectures in Node.js.
 
-The actor model describes a system made up of a set of entities called actors. An actor could be described as an independently running packet of state. Actors communicate solely by passing messages to one another.  Actors can also create more (child) actors. This explanation may sound overly simplified but it really isn't. 
+The actor model describes a system made up of a set of entities called actors. An actor could be described as an independently running packet of state. Actors communicate solely by passing messages to one another.  Actors can also create more (child) actors.
 
 Actor systems have been used to drive hugely scalable and highly available systems (such as WhatsApp and Twitter), but that doesn't mean it is exclusively for companies with big problems and even bigger pockets. Architecting a system using actors should be an option for any developer considering considering a move to a µ-services architecture:
 
   * Creating a new type of actor is a very lightweight operation in contrast to creating a whole new microservice.
   * [Location transparency](https://doc.akka.io/docs/akka/2.5.4/java/general/remoting.html) and no shared state mean that it is possible to defer decisions around where to deploy a subsystem, avoiding the commonly cited problem of prematurely choosing a [bounded context](https://vimeo.com/74589816).
-  * Using actors mean that means that the spaghetti you might see in a monolithic system is far less likely to happen in the first place as message passing creates extremely decoupled systems. 
+  * Using actors mean that the spaghetti you might see in a monolithic system is far less likely to happen in the first place as message passing creates extremely decoupled systems. 
   * Actors are asynchronous by design and closely adhere to the principles enumerated in the [reactive manifesto](https://www.reactivemanifesto.org/)
   * Actors deal well with both stateful and stateless designs, so creating a smart cache, an in-memory event store or a stateful worker is just as easy as creating a stateless repository layer without increasing infrastructural complexity.
+
+> Note: While network transparency and clustering are planned features of the framework,
+> they have not been implemented yet.
 
 # The basics
 
@@ -81,7 +84,7 @@ const greeter = spawnStateless(
 );
 ```
 
-The first argument to `spawnStateless` is the parent, which is in this case the actor system. The hierarchy section will go into more detail about this.
+The first argument to `spawnStateless` is the parent, which is in this case the actor system. The [hierarchy](#hierarchy) section will go into more detail about this.
 
 The second argument to `spawnStateless` is a function which is invoked when a message is received.
 
@@ -125,7 +128,7 @@ const statefulGreeter = spawn(
 
 If no state is returned or the state returned is `undefined` or `null`, stateful actors automatically shut down.
 
-Another feature of stateful actors is that you can subscribe to state changes by using the `state$` object. `state$` is a [RxJS](http://reactivex.io/rxjs/manual/index.html) observable stream, which makes it very composable. You can map, filter, combine, throttle and perform many other operations on the stream. For example, you could create a subscription to the statefulGreeter which prints a count of the number of unique names which have been greeted:
+Another feature of stateful actors is that you can subscribe to state changes by using the `state$` property. `state$` is a [RxJS](http://reactivex.io/rxjs/manual/index.html) observable stream, which makes it very composable. You can map, filter, combine, throttle and perform many other operations on the stream. For example, you could create a subscription to the statefulGreeter which prints a count of the number of unique names which have been greeted:
 
 ```js
 statefulGreeter.state$
@@ -314,7 +317,7 @@ app.get('/api/contacts/:contact_id', async (req,res) => {
   }
 });
 ```
-Now this is a bit of boilerplate for each endpoint, but could be refactored so as to extract the error handling into a separate function. This would allow us to define the endpoints as follows:
+Now this is a bit of boilerplate for each endpoint, but could be refactored so as to extract the error handling into a separate function (called `performQuery`, for the full definition, click on the glitch button). This would allow us to define the endpoints as follows:
 
 ```js
 
