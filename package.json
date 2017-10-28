@@ -1,7 +1,7 @@
 {
   "name": "nact",
   "version": "3.1.0",
-  "description": "Mulithreaded implementation of the actor model for node",
+  "description": "Implementation of the actor model for node",
   "main": "lib/index.js",
   "scripts": {
     "test": "yarn run lint && nyc mocha ./test/*.js",
