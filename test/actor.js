@@ -14,7 +14,7 @@ const { applyOrThrowIfStopped } = require('../lib/references');
 const spawnChildrenEchoer = (parent, name) =>
   spawnStateless(
     parent,
-    function (msg) { this.dispatch(this.sender, [...this.children.keys()]); },
+    function (msg) { this.sender.dispatch([...this.children.keys()], this.self); },
     name
   );
 
@@ -80,7 +80,7 @@ describe('Actor', function () {
         system,
         async function (msg) {
           let result = await getMockValue();
-          this.dispatch(this.sender, result);
+          this.sender.dispatch(result, this.self);
         }
       );
 
@@ -93,7 +93,7 @@ describe('Actor', function () {
         system,
          function (state = '', msg) {
            if (msg.type === 'query') {
-             this.dispatch(this.sender, state);
+             this.sender.dispatch(state, this.self);
              return state;
            } else if (msg.type === 'append') {
              return state + msg.payload;
@@ -115,7 +115,7 @@ describe('Actor', function () {
           if (msg === 2) {
             await delay(10);
           }
-          this.dispatch(this.sender, msg);
+          this.sender.dispatch(msg, this.self);
         },
         'testActor'
       );
@@ -244,7 +244,7 @@ describe('Actor', function () {
           spawnStateless(this.self, ignore, 'child1');
           spawn(this.self, ignore, 'child2');
         } else {
-          this.dispatch(this.sender, [...this.children.keys()]);
+          this.sender.dispatch([...this.children.keys()], this.self);
         }
       }, 'test');
       actor.dispatch('spawn');
@@ -268,7 +268,7 @@ describe('Actor', function () {
     it(`should reject a promise if the actor hasn't responded with the given timespan`, async function () {
       let actor = spawnStateless(
         system,
-        async (msg, ctx) => { await delay(10); ctx.dispatch(ctx.sender, 'done'); },
+        async (msg, ctx) => { await delay(10); ctx.sender.dispatch('done', ctx.self); },
         'test'
       );
       (await (actor.query('test', 1).catch(x => x))).should.be.instanceOf(Error);
@@ -277,35 +277,10 @@ describe('Actor', function () {
     it(`should resolve the promise if the actor has responded with the given timespan, clearing the timeout`, async function () {
       let actor = spawnStateless(
         system,
-        async (msg, ctx) => { await delay(10); ctx.dispatch(ctx.sender, 'done'); },
+        async (msg, ctx) => { await delay(10); ctx.sender.dispatch('done', ctx.self); },
         'test'
       );
       (await actor.query('test', 50)).should.equal('done');
-    });
-  });
-
-  describe('#dispatch()', function () {
-    let system;
-    beforeEach(() => { system = start(); });
-    afterEach(() => system.stop());
-
-    it('dispatching inside actor with non addressable recipient type should throw error', async function () {
-      let child = spawnStateless(system, function (msg) {
-        try {
-          this.dispatch({}, 'test');
-        } catch (e) {
-          this.dispatch(this.sender, e);
-        }
-      });
-      let result = await child.query();
-      result.should.be.an('error');
-    });
-
-    it('should be able to dispatch other actors', async function () {
-      let child1 = spawnStateless(system, function (msg) { this.dispatch(msg, this.sender); });
-      let child2 = spawnStateless(system, function (msg) { this.dispatch(msg, 'hello from child2'); });
-      let result = await child1.query(child2);
-      result.should.equal('hello from child2');
     });
   });
 

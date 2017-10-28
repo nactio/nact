@@ -40,7 +40,7 @@ const retry = async (assertion, remainingAttempts, retryInterval = 0) => {
 const concatenativeFunction = (initialState, additionalActions = ignore) =>
   async function (state = initialState, msg, ctx) {
     if (!ctx.recovering) {
-      ctx.dispatch(ctx.sender, state + msg);
+      ctx.sender.dispatch(state + msg, ctx.self);
     }
     await Promise.resolve(additionalActions(state, msg, ctx));
     return state + msg;

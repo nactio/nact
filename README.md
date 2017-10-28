@@ -136,9 +136,12 @@ statefulGreeter.state$
 ## Actor Communication
 [![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/nact-ping-pong)
 
-An actor alone is a somewhat useless construct; actors need to work together. Actors can send messages to one another by using the dispatch method found on the context object. 
+An actor alone is a somewhat useless construct; actors need to work together. Actors can send messages to one another by using the `dispatch` method. 
 
 In this example, the actors Ping and Pong are playing a perfect ping-pong match. To start the match, we dispatch a message to Ping as Pong. 
+
+The second parameter of `dispatch` is who the sender. This parameter is very useful in allowing an actor
+to service requests without knowing explicitly who the sender is.
 
 > Note: Ping is behaving in an asynchronous manner, however it won't handle the next message until the previous 
 > execution has fully resolved.
@@ -150,12 +153,12 @@ const ping = spawnStateless(system, async (msg, ctx) =>  {
   console.log(msg);
   // ping: Pong is a little slow. So I'm giving myself a little handicap :P
   await delay(500);
-  ctx.dispatch(ctx.sender, ctx.name);
+  ctx.sender.dispatch(ctx.name, ctx.self);
 }, 'ping');
 
 const pong = spawnStateless(system, (msg, ctx) =>  {
   console.log(msg);
-  ctx.dispatch(ctx.sender, ctx.name);
+  ctx.sender.dispatch(ctx.name, ctx.self);  
 }, 'pong');
 
 ping.dispatch('begin', pong);
@@ -175,7 +178,6 @@ etc...
 ## Querying
 
 [![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/nact-contacts-1)
-
 
 Actor systems don't live in a vacuum, they need to be available to the outside world. Commonly actor systems are fronted by REST APIs or RPC frameworks. REST and RPC style access patterns are blocking: a request comes in, it is processed, and finally returned to the sender using the original connection. To help bridge nact's non blocking nature, references to actors have a `query` function. Query returns a promise.
 
@@ -246,11 +248,11 @@ const contactsService = spawn(
   (state = { contacts:{} }, msg, ctx) => {    
     if(msg.type === GET_CONTACTS) {
         // Return all the contacts as an array
-        ctx.dispatch(ctx.sender, { payload: Object.values(state.contacts), type: SUCCESS });
+        ctx.sender.dispatch({ payload: Object.values(state.contacts), type: SUCCESS }, ctx.self);
     } else if (msg.type === CREATE_CONTACT) {
         const newContact = { id: uuid(), ...msg.payload };
         const nextState = { contacts: { ...state.contacts, [newContact.id]: newContact } };
-        ctx.dispatch(ctx.sender, { type: SUCCESS, payload: newContact });
+        ctx.sender.dispatch({ type: SUCCESS, payload: newContact });
         return nextState;
     } else {
         // All these message types require an existing contact
@@ -259,26 +261,26 @@ const contactsService = spawn(
         if (contact) {            
             switch(msg.type) {
               case GET_CONTACT: {
-                ctx.dispatch(ctx.sender, { payload: contact, type: SUCCESS });
+                ctx.sender.dispatch({ payload: contact, type: SUCCESS });
                 break;
               }
               case REMOVE_CONTACT: {
                 // Create a new state with the contact value to undefined
                 const nextState = { ...state.contacts, [contact.id]: undefined };
-                ctx.dispatch(ctx.sender, { type: SUCCESS, payload: contact });
+                ctx.sender.dispatch({ type: SUCCESS, payload: contact });
                 return nextState;                 
               }
               case UPDATE_CONTACT:  {
                 // Create a new state with the previous fields of the contact merged with the updated ones
                 const updatedContact = {...contact, ...msg.payload };
                 const nextState = { ...state.contacts, [contact.id]: updatedContact };
-                ctx.dispatch(ctx.sender, { type: SUCCESS, payload: updatedContact });
+                ctx.sender.dispatch({ type: SUCCESS, payload: updatedContact });
                 return nextState;                 
               }
             }
         } else {
-          // If it does not, dispatch a not found message to the sender
-          ctx.dispatch(ctx.sender, { type: NOT_FOUND, contactId: msg.contactId });
+          // If it does not, dispatch a not found message to the sender          
+          ctx.sender.dispatch({ type: NOT_FOUND, contactId: msg.contactId }, ctx.self);
         }
     }      
     // Return the current state if unchanged.
@@ -371,8 +373,6 @@ self
 name
 children
 sender
-
-dispatch
 
 recovering
 ​    
