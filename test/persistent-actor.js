@@ -5,7 +5,7 @@ chai.should();
 const { MockPersistenceEngine } = require('./mock-persistence-engine');
 const { BrokenPersistenceEngine } = require('./broken-persistence-engine');
 const { PartiallyBrokenPersistenceEngine } = require('./partially-broken-persistence-engine');
-const { start, spawnPersistent, configurePersistence } = require('../lib');
+const { start, spawnPersistent, configurePersistence, dispatch, query, stop } = require('../lib');
 const { PersistedEvent } = require('../lib/extensions/persistence');
 const chaiAsPromised = require('chai-as-promised');
 chai.use(chaiAsPromised);
@@ -40,7 +40,7 @@ const retry = async (assertion, remainingAttempts, retryInterval = 0) => {
 const concatenativeFunction = (initialState, additionalActions = ignore) =>
   async function (state = initialState, msg, ctx) {
     if (!ctx.recovering) {
-      ctx.sender.dispatch(state + msg, ctx.self);
+      dispatch(ctx.sender, state + msg, ctx.self);
     }
     await Promise.resolve(additionalActions(state, msg, ctx));
     return state + msg;
@@ -65,7 +65,7 @@ describe('PersistentActor', () => {
   afterEach(function () {
     // reset console
     delete console.error;
-    system && system.stop();
+    system && stop(system);
   });
 
   it('should startup normally if no previous events', async function () {
@@ -76,9 +76,9 @@ describe('PersistentActor', () => {
       concatenativeFunction(''),
       'test'
     );
-    actor.dispatch('a');
-    actor.dispatch('b');
-    (await actor.query('c')).should.equal('abc');
+    dispatch(actor, 'a');
+    dispatch(actor, 'b');
+    (await query(actor, 'c')).should.equal('abc');
   });
 
   it('must have a persistentKey of type string', async () => {
@@ -102,10 +102,11 @@ describe('PersistentActor', () => {
         concatenativeFunction(''),
         'test'
       );
-    actor.dispatch('1');
-    actor.dispatch('2');
-    actor.dispatch('3');
-    (await actor.query('')).should.equal(expectedResult + '123');
+    dispatch(actor, '1');
+    dispatch(actor, '2');
+    dispatch(actor, '3');
+
+    (await query(actor, '')).should.equal(expectedResult + '123');
   });
 
   it('should be able to persist events', async () => {
@@ -116,10 +117,10 @@ describe('PersistentActor', () => {
         concatenativeFunction('', (state, msg, ctx) => !ctx.recovering && ctx.persist(msg)),
         'test'
       );
-    actor.dispatch('a');
-    actor.dispatch('b');
-    actor.dispatch('c');
-    (await actor.query('d')).should.equal('abcd');
+    dispatch(actor, 'a');
+    dispatch(actor, 'b');
+    dispatch(actor, 'c');
+    (await query(actor, 'd')).should.equal('abcd');
     persistenceEngine._events['test'].map(x => x.data).should.deep.equal(['a', 'b', 'c', 'd']);
   });
 
@@ -164,7 +165,7 @@ describe('PersistentActor', () => {
         }),
         'iceland'
       );
-    actor.dispatch(', very cold indeed');
+    dispatch(actor, ', very cold indeed');
     await retry(() =>
       persistenceEngine._events['iceland'].map((evt, i) => evt.sequenceNumber === i + 1)
                        .should.deep.equal(new Array(previousState.length + 1).fill(true))

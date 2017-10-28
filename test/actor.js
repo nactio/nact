@@ -5,7 +5,7 @@ const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised');
 chai.use(chaiAsPromised);
 chai.should();
-const { start, spawn, spawnStateless } = require('../lib');
+const { start, spawn, spawnStateless, dispatch, stop, query, state$ } = require('../lib');
 const { Promise } = require('bluebird');
 const { LocalPath } = require('../lib/paths');
 const delay = Promise.delay;
@@ -14,7 +14,7 @@ const { applyOrThrowIfStopped } = require('../lib/references');
 const spawnChildrenEchoer = (parent, name) =>
   spawnStateless(
     parent,
-    function (msg) { this.sender.dispatch([...this.children.keys()], this.self); },
+    function (msg) { dispatch(this.sender, [...this.children.keys()], this.self); },
     name
   );
 
@@ -52,7 +52,7 @@ const retry = async (assertion, remainingAttempts, retryInterval = 0) => {
 describe('ActorReference', function () {
   let system;
   beforeEach(() => { system = start(); });
-  afterEach(() => system.stop());
+  afterEach(() => stop(system));
 
   it('should have name, path, parent, properties', function () {
     let child = spawnStateless(system, ignore);
@@ -69,7 +69,7 @@ describe('Actor', function () {
     let system;
     beforeEach(() => { system = start(); });
     afterEach(() => {
-      system.stop();
+      stop(system);
       // reset console
       delete console.error;
     });
@@ -80,12 +80,12 @@ describe('Actor', function () {
         system,
         async function (state = {}, msg) {
           let result = await getMockValue();
-          this.sender.dispatch(result, this.self);
+          dispatch(this.sender, result, this.self);
           return state;
         }
       );
 
-      let result = await child.query();
+      let result = await query(child);
       result.should.equal(2);
     });
 
@@ -94,7 +94,7 @@ describe('Actor', function () {
         system,
          function (state = '', msg) {
            if (msg.type === 'query') {
-             this.sender.dispatch(state, this.self);
+             dispatch(this.sender, state, this.self);
              return state;
            } else if (msg.type === 'append') {
              return state + msg.payload;
@@ -102,10 +102,10 @@ describe('Actor', function () {
          }
       );
 
-      actor.dispatch({ payload: 'Hello ', type: 'append' });
-      actor.dispatch({ payload: 'World. ', type: 'append' });
-      actor.dispatch({ payload: 'The time has come!!', type: 'append' });
-      let result = await actor.query({ type: 'query' });
+      dispatch(actor, { payload: 'Hello ', type: 'append' });
+      dispatch(actor, { payload: 'World. ', type: 'append' });
+      dispatch(actor, { payload: 'The time has come!!', type: 'append' });
+      let result = await query(actor, { type: 'query' });
       result.should.equal('Hello World. The time has come!!');
     });
 
@@ -116,7 +116,7 @@ describe('Actor', function () {
           if (msg.number === 2) {
             await delay(30);
           }
-          msg.listener.dispatch({ number: msg.number });
+          dispatch(msg.listener, { number: msg.number });
           return state;
         },
         'testActor'
@@ -128,17 +128,17 @@ describe('Actor', function () {
           if (msg.number) {
             return [...state, msg.number];
           } else {
-            this.sender.dispatch(state);
+            dispatch(this.sender, state);
           }
           return state;
         },
         'listener'
       );
 
-      child.dispatch({ listener, number: 1 });
-      child.dispatch({ listener, number: 2 });
-      child.dispatch({ listener, number: 3 });
-      await retry(async () => (await listener.query({})).should.deep.equal([1, 2, 3]), 5, 10);
+      dispatch(child, { listener, number: 1 });
+      dispatch(child, { listener, number: 2 });
+      dispatch(child, { listener, number: 3 });
+      await retry(async () => (await query(listener, {})).should.deep.equal([1, 2, 3]), 5, 10);
     });
 
     it('evalutes out of order when returning a promise from a stateless actor function', async function () {
@@ -148,7 +148,7 @@ describe('Actor', function () {
           if (msg.number === 2) {
             await delay(30);
           }
-          msg.listener.dispatch({ number: msg.number });
+          dispatch(msg.listener, { number: msg.number });
         },
         'testActor'
       );
@@ -159,30 +159,30 @@ describe('Actor', function () {
           if (msg.number) {
             return [...state, msg.number];
           } else {
-            this.sender.dispatch(state);
+            dispatch(this.sender, state);
           }
           return state;
         },
         'listener'
       );
 
-      child.dispatch({ listener, number: 1 });
-      child.dispatch({ listener, number: 2 });
-      child.dispatch({ listener, number: 3 });
-      await retry(async () => (await listener.query({})).should.deep.equal([1, 3, 2]), 5, 10);
+      dispatch(child, { listener, number: 1 });
+      dispatch(child, { listener, number: 2 });
+      dispatch(child, { listener, number: 3 });
+      await retry(async () => (await query(listener, {})).should.deep.equal([1, 3, 2]), 5, 10);
     });
 
     it('should automatically stop if error is thrown', async function () {
       console.error = ignore;
       let child = spawnStateless(system, (msg) => { throw new Error('testError'); });
-      child.dispatch();
+      dispatch(child);
       await retry(() => isStopped(child).should.be.true, 12, 10);
     });
 
     it('should automatically stop if rejected promise is thrown', async function () {
       console.error = ignore;
       let child = spawn(system, (state = {}, msg) => Promise.reject(new Error('testError')));
-      child.dispatch();
+      dispatch(child, {});
       await retry(() => isStopped(child).should.be.true, 12, 10);
     });
   });
@@ -191,14 +191,14 @@ describe('Actor', function () {
     let system;
     beforeEach(() => { system = start(); });
     afterEach(() => {
-      system.stop();
+      stop(system);
       // reset console
       delete console.error;
     });
 
     it('should prevent children from being spawned after being called', function () {
       let child = spawnStateless(system, ignore);
-      child.stop();
+      stop(child);
       (() => spawnStateless(child, ignore)).should.throw(Error);
       (() => spawnStateless(child, () => ignore)).should.throw(Error);
     });
@@ -208,14 +208,14 @@ describe('Actor', function () {
         if (msg === 1) {
           await delay(20);
         } else {
-          ctx.sender.dispatch(msg);
+          dispatch(ctx.sender, msg);
         }
         return state;
       });
-      child.dispatch(1);
-      let resultPromise = child.query(2, 100);
+      dispatch(child, 1);
+      let resultPromise = query(child, 2, 100);
       await delay(20);
-      child.stop();
+      stop(child);
       await resultPromise.should.be.rejectedWith(Error);
     });
 
@@ -226,12 +226,12 @@ describe('Actor', function () {
       let grandchild1 = spawnStateless(child1, ignore, 'grandchild1');
       let grandchild2 = spawnStateless(child1, ignore, 'grandchild2');
 
-      child1.stop();
+      stop(child1);
       isStopped(child1).should.be.true;
       isStopped(grandchild1).should.be.true;
       isStopped(grandchild2).should.be.true;
 
-      system.stop();
+      stop(system);
       children(system).should.be.empty;
       isStopped(actor).should.be.true;
       isStopped(child2).should.be.true;
@@ -239,24 +239,24 @@ describe('Actor', function () {
 
     it('is invoked automatically when the next state is not returned', async function () {
       let child = spawn(system, ignore, 'testActor');
-      child.dispatch();
+      dispatch(child, {});
       await retry(() => isStopped(child).should.be.true, 12, 10);
       children(system).should.not.include('testActor');
     });
 
     it('should be able to be invoked multiple times', async function () {
       let child = spawn(system, ignore);
-      child.stop();
+      stop(child);
       await retry(() => isStopped(child).should.be.true, 12, 10);
-      child.stop();
+      stop(child);
       isStopped(child).should.be.true;
     });
 
     it('should ignore subsequent dispatchs', async function () {
       let child = spawnStateless(system, () => { throw new Error('Should not be triggered'); });
-      child.stop();
+      stop(child);
       await retry(() => isStopped(child).should.be.true, 12, 10);
-      child.dispatch('test');
+      dispatch(child, 'test');
     });
   });
 
@@ -264,7 +264,7 @@ describe('Actor', function () {
     let system;
     beforeEach(() => { system = start(); });
     afterEach(() => {
-      system.stop();
+      stop(system);
       // reset console
       delete console.error;
     });
@@ -284,16 +284,16 @@ describe('Actor', function () {
     it('correctly registers children upon startup', async function () {
       let child = spawnChildrenEchoer(system, 'testChildActor');
       children(system).should.have.keys('testChildActor');
-      let childReferences = await child.query();
+      let childReferences = await query(child);
       childReferences.should.be.empty;
 
       spawnStateless(child, ignore, 'testGrandchildActor');
       children(child).should.have.keys('testGrandchildActor');
-      childReferences = await child.query();
+      childReferences = await query(child);
       childReferences.should.have.members(['testGrandchildActor']);
 
       spawnStateless(child, ignore, 'testGrandchildActor2');
-      childReferences = await child.query();
+      childReferences = await query(child);
       children(child).should.have.keys('testGrandchildActor2', 'testGrandchildActor');
       childReferences.should.have.members(['testGrandchildActor2', 'testGrandchildActor']);
     });
@@ -304,11 +304,11 @@ describe('Actor', function () {
           spawnStateless(this.self, ignore, 'child1');
           spawn(this.self, ignore, 'child2');
         } else {
-          this.sender.dispatch([...this.children.keys()], this.self);
+          dispatch(this.sender, [...this.children.keys()], this.self);
         }
       }, 'test');
-      actor.dispatch('spawn');
-      let childrenMap = await actor.query('query');
+      dispatch(actor, 'spawn');
+      let childrenMap = await query(actor, 'query');
       childrenMap.should.have.members(['child1', 'child2']);
       children(actor).should.have.keys('child1', 'child2');
     });
@@ -317,47 +317,47 @@ describe('Actor', function () {
   describe('#query()', function () {
     let system;
     beforeEach(() => { system = start(); });
-    afterEach(() => system.stop());
+    afterEach(() => stop(system));
 
     it(`should reject a promise if actor has already stopped`, async function () {
       let actor = spawnStateless(system, ignore);
-      actor.stop();
-      await delay(5).then(() => actor.query()).should.be.rejectedWith(Error, 'Actor stopped. Query can never resolve');
+      stop(actor);
+      await delay(5).then(() => query(actor)).should.be.rejectedWith(Error, 'Actor stopped. Query can never resolve');
     });
 
     it(`should reject a promise if the actor hasn't responded with the given timespan`, async function () {
       let actor = spawnStateless(
         system,
-        async (msg, ctx) => { await delay(10); ctx.sender.dispatch('done', ctx.self); },
+        async (msg, ctx) => { await delay(10); dispatch(ctx.sender, 'done', ctx.self); },
         'test'
       );
-      (await (actor.query('test', 1).catch(x => x))).should.be.instanceOf(Error);
+      (await (query(actor, 'test', 1).catch(x => x))).should.be.instanceOf(Error);
     });
 
     it(`should resolve the promise if the actor has responded with the given timespan, clearing the timeout`, async function () {
       let actor = spawnStateless(
         system,
-        async (msg, ctx) => { await delay(10); ctx.sender.dispatch('done', ctx.self); },
+        async (msg, ctx) => { await delay(10); dispatch(ctx.sender, 'done', ctx.self); },
         'test'
       );
-      (await actor.query('test', 50)).should.equal('done');
+      (await query(actor, 'test', 50)).should.equal('done');
     });
   });
 
   describe('#state$', function () {
     let system;
     beforeEach(() => { system = start(); });
-    afterEach(() => system.stop());
+    afterEach(() => stop(system));
 
     it('should allow subscription to state changes', async function () {
       let actor = spawn(system, (state, msg) => msg);
       let arr = [];
-      actor.state$.subscribe(value => {
+      state$(actor).subscribe(value => {
         arr = [...arr, value];
       });
-      actor.dispatch(1);
-      actor.dispatch(2);
-      actor.dispatch(3);
+      dispatch(actor, 1);
+      dispatch(actor, 2);
+      dispatch(actor, 3);
       await retry(() => arr.should.deep.equal([1, 2, 3]), 5, 10);
     });
 
@@ -367,23 +367,24 @@ describe('Actor', function () {
 
       let actor = spawn(system, (state, msg) => msg);
       let arr = [];
-      actor.state$.subscribe(value => {
+      state$(actor).subscribe(value => {
         arr = [...arr, value];
       });
-      actor.dispatch(state1);
-      actor.dispatch(state1);
-      actor.dispatch(state2);
+      dispatch(actor, state1);
+      dispatch(actor, state1);
+      dispatch(actor, state2);
+
       await retry(() => arr.should.deep.equal([state1, state2]), 5, 10);
     });
 
     it('should emit done when the actor is stopped', async function () {
       let actor = spawn(system, (state, msg) => msg);
       let observableClosed = false;
-      actor.state$.last().subscribe(x => { observableClosed = true; });
-      actor.dispatch(1);
-      actor.dispatch(2);
+      state$(actor).last().subscribe(x => { observableClosed = true; });
+      dispatch(actor, 1);
+      dispatch(actor, 2);
       await delay(10);
-      actor.stop();
+      stop(actor);
       await retry(() => observableClosed.should.be.true, 5, 10);
     });
   });

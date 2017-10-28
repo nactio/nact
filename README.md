@@ -70,7 +70,7 @@ Nact has only been tested to work on Node 8 and above. You can install nact in y
 Once installed, you need to import the start function, which starts and then returns the actor system.
 
 ```js
-const { start } = require('nact');
+const { start, dispatch, stop } = require('nact');
 const system = start();
 ```
 
@@ -93,12 +93,12 @@ The third argument to `spawnStateless` is the name of the actor, which in this c
 To communicate with the greeter, we need to `dispatch` a message to it informing it who we are:
 
 ```js
-greeter.dispatch({ name: 'Erlich Bachman' });
+dispatch(greeter, { name: 'Erlich Bachman' });
 ```
 
 This should print `Hello Erlich Bachman` to the console. 
 
-To complete this example, we need to shutdown our system. We can do this by calling `system.stop()`
+To complete this example, we need to shutdown our system. We can do this by calling `stop(system)`
 
 > Note: Stateless actors can service multiple requests at the same time. Statelessness means that the actor
 > does not have to cater for concurrency issues.
@@ -131,10 +131,10 @@ const statefulGreeter = spawn(
 
 If no state is returned or the state returned is `undefined` or `null`, stateful actors automatically shut down.
 
-Another feature of stateful actors is that you can subscribe to state changes by using the `state$` property. `state$` is a [RxJS](http://reactivex.io/rxjs/manual/index.html) observable stream, which makes it very composable. You can map, filter, combine, throttle and perform many other operations on the stream. For example, you could create a subscription to the statefulGreeter which prints a count of the number of unique names which have been greeted:
+Another feature of stateful actors is that you can subscribe to state changes by using the `state$` function. `state$(actor)` returns a [RxJS](http://reactivex.io/rxjs/manual/index.html) observable stream, which makes it very composable. You can map, filter, combine, throttle and perform many other operations on the stream. For example, you could create a subscription to the statefulGreeter which prints a count of the number of unique names which have been greeted:
 
 ```js
-statefulGreeter.state$
+state$(statefulGreeter)
                .map(state => Object.keys(state).length)
                .subscribe(count => console.log(`The statefulGreeter has now greeted ${count} unique names`);
 ```
@@ -159,15 +159,15 @@ const ping = spawnStateless(system, async (msg, ctx) =>  {
   console.log(msg);
   // ping: Pong is a little slow. So I'm giving myself a little handicap :P
   await delay(500);
-  ctx.sender.dispatch(ctx.name, ctx.self);
+  dispatch(ctx.sender, ctx.name, ctx.self);
 }, 'ping');
 
 const pong = spawnStateless(system, (msg, ctx) =>  {
   console.log(msg);
-  ctx.sender.dispatch(ctx.name, ctx.self);  
+  dispatch(ctx.sender, ctx.name, ctx.self);  
 }, 'pong');
 
-ping.dispatch('begin', pong);
+dispatch(ping, 'begin', pong);
 ```
 This produces the following console output:
 
@@ -254,11 +254,11 @@ const contactsService = spawn(
   (state = { contacts:{} }, msg, ctx) => {    
     if(msg.type === GET_CONTACTS) {
         // Return all the contacts as an array
-        ctx.sender.dispatch({ payload: Object.values(state.contacts), type: SUCCESS }, ctx.self);
+        dispatch(ctx.sender, { payload: Object.values(state.contacts), type: SUCCESS }, ctx.self);
     } else if (msg.type === CREATE_CONTACT) {
         const newContact = { id: uuid(), ...msg.payload };
         const nextState = { contacts: { ...state.contacts, [newContact.id]: newContact } };
-        ctx.sender.dispatch({ type: SUCCESS, payload: newContact });
+        dispatch(ctx.sender, { type: SUCCESS, payload: newContact });
         return nextState;
     } else {
         // All these message types require an existing contact
@@ -267,26 +267,26 @@ const contactsService = spawn(
         if (contact) {            
             switch(msg.type) {
               case GET_CONTACT: {
-                ctx.sender.dispatch({ payload: contact, type: SUCCESS });
+                dispatch(ctx.sender, { payload: contact, type: SUCCESS });
                 break;
               }
               case REMOVE_CONTACT: {
                 // Create a new state with the contact value to undefined
                 const nextState = { ...state.contacts, [contact.id]: undefined };
-                ctx.sender.dispatch({ type: SUCCESS, payload: contact });
+                dispatch(ctx.sender, { type: SUCCESS, payload: contact });
                 return nextState;                 
               }
               case UPDATE_CONTACT:  {
                 // Create a new state with the previous fields of the contact merged with the updated ones
                 const updatedContact = {...contact, ...msg.payload };
                 const nextState = { ...state.contacts, [contact.id]: updatedContact };
-                ctx.sender.dispatch({ type: SUCCESS, payload: updatedContact });
+                dispatch(ctx.sender, { type: SUCCESS, payload: updatedContact });
                 return nextState;                 
               }
             }
         } else {
           // If it does not, dispatch a not found message to the sender          
-          ctx.sender.dispatch({ type: NOT_FOUND, contactId: msg.contactId }, ctx.self);
+          dispatch(ctx.sender, { type: NOT_FOUND, contactId: msg.contactId }, ctx.self);
         }
     }      
     // Return the current state if unchanged.
@@ -303,7 +303,7 @@ app.get('/api/contacts/:contact_id', async (req,res) => {
   const contactId = req.params.contact_id;
   const msg = { type: GET_CONTACT, contactId };
   try {
-    const result = await contactService.query(msg, 250); // Set a 250ms timeout
+    const result = await query(contactService, msg, 250); // Set a 250ms timeout
     switch(result.type) {
       case SUCCESS: res.json(result.payload); break;
       case NOT_FOUND: res.sendStatus(404); break;
@@ -357,15 +357,22 @@ The contacts service we've been working on STILL isn't very useful. While we've 
 
 # API
 
+# Functions
+
+spawn 
+spawnStateless
+spawnPersistent
+dispatch
+query
+stop
+configurePersistence
+
 ## System Reference
+
 stop
 path
 
 ## Actor Reference
-
-dispatch
-query
-stop
 
 path
 name
