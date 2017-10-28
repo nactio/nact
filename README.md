@@ -336,7 +336,7 @@ app.patch('/api/contacts/:contact_id', (req,res) =>
   performQuery({ type: UPDATE_CONTACT, contactId: req.params.contact_id, payload: req.body }, res)
 );
 
-app.delete('api/contacts/:contact_id', (req,res) => 
+app.delete('/api/contacts/:contact_id', (req,res) => 
   performQuery({ type: REMOVE_CONTACT, contactId: req.params.contact_id }, res)
 );
 ```
@@ -366,13 +366,13 @@ path
 dispatch
 query
 stop
-
 path
 name
 parent
 
 ## Internal Context
 
+### Stateful & Stateless Actors
 parent
 path
 self
@@ -380,5 +380,6 @@ name
 children
 sender
 
+### Persistence
 recovering
-​    
+
