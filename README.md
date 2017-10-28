@@ -144,10 +144,10 @@ state$(statefulGreeter)
 
 An actor alone is a somewhat useless construct; actors need to work together. Actors can send messages to one another by using the `dispatch` method. 
 
-In this example, the actors Ping and Pong are playing a perfect ping-pong match. To start the match, we dispatch a message to Ping as Pong. 
-
-The second parameter of `dispatch` is who the sender. This parameter is very useful in allowing an actor
+The third parameter of `dispatch` is who the sender is. This parameter is very useful in allowing an actor
 to service requests without knowing explicitly who the sender is.
+
+In this example, the actors Ping and Pong are playing a perfect ping-pong match. To start the match, we dispatch a message to Ping as Pong use this third parameter. 
 
 > Note: Ping is behaving in an asynchronous manner, however it won't handle the next message until the previous 
 > execution has fully resolved.
