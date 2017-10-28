@@ -120,7 +120,7 @@ const statefulGreeter = spawn(
       return state;
     } else {
       console.log(
-        `Good to meet you, ${msg.name}.\nI am the stateful-greeter service!`
+        `Good to meet you, ${msg.name}.\nI am the ${ctx.name} service!`
       );
       return { ...state, [msg.name]: true };
     }
@@ -136,7 +136,7 @@ Another feature of stateful actors is that you can subscribe to state changes by
 ```js
 state$(statefulGreeter)
                .map(state => Object.keys(state).length)
-               .subscribe(count => console.log(`The statefulGreeter has now greeted ${count} unique names`);
+               .subscribe(count => console.log(`The statefulGreeter has now greeted ${count} unique names`));
 ```
 
 ## Actor Communication
