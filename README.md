@@ -28,7 +28,7 @@
     * [Actor Communication](#actor-communication)
     * [Querying](#querying)
     * [Hierarchy](#hierarchy)
-      * [Persistence](#persistence)
+    * [Persistence](#persistence)
   * Patterns and Practises
   * [API](#api)
     * [System Reference](#system-reference)
@@ -51,7 +51,7 @@ Actor systems have been used to drive hugely scalable and highly available syste
   * Actors are asynchronous by design and closely adhere to the principles enumerated in the [reactive manifesto](https://www.reactivemanifesto.org/)
   * Actors deal well with both stateful and statelessness, so creating a smart cache, an in-memory event store or a stateful worker is just as easy as creating a stateless db repository layer without increasing infrastructural complexity.
 
-##Caveats
+## Caveats
 
 While network transparency and clustering are planned features of the framework,
 they have not been implemented yet.
@@ -367,8 +367,6 @@ This should leave you with a working but very basic contacts service.
 
 [![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/nact-contacts-2)
 
-
-
 The application we made in the [querying](#querying) section isn't very useful. For one it only supports a single user's contacts, and secondly it forgets all the user's contacts whenever the system restarts. In this section we'll solve the multi-user problem by exploiting an important feature of any blue-blooded actor system: the hierachy.
 
 Actors are arranged hierarchially, they can create child actors of their own, and accordingly every actor has a parent. The lifecycle of an actor is tied to its parent; if an actor stops, then it's children do too.
@@ -377,11 +375,7 @@ Up till now we've been creating actors which are children of the actor system (w
 
 Let us imagine that the single user contacts service was simple a part of some larger system; an email campaign management API for example.  A potentially valid system could perhaps be represented by the diagram below. 
 
-
-
 <img height="500px" alt="Example of an Actor System Hierarchy" src="https://raw.githubusercontent.com/ncthbrt/nact/master/assets/hierarchy-diagram.svg?sanitize=true"/>
-
-
 
 In the diagram, the email service is responsible for managing the template engine and email delivery, while the contacts service has choosen to model each user's contacts as an actor. (This is a very feasible approach in production provided you shutdown actors after a period of inactivity)
 
@@ -407,7 +401,7 @@ Now we need to create the parent contact service:
 const spawnContactsService = (parent) => spawnStateless(
   parent,
   (msg, ctx) => {
-  	const userId = msg.userId;
+    const userId = msg.userId;
     let childActor;
     if(ctx.children.has(userId)){
       childActor = ctx.children.get(userId);
@@ -449,10 +443,6 @@ Now the only thing remaining for an MVP of our contacts service is some way of p
 
 The contacts service we've been working on STILL isn't very useful. While we've extended the service to support multiple users, it has the unfortunate limitation that it loses the contacts each time the machine restarts. To remedy this, nact extends a stateful actors by adding a new method: `persist` 
 
-
-
-
-
 # API
 
 ## Functions
@@ -467,7 +457,7 @@ The contacts service we've been working on STILL isn't very useful. While we've 
 | `start(...plugins)`                      | `SystemReference`    | Starts the actor system. Plugins is a variadic list of middleware. Currently this is only being used with `configurePersistence` |
 | `state$(actor)`                          | `Observable<'state>` | Creates an observable which streams the current state of the actor to subscribers. |
 
-## communication	
+## communication
 
 | Method                                   | Returns         | Description                              |
 | ---------------------------------------- | :-------------- | ---------------------------------------- |
