@@ -103,8 +103,7 @@ This should print `Hello Erlich Bachman` to the console.
 
 To complete this example, we need to shutdown our system. We can do this by calling `stop(system)`
 
-> Note: Stateless actors can service multiple requests at the same time. Statelessness means that the actor
-> does not have to cater for concurrency issues.
+> Note: Stateless actors can service multiple requests at the same time. Statelessness means that such actors do not have to cater for concurrency issues.
 
 ## Stateful Actors
 [![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/nact-stateful-greeter)
@@ -147,8 +146,7 @@ state$(statefulGreeter)
 
 An actor alone is a somewhat useless construct; actors need to work together. Actors can send messages to one another by using the `dispatch` method. 
 
-The third parameter of `dispatch` is who the sender is. This parameter is very useful in allowing an actor
-to service requests without knowing explicitly who the sender is.
+The third parameter of `dispatch` is the sender. This parameter is very useful in allowing an actor to service requests without knowing explicitly who the sender is.
 
 In this example, the actors Ping and Pong are playing a perfect ping-pong match. To start the match, we dispatch a message to Ping as Pong use this third parameter. 
 
@@ -223,13 +221,17 @@ const bodyParser = require('body-parser');
 app.use(bodyParser.json());
 
 app.get('/api/contacts', (req,res) => { /* Fetch all contacts */ });
-app.get('/api/contacts/:contact_id', (req,res) => { /* Fetch a specific contact */ });
-app.post('/api/contacts', (req,res) => { /* Create a new contact */ });
-app.patch('/api/contacts/:contact_id', (req,res) => { /* Update an existing contact */ });
-app.delete('api/contacts/:contact_id', (req,res) => { /* Delete a contact */ });
+
+app.get('/api/contacts/:contact_id', (req,res) => { /* Fetch specific contact */ });
+
+app.post('/api/contacts', (req,res) => { /* Create new contact */ });
+
+app.patch('/api/contacts/:contact_id',(req,res) => { /* Update existing contact */ });
+
+app.delete('api/contacts/:contact_id', (req,res) => { /* Delete contact */ });
 
 app.listen(process.env.PORT || 3000, function () {
-  console.log('Address book listening on port 3000!');
+  console.log(`Address book listening on port ${process.env.PORT || 3000}!`);
 });
 ```
 
@@ -258,10 +260,16 @@ const contactsService = spawn(
   (state = { contacts:{} }, msg, ctx) => {    
     if(msg.type === GET_CONTACTS) {
         // Return all the contacts as an array
-        dispatch(ctx.sender, { payload: Object.values(state.contacts), type: SUCCESS }, ctx.self);
+        dispatch(
+          ctx.sender, 
+          { payload: Object.values(state.contacts), type: SUCCESS }, 
+          ctx.self
+        );
     } else if (msg.type === CREATE_CONTACT) {
         const newContact = { id: uuid(), ...msg.payload };
-        const nextState = { contacts: { ...state.contacts, [newContact.id]: newContact } };
+        const nextState = { 
+          contacts: { ...state.contacts, [newContact.id]: newContact } 
+        };
         dispatch(ctx.sender, { type: SUCCESS, payload: newContact });
         return nextState;
     } else {
@@ -281,16 +289,24 @@ const contactsService = spawn(
                 return nextState;                 
               }
               case UPDATE_CONTACT:  {
-                // Create a new state with the previous fields of the contact merged with the updated ones
+                // Create a new state with the previous fields of the contact 
+                // merged with the updated ones
                 const updatedContact = {...contact, ...msg.payload };
-                const nextState = { ...state.contacts, [contact.id]: updatedContact };
+                const nextState = { 
+                  ...state.contacts,
+                  [contact.id]: updatedContact 
+                };
                 dispatch(ctx.sender, { type: SUCCESS, payload: updatedContact });
                 return nextState;                 
               }
             }
         } else {
           // If it does not, dispatch a not found message to the sender          
-          dispatch(ctx.sender, { type: NOT_FOUND, contactId: msg.contactId }, ctx.self);
+          dispatch(
+            ctx.sender, 
+            { type: NOT_FOUND, contactId: msg.contactId }, 
+            ctx.self
+          );
         }
     }      
     // Return the current state if unchanged.
@@ -349,6 +365,10 @@ This should leave you with a working but very basic contacts service.
 
 ## Hierarchy
 
+[![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/nact-contacts-2)
+
+
+
 The application we made in the [querying](#querying) section isn't very useful. For one it only supports a single user's contacts, and secondly it forgets all the user's contacts whenever the system restarts. In this section we'll solve the multi-user problem by exploiting an important feature of any blue-blooded actor system: the hierachy.
 
 Actors are arranged hierarchially, they can create child actors of their own, and accordingly every actor has a parent. The lifecycle of an actor is tied to its parent; if an actor stops, then it's children do too.
@@ -390,15 +410,14 @@ const spawnContactsService = (parent) => spawnStateless(
   	const userId = msg.userId;
     let childActor;
     if(ctx.children.has(userId)){
-      childActor = spawnUserContactService(ctx.self, userId);      
-    } else {
       childActor = ctx.children.get(userId);
+    } else {
+      childActor = spawnUserContactService(ctx.self, userId);            
     }
-    dispatch(childActor, msg, ctx.self);
+    dispatch(childActor, msg, ctx.sender);
   },
   'contacts'
 );
-
 ```
 
 These two modifications show the power of an actor hierarchy. The contact service doesn't need to know the implementation details of its children (and doesn't even have to know about what kind of messages the children can handle). The children also don't need to worry about multi tenancy and can focus on the domain.
@@ -428,7 +447,11 @@ Now the only thing remaining for an MVP of our contacts service is some way of p
 
 ## Persistence
 
-The contacts service we've been working on STILL isn't very useful. While we've extended the service to support multiple users, it has the unfortunate limitation that it loses the contacts each time the machine restarts. To remedy these types of situations, nact extends a stateful actors by adding a new method. 
+The contacts service we've been working on STILL isn't very useful. While we've extended the service to support multiple users, it has the unfortunate limitation that it loses the contacts each time the machine restarts. To remedy this, nact extends a stateful actors by adding a new method: `persist` 
+
+
+
+
 
 # API
 
@@ -436,19 +459,21 @@ The contacts service we've been working on STILL isn't very useful. While we've 
 
 ### creation
 
-| Method                                   | Returns          | Description                              |
-| ---------------------------------------- | ---------------- | ---------------------------------------- |
-| `spawn(parent, func, name, options = {})` | `ActorReference` | Creates a stateful actor. The actor has a processor function with the following signature `('state, 'msg, Context) => 'nextState`  Stateful actors process messages one at a time and automatically terminate if the next state is `undefined` or `null ` |
-| `spawnStateless(parent, func, name, options = {})` | `ActorReference` | Creates a stateless actor. The actor has a processor function with the following signature `('msg, Context) => 'nextState`  Stateless actors process messages concurrently and do not terminate until they are explicitely stopped. |
-| `spawnPersistent(parent, func, persistenceKey, name, options = {})` | `ActorReference` | Creates a persistent actor. The actor has a processor function with the following signature `('msg, Context) => 'nextState`  Stateless actors process messages concurrently and do not terminate until they are explicitely stopped. |
+| Method                                   | Returns              | Description                              |
+| ---------------------------------------- | -------------------- | ---------------------------------------- |
+| `spawn(parent, func, name = auto, options = {})` | `ActorReference`     | Creates a stateful actor. The actor has a processor function with the following signature `('state, 'msg, Context) => 'nextState`  Stateful actors process messages one at a time and automatically terminate if the next state is `undefined` or `null ` |
+| `spawnStateless(parent, func, name = auto, options = {})` | `ActorReference`     | Creates a stateless actor. The actor has a processor function with the following signature `('msg, Context) => 'nextState`  Stateless actors process messages concurrently and do not terminate until they are explicitely stopped. |
+| `spawnPersistent(parent, func, persistenceKey, name = auto, options = {})` | `ActorReference`     | Creates a persistent actor. Persistent actors extend stateful actors but also add a  persist method to the actor context. When an actor restarts after persisting messages, the persisted messages are played back in order until no futher messages remain. The actor may then start processing new messages. The `persistenceKey` is used to retrieve the  persisted messages from the actor. |
+| `start(...plugins)`                      | `SystemReference`    | Starts the actor system. Plugins is a variadic list of middleware. Currently this is only being used with `configurePersistence` |
+| `state$(actor)`                          | `Observable<'state>` | Creates an observable which streams the current state of the actor to subscribers. |
 
 ## communication	
 
-| Method                                   | Returns         |      | Description                              |
-| ---------------------------------------- | --------------- | ---- | ---------------------------------------- |
-| `dispatch(actor, message, sender = Nobody())` | `void`          |      | Enqueues the message into the actor's mailbox. |
-| `query(actor, message, timeout)`         | `Promise<'any>` |      | Enqueues the `message` into the actor's mailbox and waits up to`timeout` milliseconds for a reply. If no reply is received in this time, the promise is rejected. |
-| `stop(actor)`                            | `void`          |      | Stops the actor after it has finished processing the current message. |
+| Method                                   | Returns         | Description                              |
+| ---------------------------------------- | :-------------- | ---------------------------------------- |
+| `dispatch(actor, message, sender = Nobody())` | `void`          | Enqueues the message into the actor's mailbox. |
+| `query(actor, message, timeout)`         | `Promise<'any>` | Enqueues the `message` into the actor's mailbox and waits up to`timeout` milliseconds for a reply. If no reply is received in this time, the promise is rejected. |
+| `stop(actor)`                            | `void`          | Stops the actor after it has finished processing the current message. |
 
 ### configuration
 
@@ -458,29 +483,34 @@ The contacts service we've been working on STILL isn't very useful. While we've 
 
 
 
-## System Reference
+## ActorReferences & SystemReferences
 
-path
+| Property | Description                              | Present On     |
+| -------- | ---------------------------------------- | -------------- |
+| `path`   | The path is the address of the actor. It uniquely identifies the actor in the hierarchy. | Both           |
+| `name`   | The name given to the actor. May be automatically generated if not supplied. | ActorReference |
+| `parent` | The parent                               | ActorReference |
 
-## Actor Reference
 
-path
-name
-parent
 
 ## Internal Context
 
 #### All Actors
 
-parent
-path
-self
-name
-children
-sender
+| Property   | Description                              |
+| ---------- | ---------------------------------------- |
+| `parent`   | `ActorReference` (or `SystemReference`) of this actor's parent |
+| `path`     | An object uniquely describing this actor's position in the hierarchy |
+| `self`     | The `ActorReference` of the current actor |
+| `name`     | The name of the this actor               |
+| `children` | A [`Map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map) containing the references to children of the current actor. The key of the map is the actor's name. |
+| `sender`   | The sender of the current message. If left unspecified, this defaults to `Nobody`. Messages sent to `Nobody` are ignored. |
+
+
 
 #### Persistenct Actors
 
-recovering 
-
-persist    
+| Property       | Returns         | Description                              |
+| -------------- | :-------------- | ---------------------------------------- |
+| `recovering`   | -               | Whether the current messages was previously persisted or is a new message. |
+| `persist(msg)` | `Promise<void>` | Saves the message to the event store. Highly recommended that this method is used in conjunction with `await`. |
