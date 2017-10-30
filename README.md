@@ -1,4 +1,4 @@
-S![nact Logo](https://raw.githubusercontent.com/ncthbrt/nact/master/assets/logo.svg?sanitize=true)
+![nact Logo](https://raw.githubusercontent.com/ncthbrt/nact/master/assets/logo.svg?sanitize=true)
 
 **nact ⇒ node.js + actors**\
 *your services have never been so µ*
