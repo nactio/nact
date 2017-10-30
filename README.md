@@ -437,7 +437,7 @@ app.delete('/api/:user_id/contacts/:contact_id', (req,res) =>
 );
 ```
 
-Now the only thing remaining for an MVP of our contacts service is some way of persisting changes...
+Now the only thing remaining for a MVP of our contacts service is some way of persisting changes...
 
 ## Persistence
 
