@@ -85,7 +85,7 @@ describe('Actor', function () {
         }
       );
 
-      let result = await query(child);
+      let result = await query(child, {}, 30);
       result.should.equal(2);
     });
 
@@ -105,7 +105,7 @@ describe('Actor', function () {
       dispatch(actor, { payload: 'Hello ', type: 'append' });
       dispatch(actor, { payload: 'World. ', type: 'append' });
       dispatch(actor, { payload: 'The time has come!!', type: 'append' });
-      let result = await query(actor, { type: 'query' });
+      let result = await query(actor, { type: 'query' }, 30);
       result.should.equal('Hello World. The time has come!!');
     });
 
@@ -138,7 +138,7 @@ describe('Actor', function () {
       dispatch(child, { listener, number: 1 });
       dispatch(child, { listener, number: 2 });
       dispatch(child, { listener, number: 3 });
-      await retry(async () => (await query(listener, {})).should.deep.equal([1, 2, 3]), 5, 10);
+      await retry(async () => (await query(listener, {}, 30)).should.deep.equal([1, 2, 3]), 5, 10);
     });
 
     it('evalutes out of order when returning a promise from a stateless actor function', async function () {
@@ -169,12 +169,20 @@ describe('Actor', function () {
       dispatch(child, { listener, number: 1 });
       dispatch(child, { listener, number: 2 });
       dispatch(child, { listener, number: 3 });
-      await retry(async () => (await query(listener, {})).should.deep.equal([1, 3, 2]), 5, 10);
+      await retry(async () => (await query(listener, {}, 30)).should.deep.equal([1, 3, 2]), 5, 10);
+    });
+
+    it('should not automatically stop if error is thrown and actor is stateless', async function () {
+      console.error = ignore;
+      let child = spawnStateless(system, (msg) => { throw new Error('testError'); });
+      dispatch(child);
+      delay(50);
+      isStopped(child).should.not.be.true;
     });
 
     it('should automatically stop if error is thrown', async function () {
       console.error = ignore;
-      let child = spawnStateless(system, (msg) => { throw new Error('testError'); });
+      let child = spawn(system, (msg) => { throw new Error('testError'); });
       dispatch(child);
       await retry(() => isStopped(child).should.be.true, 12, 10);
     });
@@ -284,16 +292,16 @@ describe('Actor', function () {
     it('correctly registers children upon startup', async function () {
       let child = spawnChildrenEchoer(system, 'testChildActor');
       children(system).should.have.keys('testChildActor');
-      let childReferences = await query(child);
+      let childReferences = await query(child, {}, 30);
       childReferences.should.be.empty;
 
       spawnStateless(child, ignore, 'testGrandchildActor');
       children(child).should.have.keys('testGrandchildActor');
-      childReferences = await query(child);
+      childReferences = await query(child, {}, 30);
       childReferences.should.have.members(['testGrandchildActor']);
 
       spawnStateless(child, ignore, 'testGrandchildActor2');
-      childReferences = await query(child);
+      childReferences = await query(child, {}, 30);
       children(child).should.have.keys('testGrandchildActor2', 'testGrandchildActor');
       childReferences.should.have.members(['testGrandchildActor2', 'testGrandchildActor']);
     });
@@ -308,7 +316,7 @@ describe('Actor', function () {
         }
       }, 'test');
       dispatch(actor, 'spawn');
-      let childrenMap = await query(actor, 'query');
+      let childrenMap = await query(actor, 'query', 30);
       childrenMap.should.have.members(['child1', 'child2']);
       children(actor).should.have.keys('child1', 'child2');
     });
@@ -319,10 +327,15 @@ describe('Actor', function () {
     beforeEach(() => { system = start(); });
     afterEach(() => stop(system));
 
+    it(`should throw if a timeout is not provided`, async function () {
+      let actor = spawnStateless(system, ignore);
+      (() => query(actor, {})).should.throw(Error, 'A timeout is required to be specified');
+    });
+
     it(`should reject a promise if actor has already stopped`, async function () {
       let actor = spawnStateless(system, ignore);
       stop(actor);
-      await delay(5).then(() => query(actor)).should.be.rejectedWith(Error, 'Actor stopped. Query can never resolve');
+      await delay(5).then(() => query(actor, {}, 30)).should.be.rejectedWith(Error, 'Actor stopped. Query can never resolve');
     });
 
     it(`should reject a promise if the actor hasn't responded with the given timespan`, async function () {

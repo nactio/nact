@@ -78,7 +78,7 @@ describe('PersistentActor', () => {
     );
     dispatch(actor, 'a');
     dispatch(actor, 'b');
-    (await query(actor, 'c')).should.equal('abc');
+    (await query(actor, 'c', 30)).should.equal('abc');
   });
 
   it('must have a persistentKey of type string', async () => {
@@ -106,7 +106,7 @@ describe('PersistentActor', () => {
     dispatch(actor, '2');
     dispatch(actor, '3');
 
-    (await query(actor, '')).should.equal(expectedResult + '123');
+    (await query(actor, '', 30)).should.equal(expectedResult + '123');
   });
 
   it('should be able to persist events', async () => {
@@ -120,7 +120,7 @@ describe('PersistentActor', () => {
     dispatch(actor, 'a');
     dispatch(actor, 'b');
     dispatch(actor, 'c');
-    (await query(actor, 'd')).should.equal('abcd');
+    (await query(actor, 'd', 30)).should.equal('abcd');
     persistenceEngine._events['test'].map(x => x.data).should.deep.equal(['a', 'b', 'c', 'd']);
   });
 

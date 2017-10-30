@@ -1,4 +1,4 @@
-![nact Logo](https://raw.githubusercontent.com/ncthbrt/nact/master/assets/logo.svg?sanitize=true)
+S![nact Logo](https://raw.githubusercontent.com/ncthbrt/nact/master/assets/logo.svg?sanitize=true)
 
 **nact ⇒ node.js + actors**\
 *your services have never been so µ*
@@ -28,7 +28,8 @@
     * [Actor Communication](#actor-communication)
     * [Querying](#querying)
     * [Hierarchy](#hierarchy)
-  * [Persistence](#persistence)
+      * [Persistence](#persistence)
+  * Patterns and Practises
   * [API](#api)
     * [System Reference](#system-reference)
     * [Actor Reference](#actor-reference)
@@ -46,12 +47,14 @@ Actor systems have been used to drive hugely scalable and highly available syste
 
   * Creating a new type of actor is a very lightweight operation in contrast to creating a whole new microservice.
   * [Location transparency](https://doc.akka.io/docs/akka/2.5.4/java/general/remoting.html) and no shared state mean that it is possible to defer decisions around where to deploy a subsystem, avoiding the commonly cited problem of prematurely choosing a [bounded context](https://vimeo.com/74589816).
-  * Using actors mean that the spaghetti you might see in a monolithic system is far less likely to happen in the first place as message passing creates extremely decoupled systems. 
+  * Using actors mean that the spaghetti you might see in a monolithic system is far less likely to happen in the first place as message passing creates less coupled systems. 
   * Actors are asynchronous by design and closely adhere to the principles enumerated in the [reactive manifesto](https://www.reactivemanifesto.org/)
-  * Actors deal well with both stateful and stateless designs, so creating a smart cache, an in-memory event store or a stateful worker is just as easy as creating a stateless repository layer without increasing infrastructural complexity.
+  * Actors deal well with both stateful and statelessness, so creating a smart cache, an in-memory event store or a stateful worker is just as easy as creating a stateless db repository layer without increasing infrastructural complexity.
 
-> Note: While network transparency and clustering are planned features of the framework,
-> they have not been implemented yet.
+##Caveats
+
+While network transparency and clustering are planned features of the framework,
+they have not been implemented yet.
 
 # The basics
 
@@ -149,8 +152,9 @@ to service requests without knowing explicitly who the sender is.
 
 In this example, the actors Ping and Pong are playing a perfect ping-pong match. To start the match, we dispatch a message to Ping as Pong use this third parameter. 
 
-> Note: Ping is behaving in an asynchronous manner, however it won't handle the next message until the previous 
-> execution has fully resolved.
+> Note: Ping is behaving in an asynchronous manner, however it won't handle the next message until the previous execution has fully resolved.
+
+
 
 ```js
 const delay = (time) => new Promise((res) => setTimeout(res, time));
@@ -345,31 +349,117 @@ This should leave you with a working but very basic contacts service.
 
 ## Hierarchy
 
-The application we made in the [querying](#querying) section isn't very useful. For one it only supports a single user's  contacts and two it 
+The application we made in the [querying](#querying) section isn't very useful. For one it only supports a single user's contacts, and secondly it forgets all the user's contacts whenever the system restarts. In this section we'll solve the multi-user problem by exploiting an important feature of any blue-blooded actor system: the hierachy.
 
-Actors can create child actors of their own, and accordingly every actor has a parent. Up till now we've been creating actors which are children of the actor system (which is a pseudo actor). However in a real system, this would be considered an anti pattern, for much the same reasons as placing all your code in a single file is an anti-pattern. By exploiting the actor hierarchy, you can enforce a separation of concerns and encapsulate system functionality, while providing a coherent means of dealing with failure and system shutdown. 
+Actors are arranged hierarchially, they can create child actors of their own, and accordingly every actor has a parent. The lifecycle of an actor is tied to its parent; if an actor stops, then it's children do too.
+
+Up till now we've been creating actors which are children of the actor system (which is a pseudo actor). However in a real system, this would be considered an anti pattern, for much the same reasons as placing all your code in a single file is an anti-pattern. By exploiting the actor hierarchy, you can enforce a separation of concerns and encapsulate system functionality, while providing a coherent means of reasoning with failure and system shutdown. 
+
+Let us imagine that the single user contacts service was simple a part of some larger system; an email campaign management API for example.  A potentially valid system could perhaps be represented by the diagram below. 
+
+
 
 <img height="500px" alt="Example of an Actor System Hierarchy" src="https://raw.githubusercontent.com/ncthbrt/nact/master/assets/hierarchy-diagram.svg?sanitize=true"/>
 
-# Persistence
 
-The contacts service we've been working on STILL isn't very useful. While we've extended the service to support multiple users, it has the unfortunate limitation that it loses the contacts each time the machine restarts. To remedy these types of situations, nact extends stateful actors by adding a few new methods. 
+
+In the diagram, the email service is responsible for managing the template engine and email delivery, while the contacts service has choosen to model each user's contacts as an actor. (This is a very feasible approach in production provided you shutdown actors after a period of inactivity)
+
+Let us focus on the contacts service to see how we can make effective of use of the hierarchy. To support multiple users, we need do three things: 
+
+- Modify our original contacts service to so that we can parameterise its parent and name
+- Create a parent to route requests to the correct child
+- Add a user id to the path of each API endpoint and add a `userId` into each message.
+
+Modifying our original service is as simple as the following:
+
+```js
+const spawnUserContactService = (parent, userId) => spawn(
+  parent,
+  // same function as before
+  userId
+);
+```
+
+Now we need to create the parent contact service:
+
+```json
+const spawnContactsService = (parent) => spawnStateless(
+  parent,
+  (msg, ctx) => {
+  	const userId = msg.userId;
+    let childActor;
+    if(ctx.children.has(userId)){
+      childActor = spawnUserContactService(ctx.self, userId);      
+    } else {
+      childActor = ctx.children.get(userId);
+    }
+    dispatch(childActor, msg, ctx.self);
+  },
+  'contacts'
+);
+
+```
+
+These two modifications show the power of an actor hierarchy. The contact service doesn't need to know the implementation details of its children (and doesn't even have to know about what kind of messages the children can handle). The children also don't need to worry about multi tenancy and can focus on the domain.
+
+To complete the example, we finally adjust the API endpoints:
+
+```js
+
+app.get('/api/:user_id/contacts', (req,res) => performQuery({ type: GET_CONTACTS, userId: req.params.user_id }, res));
+
+app.get('/api/:user_id/contacts/:contact_id', (req,res) => 
+  performQuery({ type: GET_CONTACT, userId: req.params.user_id, contactId: req.params.contact_id }, res)
+);
+
+app.post('/api/:user_id/contacts', (req,res) => performQuery({ type: CREATE_CONTACT, payload: req.body }, res));
+
+app.patch('/api/:user_id/contacts/:contact_id', (req,res) => 
+  performQuery({ type: UPDATE_CONTACT, userId: req.params.user_id, contactId: req.params.contact_id, payload: req.body }, res)
+);
+
+app.delete('/api/:user_id/contacts/:contact_id', (req,res) => 
+  performQuery({ type: REMOVE_CONTACT, userId: req.params.user_id, contactId: req.params.contact_id }, res)
+);
+```
+
+Now the only thing remaining for an MVP of our contacts service is some way of persisting changes...
+
+## Persistence
+
+The contacts service we've been working on STILL isn't very useful. While we've extended the service to support multiple users, it has the unfortunate limitation that it loses the contacts each time the machine restarts. To remedy these types of situations, nact extends a stateful actors by adding a new method. 
 
 # API
 
-# Functions
+## Functions
 
-spawn 
-spawnStateless
-spawnPersistent
-dispatch
-query
-stop
-configurePersistence
+### creation
+
+| Method                                   | Returns          | Description                              |
+| ---------------------------------------- | ---------------- | ---------------------------------------- |
+| `spawn(parent, func, name, options = {})` | `ActorReference` | Creates a stateful actor. The actor has a processor function with the following signature `('state, 'msg, Context) => 'nextState`  Stateful actors process messages one at a time and automatically terminate if the next state is `undefined` or `null ` |
+| `spawnStateless(parent, func, name, options = {})` | `ActorReference` | Creates a stateless actor. The actor has a processor function with the following signature `('msg, Context) => 'nextState`  Stateless actors process messages concurrently and do not terminate until they are explicitely stopped. |
+| `spawnPersistent(parent, func, persistenceKey, name, options = {})` | `ActorReference` | Creates a persistent actor. The actor has a processor function with the following signature `('msg, Context) => 'nextState`  Stateless actors process messages concurrently and do not terminate until they are explicitely stopped. |
+
+## communication	
+
+| Method                                   | Returns         |      | Description                              |
+| ---------------------------------------- | --------------- | ---- | ---------------------------------------- |
+| `dispatch(actor, message, sender = Nobody())` | `void`          |      | Enqueues the message into the actor's mailbox. |
+| `query(actor, message, timeout)`         | `Promise<'any>` |      | Enqueues the `message` into the actor's mailbox and waits up to`timeout` milliseconds for a reply. If no reply is received in this time, the promise is rejected. |
+| `stop(actor)`                            | `void`          |      | Stops the actor after it has finished processing the current message. |
+
+### configuration
+
+| Method                                   | Returns | Description                              |
+| ---------------------------------------- | ------- | ---------------------------------------- |
+| `configurePersistence(persistenceEngine)` | `void`  | Enables the persistence plugin in the actor system using the specified persistence engine. |
+
+
 
 ## System Reference
 
-stop
 path
 
 ## Actor Reference
@@ -380,6 +470,8 @@ parent
 
 ## Internal Context
 
+#### All Actors
+
 parent
 path
 self
@@ -387,5 +479,8 @@ name
 children
 sender
 
-recovering
-​    
+#### Persistenct Actors
+
+recovering 
+
+persist    
