@@ -397,7 +397,7 @@ const spawnUserContactService = (parent, userId) => spawn(
 
 Now we need to create the parent contact service:
 
-```json
+```js
 const spawnContactsService = (parent) => spawnStateless(
   parent,
   (msg, ctx) => {
