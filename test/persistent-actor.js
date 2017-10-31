@@ -48,14 +48,12 @@ const concatenativeFunction = (initialState, additionalActions = ignore) =>
 
 // End helpers
 
-describe('#persistence', () => {
-  it('should disallow persistence engines which do not inherit from AbstractPersistenceEngine', function () {
+describe('#configurePersistence', () => {
+  it('should require that the persistence engine be defined', function () {
     (() => configurePersistence(0)({})).should.throw(Error);
-    (() => configurePersistence('1')({})).should.throw(Error);
-    (() => configurePersistence(Symbol('AbstractPersistenceEngine'))({})).should.throw(Error);
-    (() => configurePersistence([])({})).should.throw(Error);
-    (() => configurePersistence({})({})).should.throw(Error);
-    (() => configurePersistence({ events: ignore, persist: ignore })({})).should.throw(Error);
+    (() => configurePersistence(undefined)({})).should.throw(Error);
+    (() => configurePersistence(null)({})).should.throw(Error);
+    (() => configurePersistence()({})).should.throw(Error);
   });
 });
 
