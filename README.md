@@ -440,8 +440,9 @@ app.delete('/api/:user_id/contacts/:contact_id', (req,res) =>
 Now the only thing remaining for a MVP of our contacts service is some way of persisting changes...
 
 ## Persistence
+[![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/nact-contacts-3)
 
-The contacts service we've been working on STILL isn't very useful. While we've extended the service to support multiple users, it has the unfortunate limitation that it loses the contacts each time the machine restarts. To remedy this, nact extends a stateful actors by adding a new method: `persist` 
+The contacts service we've been working on STILL isn't very useful. While we've extended the service to support multiple users, it has the unfortunate limitation that it loses the contacts each time the machine restarts. To remedy this, nact extends stateful actors by adding a new method: `persist` 
 
 # API
 
