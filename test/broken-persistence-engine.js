@@ -1,4 +1,4 @@
-const { AbstractPersistenceEngine } = require('../lib/extensions/persistence');
+const { AbstractPersistenceEngine } = require('../lib/persistence');
 
 class BrokenPersistenceEngine extends AbstractPersistenceEngine {
   events (persistenceKey, offset, limit, tags) {

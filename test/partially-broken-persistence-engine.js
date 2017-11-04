@@ -1,4 +1,4 @@
-const { AbstractPersistenceEngine } = require('../lib/extensions/persistence');
+const { AbstractPersistenceEngine } = require('../lib/persistence');
 const Rx = require('rxjs');
 const { Observable } = Rx;
 
