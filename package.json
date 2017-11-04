@@ -1,7 +1,7 @@
 {
   "name": "nact",
   "version": "3.1.4",
-  "description": "Implementation of the actor model for node",
+  "description": "nact ⇒ node.js + actors = your services have never been so µ",
   "main": "lib/index.js",
   "scripts": {
     "test": "yarn run lint && nyc mocha ./test/*.js",
@@ -16,11 +16,14 @@
   },
   "keywords": [
     "actors",
-    "actor-model",
-    "distributed-systems",
+    "actor-model",    
     "akka",
     "akka.net",
-    "non-blocking"
+    "non-blocking",
+    "actor system",
+    "erlang",
+    "event sourcing",
+    "distributed-systems"
   ],
   "author": "Nick Cuthbert (https://github.com/ncthbrt)",
   "license": "Apache-2.0",
