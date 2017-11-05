@@ -22,7 +22,7 @@
 
 # Table of Contents
   * [Introduction](#introduction)
-  * [Core Concepts](#the-basics)
+  * [Core Concepts](#core-concepts)
     * [Getting Started](#getting-started)
     * [Stateful Actors](#stateful-actors)
     * [Actor Communication](#actor-communication)
@@ -31,9 +31,10 @@
     * [Persistence](#persistence)
   * Patterns and Practises
   * [API](#api)
-    * [System Reference](#system-reference)
-    * [Actor Reference](#actor-reference)
+    * [Functions](#functions)
+    * [References](#references)
     * [Internal Context](#internal-context)
+    * [Persistent Actors](#persistent-actors)
 
 # Introduction
 
@@ -56,7 +57,7 @@ Actor systems have been used to drive hugely scalable and highly available syste
 While network transparency and clustering are planned features of the framework,
 they have not been implemented yet.
 
-# The basics
+# Core Concepts
 
 ## Getting Started
 [![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/nact-stateless-greeter)
@@ -549,7 +550,8 @@ const spawnUserContactService = (parent, userId) => spawnPersistent(
 
 
 
-## ActorReferences & SystemReferences
+## References
+Applies to ActorReferences & SystemReferences
 
 | Property | Description                              | Present On     |
 | -------- | ---------------------------------------- | -------------- |
@@ -574,7 +576,7 @@ const spawnUserContactService = (parent, userId) => spawnPersistent(
 
 
 
-#### Persistenct Actor
+#### Persistent Actors
 
 | Property       | Returns         | Description                              |
 | -------------- | :-------------- | ---------------------------------------- |
