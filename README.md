@@ -150,9 +150,6 @@ The third parameter of `dispatch` is the sender. This parameter is very useful i
 
 In this example, the actors Ping and Pong are playing a perfect ping-pong match. To start the match, we dispatch a message to Ping as Pong use this third parameter. 
 
-> Note: Ping is behaving in an asynchronous manner, however it won't handle the next message until the previous execution has fully resolved.
-
-
 
 ```js
 const delay = (time) => new Promise((res) => setTimeout(res, time));
