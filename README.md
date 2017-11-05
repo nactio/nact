@@ -34,7 +34,6 @@
     * [Functions](#functions)
     * [References](#references)
     * [Internal Context](#internal-context)
-    * [Persistent Actors](#persistent-actors)
 
 # Introduction
 
