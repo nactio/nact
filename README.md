@@ -452,7 +452,7 @@ const system = start(configurePersistence(new PostgresPersistenceEngine(connecti
 
 The `configurePersistence` method adds the the persistence plugin to the system using the specified persistence engine.
 
-Now the only remaining work is to modify the contacts service to allow persistence. We want to save messages which modify state and replay them when the actor starts up again: 
+Now the only remaining work is to modify the contacts service to allow persistence. We want to save messages which modify state and replay them when the actor starts up again. When the actor start up, it first receives all the persisted messages and then can begin processing new ones.  
 
 ```js
 
