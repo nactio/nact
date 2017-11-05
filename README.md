@@ -447,8 +447,7 @@ The contacts service we've been working on *still* isn't very useful. While we'v
 To use `persist`, the first thing we need to do is specify a persistence engine. Currently only a [PostgreSQL](https://github.com/ncthbrt/nact-persistence-postgres) engine is available (though it should be easy to create your own). To work with the PostgreSQL engine, install the persistent provider package using the command `npm install --save nact-persistence-postgres`.  Assuming you've stored a connection string to a running database instance under the environment variable `DATABASE_URL` , we'll need to modify the code creating the system to look something like the following:
 
 ```js
-const { start } = require('nact');
-const { configurePersistence, spawnPersistent } = require('nact/persistence');
+const { start, configurePersistence, spawnPersistent } = require('nact');
 const { PostgresPersistenceEngine } = require('nact-persistence-postgres');
 const connectionString = process.env.DATABASE_URL;
 const system = start(configurePersistence(new PostgresPersistenceEngine(connectionString)));
