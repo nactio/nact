@@ -12,6 +12,8 @@
 [![js-semistandard-style](https://img.shields.io/badge/code%20style-semistandard-blue.svg?style=flat-square)](https://github.com/Flet/semistandard) 
 [![we are reactive](https://img.shields.io/badge/we_are-reactive-blue.svg?style=flat-square)](https://www.reactivemanifesto.org/)
 
+[![DeepScan Grade](https://deepscan.io/api/projects/908/branches/1863/badge/grade.svg)](https://deepscan.io/dashboard/#view=project&pid=908&bid=1863)
+
 > Note:
 >
 > Any and all feedback, comments and suggestions are welcome. Please open an issue if you
