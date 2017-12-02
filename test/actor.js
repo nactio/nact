@@ -176,6 +176,14 @@ describe('Actor', function () {
       console.error = ignore;
       let child = spawnStateless(system, (msg) => { throw new Error('testError'); });
       dispatch(child);
+      await delay(50);
+      isStopped(child).should.not.be.true;
+    });
+
+    it('should automatically stop after timeout if timeout is specified', async function () {
+      console.error = ignore;
+      let child = spawnStateless(system, (msg) => { throw new Error('testError'); });
+      dispatch(child);
       delay(50);
       isStopped(child).should.not.be.true;
     });
