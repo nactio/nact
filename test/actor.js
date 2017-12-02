@@ -8,7 +8,7 @@ chai.should();
 const { start, spawn, spawnStateless, dispatch, stop, query, state$ } = require('../lib');
 const { Promise } = require('bluebird');
 const { LocalPath } = require('../lib/paths');
-const delay = Promise.delay;
+const delay = Promise.delay.bind(Promise);
 const { applyOrThrowIfStopped } = require('../lib/references');
 
 const spawnChildrenEchoer = (parent, name) =>
@@ -180,14 +180,6 @@ describe('Actor', function () {
       isStopped(child).should.not.be.true;
     });
 
-    it('should automatically stop after timeout if timeout is specified', async function () {
-      console.error = ignore;
-      let child = spawnStateless(system, (msg) => { throw new Error('testError'); });
-      dispatch(child);
-      delay(50);
-      isStopped(child).should.not.be.true;
-    });
-
     it('should automatically stop if error is thrown', async function () {
       console.error = ignore;
       let child = spawn(system, (msg) => { throw new Error('testError'); });
@@ -212,6 +204,21 @@ describe('Actor', function () {
       delete console.error;
     });
 
+    it('should automatically stop after timeout if timeout is specified', async function () {
+      console.error = ignore;
+      let child = spawnStateless(system, (msg) => {}, 'test', { shutdown: 100 });
+      await delay(110);
+      isStopped(child).should.be.true;
+    });
+
+    it('should automatically renew timeout after message', async function () {
+      let child = spawnStateless(system, ignore, 'test1', { shutdown: 60 });
+      await delay(30);
+      dispatch(child, {});
+      await delay(40);
+      isStopped(child).should.not.be.true;
+    });
+
     it('should prevent children from being spawned after being called', function () {
       let child = spawnStateless(system, ignore);
       stop(child);
@@ -232,7 +239,7 @@ describe('Actor', function () {
       let resultPromise = query(child, 2, 100);
       await delay(20);
       stop(child);
-      await resultPromise.should.be.rejectedWith(Error);
+      return resultPromise.should.be.rejectedWith(Error);
     });
 
     it('stops children when parent is stopped', async function () {
@@ -268,7 +275,7 @@ describe('Actor', function () {
       isStopped(child).should.be.true;
     });
 
-    it('should ignore subsequent dispatchs', async function () {
+    it('should ignore subsequent dispatches', async function () {
       let child = spawnStateless(system, () => { throw new Error('Should not be triggered'); });
       stop(child);
       await retry(() => isStopped(child).should.be.true, 12, 10);
