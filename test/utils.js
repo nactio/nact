@@ -28,14 +28,19 @@ describe('#after', function () {
     after(0).hours.duration.should.equal(0);
   });
 
+  it('should correctly calculat duration when using and operator', function () {
+    after(1).hours.and(5).milliseconds.duration.should.equal(3600005);
+    after(0).hours.and(3).minutes.duration.should.equal(180000);
+  });
+
   it('should correctly set messages', function () {
-    after(1).message.messages.should.equal(1);
-    every(10).messages.messages.should.equal(10);
+    after(1).message.messageInterval.should.equal(1);
+    every(10).messages.messageInterval.should.equal(10);
   });
 
   it('should allow the combination of duration and messages', function () {
     let value = every(1).hours.or(5).messages;
     value.duration.should.equal(3600000);
-    value.messages.should.equal(5);
+    value.messageInterval.should.equal(5);
   });
 });

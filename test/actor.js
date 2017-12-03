@@ -220,7 +220,7 @@ describe('Actor', function () {
     });
 
     it('should throw if timeout does not include a duration field', async function () {
-      (() => spawnStateless(system, ignore, 'test1', { shutdown: {} })).should.throw();
+      (() => spawnStateless(system, ignore, 'test1', { shutdown: {} })).should.throw(Error);
     });
   });
 

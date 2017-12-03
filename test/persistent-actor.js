@@ -5,8 +5,8 @@ chai.should();
 const { MockPersistenceEngine } = require('./mock-persistence-engine');
 const { BrokenPersistenceEngine } = require('./broken-persistence-engine');
 const { PartiallyBrokenPersistenceEngine } = require('./partially-broken-persistence-engine');
-const { start, dispatch, query, stop } = require('../lib');
-const { PersistedEvent, spawnPersistent, configurePersistence } = require('../lib/persistence');
+const { start, dispatch, query, stop, every } = require('../lib');
+const { PersistedEvent, PersistedSnapshot, spawnPersistent, configurePersistence } = require('../lib/persistence');
 const chaiAsPromised = require('chai-as-promised');
 chai.use(chaiAsPromised);
 const { Promise } = require('bluebird');
@@ -22,7 +22,7 @@ const isStopped = (reference) => {
 };
 
 // Begin helpers
-const ignore = () => {};
+const ignore = () => { };
 
 const retry = async (assertion, remainingAttempts, retryInterval = 0) => {
   if (remainingAttempts <= 1) {
@@ -96,10 +96,10 @@ describe('PersistentActor', () => {
     const persistenceEngine = new MockPersistenceEngine({ test: events });
     system = start(configurePersistence(persistenceEngine));
     const actor = spawnPersistent(
-        system,
-        concatenativeFunction(''),
-        'test'
-      );
+      system,
+      concatenativeFunction(''),
+      'test'
+    );
     dispatch(actor, '1');
     dispatch(actor, '2');
     dispatch(actor, '3');
@@ -111,10 +111,10 @@ describe('PersistentActor', () => {
     const persistenceEngine = new MockPersistenceEngine();
     system = start(configurePersistence(persistenceEngine));
     const actor = spawnPersistent(
-        system,
-        concatenativeFunction('', (state, msg, ctx) => !ctx.recovering && ctx.persist(msg)),
-        'test'
-      );
+      system,
+      concatenativeFunction('', (state, msg, ctx) => !ctx.recovering && ctx.persist(msg)),
+      'test'
+    );
     dispatch(actor, 'a');
     dispatch(actor, 'b');
     dispatch(actor, 'c');
@@ -127,10 +127,10 @@ describe('PersistentActor', () => {
     const persistenceEngine = new BrokenPersistenceEngine();
     system = start(configurePersistence(persistenceEngine));
     const actor = spawnPersistent(
-        system,
-        concatenativeFunction(''),
-        'test'
-      );
+      system,
+      concatenativeFunction(''),
+      'test'
+    );
     await retry(() => isStopped(actor).should.be.true, 5, 10);
   });
 
@@ -154,19 +154,110 @@ describe('PersistentActor', () => {
     const persistenceEngine = new MockPersistenceEngine({ iceland: previousEvents });
     system = start(configurePersistence(persistenceEngine));
     const actor = spawnPersistent(
-        system,
-        concatenativeFunction('', (state, msg, ctx) => {
-          if (!ctx.recovering) {
-            console.log('persisting');
-            return ctx.persist(msg);
-          }
-        }),
-        'iceland'
-      );
+      system,
+      concatenativeFunction('', async (state, msg, ctx) => {
+        if (!ctx.recovering) {
+          console.log('persisting');
+          await ctx.persist(msg);
+        }
+      }),
+      'iceland'
+    );
     dispatch(actor, ', very cold indeed');
     await retry(() =>
       persistenceEngine._events['iceland'].map((evt, i) => evt.sequenceNumber === i + 1)
-                       .should.deep.equal(new Array(previousState.length + 1).fill(true))
-    , 5, 20);
+        .should.deep.equal(new Array(previousState.length + 1).fill(true))
+      , 5, 20);
+  });
+
+  it('should be able to restore a snapshot and replay events exluding those that were persisted before the snapshot', async () => {
+    const previousState = 'icelandiscold';
+    const expectedState = 'greenlandiscold';
+    const previousEvents = [...previousState].map((evt, i) => new PersistedEvent(evt, i + 1, 'iceland'));
+    const persistenceEngine = new MockPersistenceEngine({ iceland: previousEvents }, { iceland: [new PersistedSnapshot('green', 3, 'iceland')] });
+    system = start(configurePersistence(persistenceEngine));
+    const actor = spawnPersistent(
+      system,
+      concatenativeFunction(''),
+      'iceland'
+    );
+    (await query(actor, '', 30)).should.equal(expectedState);
+  });
+
+  it('should be able to restore a snapshot and replay events exluding those that were persisted before the snapshot', async () => {
+    const previousState = 'icelandiscold';
+    const expectedState = 'greenlandiscold';
+    const previousEvents = [...previousState].map((evt, i) => new PersistedEvent(evt, i + 1, 'iceland'));
+    const persistenceEngine = new MockPersistenceEngine({ iceland: previousEvents }, { iceland: [new PersistedSnapshot('green', 3, 'iceland')] });
+    system = start(configurePersistence(persistenceEngine));
+    const actor = spawnPersistent(
+      system,
+      concatenativeFunction(''),
+      'iceland'
+    );
+    (await query(actor, '', 30)).should.equal(expectedState);
+  });
+
+  it('should be able to persist a snapshot after a given number of messages', async () => {
+    const persistenceEngine = new MockPersistenceEngine();
+    system = start(configurePersistence(persistenceEngine));
+    const actor = spawnPersistent(
+      system,
+      concatenativeFunction(''),
+      'iceland',
+      'test',
+      { snapshot: every(5).messages }
+    );
+    const expectedResult = 'iceland is cold';
+    expectedResult.split('').forEach(msg => {
+      dispatch(actor, msg);
+    });
+    (await query(actor, '!', 30));
+    const snapshots = persistenceEngine._snapshots['iceland'];
+    snapshots.length.should.equal(3);
+    snapshots[snapshots.length - 1].data.should.equal(expectedResult);
+  });
+
+  it('should be able to persist a snapshot after a specified duration', async () => {
+    const persistenceEngine = new MockPersistenceEngine();
+    system = start(configurePersistence(persistenceEngine));
+    const actor = spawnPersistent(
+      system,
+      concatenativeFunction(''),
+      'iceland',
+      'test',
+      { snapshot: every(40).milliseconds }
+    );
+    const expectedResult = 'iceland is cold';
+    expectedResult.split('').forEach(msg => {
+      dispatch(actor, msg);
+    });
+    await delay(50);
+    const snapshots = persistenceEngine._snapshots['iceland'];
+    snapshots[snapshots.length - 1].data.should.equal(expectedResult);
+  });
+
+  it('should be able to continue processing messages even after failing to save a snapshot', async () => {
+    console.error = ignore;
+    const persistenceEngine = new MockPersistenceEngine(undefined, undefined, false); // Disable takeSnapshot
+    system = start(configurePersistence(persistenceEngine));
+    const actor = spawnPersistent(
+      system,
+      concatenativeFunction(''),
+      'iceland',
+      'test',
+      { snapshot: every(5).messages }
+    );
+    const expectedResult = 'iceland is cold';
+    expectedResult.split('').forEach(msg => {
+      dispatch(actor, msg);
+    });
+    (await query(actor, '', 30)).should.equal(expectedResult);
+  });
+
+  it('should throw if timeout does not include a duration field', async function () {
+    const persistenceEngine = new MockPersistenceEngine(); // Disable takeSnapshot
+    system = start(configurePersistence(persistenceEngine));
+    (() => spawnPersistent(system, ignore, 'test1', undefined, { snapshot: {} })).should.throw(Error);
   });
 });
