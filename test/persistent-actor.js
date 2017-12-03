@@ -237,7 +237,7 @@ describe('PersistentActor', () => {
     snapshots[snapshots.length - 1].data.should.equal(expectedResult);
   });
 
-  it('should be able to continue processing messages even after failing to save a snapshot', async () => {
+  it('should be able to continue processing messages even after failing to save a snapshot when snapshotting', async () => {
     console.error = ignore;
     const persistenceEngine = new MockPersistenceEngine(undefined, undefined, false); // Disable takeSnapshot
     system = start(configurePersistence(persistenceEngine));
@@ -246,16 +246,17 @@ describe('PersistentActor', () => {
       concatenativeFunction(''),
       'iceland',
       'test',
-      { snapshot: every(5).messages }
+      { snapshot: every(5).messages.and(30).milliseconds }
     );
     const expectedResult = 'iceland is cold';
     expectedResult.split('').forEach(msg => {
       dispatch(actor, msg);
     });
+    await delay(50);
     (await query(actor, '', 30)).should.equal(expectedResult);
   });
 
-  it('should throw if timeout does not include a duration field', async function () {
+  it('should throw if snapshot does not include a duration field', async function () {
     const persistenceEngine = new MockPersistenceEngine(); // Disable takeSnapshot
     system = start(configurePersistence(persistenceEngine));
     (() => spawnPersistent(system, ignore, 'test1', undefined, { snapshot: {} })).should.throw(Error);
