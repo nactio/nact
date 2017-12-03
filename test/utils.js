@@ -2,7 +2,7 @@
 /* eslint-disable no-unused-expressions */
 const chai = require('chai');
 chai.should();
-const { after } = require('../lib');
+const { after, every } = require('../lib');
 
 describe('#after', function () {
   it('should correctly calculate milliseconds', function () {
@@ -10,6 +10,7 @@ describe('#after', function () {
     after(1).millisecond.duration.should.equal(1);
     after(0).milliseconds.duration.should.equal(0);
   });
+
   it('should correctly calculate seconds', function () {
     after(1).second.duration.should.equal(1000);
     after(0).seconds.duration.should.equal(0);
@@ -25,5 +26,16 @@ describe('#after', function () {
   it('should correctly calculate hours', function () {
     after(1).hour.duration.should.equal(3600000);
     after(0).hours.duration.should.equal(0);
+  });
+
+  it('should correctly set messages', function () {
+    after(1).message.messages.should.equal(1);
+    every(10).messages.messages.should.equal(10);
+  });
+
+  it('should allow the combination of duration and messages', function () {
+    let value = every(1).hours.or(5).messages;
+    value.duration.should.equal(3600000);
+    value.messages.should.equal(5);
   });
 });

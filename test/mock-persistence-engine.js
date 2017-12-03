@@ -2,9 +2,16 @@ const { AbstractPersistenceEngine } = require('../lib/persistence');
 const { Observable } = require('rxjs');
 
 class MockPersistenceEngine extends AbstractPersistenceEngine {
-  constructor (events = {}) {
+  constructor (events = {}, snapshots = {}) {
     super();
     this._events = events;
+    this._snapshots = snapshots;
+  }
+
+  latestSnapshot (persistenceKey) {
+    const snapshots = (this._snapshots[persistenceKey] || []);
+    const snapshot = snapshots.length > 0 ? snapshots[snapshots.length - 1] : undefined;
+    return Promise.resolve(snapshot);
   }
 
   events (persistenceKey, offset = 0, limit, tags) {
