@@ -5,6 +5,10 @@ class BrokenPersistenceEngine extends AbstractPersistenceEngine {
     throw new Error('Elvis has left the building');
   }
 
+  latestSnapshot (persistenceKey) {
+    throw new Error('#latestSnapshot() is yet implemented');
+  }
+
   persist (persistedEvent) {}
 }
 

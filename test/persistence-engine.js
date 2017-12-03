@@ -2,7 +2,44 @@
 /* eslint-disable no-unused-expressions */
 const chai = require('chai');
 chai.should();
-const { PersistedEvent, AbstractPersistenceEngine } = require('../lib/persistence');
+const { PersistedEvent, PersistedSnapshot, AbstractPersistenceEngine } = require('../lib/persistence');
+
+describe('PersistedSnapshot', function () {
+  it('should be immutable', function () {
+    const event = new PersistedSnapshot('123', 1, 'test-key');
+    event.sequenceNumber = 2;
+    event.sequenceNumber.should.equal(1);
+    event.data = '234';
+    event.data.should.equal('123');
+    event.key = 'another-test-key';
+    event.key.should.equal('test-key');
+  });
+
+  describe('#data', function () {
+    it('should disallow null values', function () {
+      (() => new PersistedSnapshot(null, 1, 'test-key')).should.throw(Error);
+    });
+    it('should disallow undefined data values', function () {
+      (() => new PersistedSnapshot(undefined, 1, 'test-key')).should.throw(Error);
+    });
+    it('should disallow non-number sequenceNums', function () {
+      (() => new PersistedSnapshot({ msg: 'test' }, '1', 'test-key')).should.throw(Error);
+    });
+  });
+
+  describe('#createdAt', function () {
+    it('should be able to be explicitely set', function () {
+      new PersistedSnapshot({ msg: 'test' }, 1, 'test-key', 123456).createdAt.should.equal(123456);
+    });
+
+    it('should default to the current time', function () {
+      const oldGetTime = global.Date.prototype.getTime;
+      global.Date.prototype.getTime = () => 123456;
+      new PersistedSnapshot({ msg: 'test' }, 1, 'test-key').createdAt.should.equal(123456);
+      global.Date.prototype.getTime = oldGetTime;
+    });
+  });
+});
 
 describe('PersistedEvent', function () {
   it('should be immutable', function () {
@@ -61,8 +98,11 @@ describe('PersistedEvent', function () {
 describe('AbstractPersistenceEngine', function () {
   it('should throw when functions are invoked', function () {
     const event = new PersistedEvent({ msg: '234' }, 1, 'test-key', []);
+    const snapshot = new PersistedSnapshot('234', 1, 'test-key');
     const abstractEngine = new AbstractPersistenceEngine();
     (() => abstractEngine.events('123', 1)).should.throw(Error);
     (() => abstractEngine.persist(event)).should.throw(Error);
+    (() => abstractEngine.latestSnapshot('123')).should.throw(Error);
+    (() => abstractEngine.takeSnapshot(snapshot)).should.throw(Error);
   });
 });

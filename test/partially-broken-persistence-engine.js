@@ -26,6 +26,10 @@ class PartiallyBrokenPersistenceEngine extends AbstractPersistenceEngine {
     });
   }
 
+  latestSnapshot (persistenceKey) {
+    throw new Error('#latestSnapshot() is yet implemented');
+  }
+
   persist (persistedEvent) {
     const prev = this._events.get(persistedEvent.key) || [];
     this._events.set(persistedEvent.key, [...prev, persistedEvent]);
