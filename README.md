@@ -31,11 +31,17 @@
     * [Querying](#querying)
     * [Hierarchy](#hierarchy)
     * [Persistence](#persistence)
+      * [Snapshotting](#snapshotting)
+      * [Timeouts](#timeouts)
   * Patterns and Practises
   * [API](#api)
     * [Functions](#functions)
+
     * [References](#references)
+
     * [Internal Context](#internal-context)
+
+      ​
 
 # Introduction
 
@@ -454,7 +460,7 @@ const system = start(configurePersistence(new PostgresPersistenceEngine(connecti
 
 The `configurePersistence` method adds the the persistence plugin to the system using the specified persistence engine.
 
-Now the only remaining work is to modify the contacts service to allow persistence. We want to save messages which modify state and replay them when the actor starts up again. When the actor start up, it first receives all the persisted messages and then can begin processing new ones.  
+Now the only remaining work is to modify the contacts service to allow persistence. We want to save messages which modify state and replay them when the actor starts up again. When the actor start up, it first receives all the persisted messages and then can begin processing new ones. 
 
 ```js
 
@@ -515,6 +521,29 @@ const spawnUserContactService = (parent, userId) => spawnPersistent(
 );
 ```
 
+### Snapshotting
+
+Sometimes actors accumulate a lot of persisted events. This is problematic because it means that it can take a potentially long time for an actor to recover. For time-sensitive applictions, this would make nact an unsuitable proposition. Snapshotting is a way to skip replaying every single event. When a persistent actor starts up again, nact checks to see if there are any snapshots available in the *snapshot store*. Nact selects the latest snapshot. The snapshot contains the sequence number at which it was taken. The snapshot is passed as the initial state to the actor, and only the events which were persisted after the snapshot are replayed. 
+
+To modify the user contacts service to support snapshotting, we import the `every` function and refactor the code to the following:
+
+```js
+const spawnUserContactService = (parent, userId) => spawnPersistent(
+  parent,
+  // Same function as before
+  async (state = { contacts:{} }, msg, ctx) => {},
+  `contacts:${userId}`,
+  userId,
+  { snapshot: every(20).messages.or(12).hours }
+);
+```
+
+The final argument to `spawnPersistent` is the actor properties object. Here we are using `every`  to instruct nact to make a snapshot every 20 messages or 12 hours (the timer till the next snapshot is reset if a snapshot is made sooner and visa-versa).  
+
+### Timeouts
+
+While not strictly a part of the persistent actor, timeouts are frequently used with snapshotting. Actors take up memory, which is still a limited resource. If an actor has not processed messages in a while, it makes sense to shut it down until it is again needed; this frees up memory. Adding a timeout to the user 
+
 
 
 # API
@@ -523,13 +552,15 @@ const spawnUserContactService = (parent, userId) => spawnPersistent(
 
 ### creation
 
-| Method                                   | Returns              | Description                              |
-| ---------------------------------------- | -------------------- | ---------------------------------------- |
-| `spawn(parent, func, name = auto, options = {})` | `ActorReference`     | Creates a stateful actor. The actor has a processor function with the following signature `('state, 'msg, Context) => 'nextState`  Stateful actors process messages one at a time and automatically terminate if the next state is `undefined` or `null ` |
-| `spawnStateless(parent, func, name = auto, options = {})` | `ActorReference`     | Creates a stateless actor. The actor has a processor function with the following signature `('msg, Context) => 'nextState`  Stateless actors process messages concurrently and do not terminate until they are explicitely stopped. |
-| `spawnPersistent(parent, func, persistenceKey, name = auto, options = {})` | `ActorReference`     | Creates a persistent actor. Persistent actors extend stateful actors but also add a  persist method to the actor context. When an actor restarts after persisting messages, the persisted messages are played back in order until no futher messages remain. The actor may then start processing new messages. The `persistenceKey` is used to retrieve the  persisted messages from the actor. |
-| `start(...plugins)`                      | `SystemReference`    | Starts the actor system. Plugins is a variadic list of middleware. Currently this is only being used with `configurePersistence` |
-| `state$(actor)`                          | `Observable<'state>` | Creates an observable which streams the current state of the actor to subscribers. |
+| Method                                   | Returns                      | Description                              |
+| ---------------------------------------- | ---------------------------- | ---------------------------------------- |
+| `spawn(parent, func, name = auto, options = {})` | `ActorReference`             | Creates a stateful actor. The actor has a processor function with the following signature `('state, 'msg, Context) => 'nextState`  Stateful actors process messages one at a time and automatically terminate if the next state is `undefined` or `null ` |
+| `spawnStateless(parent, func, name = auto, options = {})` | `ActorReference`             | Creates a stateless actor. The actor has a processor function with the following signature `('msg, Context) => 'nextState`  Stateless actors process messages concurrently and do not terminate until they are explicitely stopped. |
+| `spawnPersistent(parent, func, persistenceKey, name = auto, options = {})` | `ActorReference`             | Creates a persistent actor. Persistent actors extend stateful actors but also add a  persist method to the actor context. When an actor restarts after persisting messages, the persisted messages are played back in order until no futher messages remain. The actor may then start processing new messages. The `persistenceKey` is used to retrieve the  persisted messages from the actor. |
+| `start(...plugins)`                      | `SystemReference`            | Starts the actor system. Plugins is a variadic list of middleware. Currently this is only being used with `configurePersistence` |
+| `state$(actor)`                          | `Observable<'state>`         | Creates an observable which streams the current state of the actor to subscribers. |
+| every(amount).[unit]                     | `Duration | MessageInterval` |                                          |
+| after(amount).[unit]                     | `Duration | MessageInterval` |                                          |
 
 ### communication
 
