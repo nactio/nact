@@ -542,7 +542,20 @@ The final argument to `spawnPersistent` is the actor properties object. Here we 
 
 ### Timeouts
 
-While not strictly a part of the persistent actor, timeouts are frequently used with snapshotting. Actors take up memory, which is still a limited resource. If an actor has not processed messages in a while, it makes sense to shut it down until it is again needed; this frees up memory. Adding a timeout to the user 
+While not strictly a part of the persistent actor, timeouts are frequently used with snapshotting. Actors take up memory, which is still a limited resource. If an actor has not processed messages in a while, it makes sense to shut it down until it is again needed; this frees up memory. Adding a timeout to the user contacts service is similar to snapshotting:
+
+```js
+const spawnUserContactService = (parent, userId) => spawnPersistent(
+  parent,
+  // Same function as before
+  async (state = { contacts:{} }, msg, ctx) => {},
+  `contacts:${userId}`,
+  userId,
+  { snapshot: every(20).messages.or(12).hours,
+    timeout: after(10).minutes
+  }
+);
+```
 
 
 
