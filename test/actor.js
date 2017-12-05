@@ -384,6 +384,15 @@ describe('Actor', function () {
       );
       (await query(actor, 'test', 50)).should.equal('done');
     });
+
+    it(`should accept a message function which takes in the temporary actor reference`, async function () {
+      let actor = spawnStateless(
+        system,
+        async (msg, ctx) => { dispatch(msg, 'done', ctx.self); },
+        'test'
+      );
+      (await query(actor, (sender) => sender, 50)).should.equal('done');
+    });
   });
 
   describe('#state$', function () {
