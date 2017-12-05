@@ -33,11 +33,11 @@
     * [Persistence](#persistence)
       * [Snapshotting](#snapshotting)
       * [Timeouts](#timeouts)
-<!--  * Patterns and Practises !-->
   * [API](#api)
     * [Functions](#functions)
     * [References](#references)
     * [Internal Context](#internal-context)
+<!--  * Patterns and Practises !-->
 
 # Introduction
 
