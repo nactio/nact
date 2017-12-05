@@ -33,15 +33,11 @@
     * [Persistence](#persistence)
       * [Snapshotting](#snapshotting)
       * [Timeouts](#timeouts)
-  * Patterns and Practises
+<!--  * Patterns and Practises !-->
   * [API](#api)
     * [Functions](#functions)
-
     * [References](#references)
-
     * [Internal Context](#internal-context)
-
-      ​
 
 # Introduction
 
@@ -557,6 +553,7 @@ const spawnUserContactService = (parent, userId) => spawnPersistent(
 );
 ```
 
+In the code above, the user contacts service stops if it hasn't received a new message in 10 minutes. 
 
 
 # API
