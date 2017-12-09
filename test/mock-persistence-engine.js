@@ -21,7 +21,7 @@ class MockPersistenceEngine extends AbstractPersistenceEngine {
       this._snapshots[persistedSnapshot.key] = [...prev, persistedSnapshot];
       return Promise.resolve(persistedSnapshot);
     } else {
-      throw new Error('Elvis has left the building');
+      return Promise.reject(new Error('Elvis has left the building'));
     }
   }
 

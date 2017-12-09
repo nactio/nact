@@ -521,40 +521,41 @@ const spawnUserContactService = (parent, userId) => spawnPersistent(
 
 Sometimes actors accumulate a lot of persisted events. This is problematic because it means that it can take a potentially long time for an actor to recover. For time-sensitive applictions, this would make nact an unsuitable proposition. Snapshotting is a way to skip replaying every single event. When a persistent actor starts up again, nact checks to see if there are any snapshots available in the *snapshot store*. Nact selects the latest snapshot. The snapshot contains the sequence number at which it was taken. The snapshot is passed as the initial state to the actor, and only the events which were persisted after the snapshot are replayed. 
 
-To modify the user contacts service to support snapshotting, we import the `every` function and refactor the code to the following:
+To modify the user contacts service to support snapshotting, we refactor the code to the following:
 
 ```js
+const { messages } = require('nact');
 const spawnUserContactService = (parent, userId) => spawnPersistent(
   parent,
   // Same function as before
   async (state = { contacts:{} }, msg, ctx) => {},
   `contacts:${userId}`,
   userId,
-  { snapshot: every(20).messages.or(12).hours }
+  { snapshotEvery: 20 * messages }
 );
 ```
 
-The final argument to `spawnPersistent` is the actor properties object. Here we are using `every`  to instruct nact to make a snapshot every 20 messages or 12 hours (the timer till the next snapshot is reset if a snapshot is made sooner and visa-versa).  
+The final argument to `spawnPersistent` is the actor properties object. Here we are using `snapshotEvery` to instruct nact to make a snapshot every 20 messages.
 
 ### Timeouts
 
 While not strictly a part of the persistent actor, timeouts are frequently used with snapshotting. Actors take up memory, which is still a limited resource. If an actor has not processed messages in a while, it makes sense to shut it down until it is again needed; this frees up memory. Adding a timeout to the user contacts service is similar to snapshotting:
 
 ```js
+const { messages, minutes } = require('nact');
 const spawnUserContactService = (parent, userId) => spawnPersistent(
   parent,
   // Same function as before
   async (state = { contacts:{} }, msg, ctx) => {},
   `contacts:${userId}`,
   userId,
-  { snapshot: every(20).messages.or(12).hours,
-    timeout: after(10).minutes
+  { snapshotEvery: 20 * messages,
+    shutdownAfter: 10 * minutes
   }
 );
 ```
 
 In the code above, the user contacts service stops if it hasn't received a new message in 10 minutes. 
-
 
 # API
 
@@ -569,8 +570,7 @@ In the code above, the user contacts service stops if it hasn't received a new m
 | `spawnPersistent(parent, func, persistenceKey, name = auto, options = {})` | `ActorReference`             | Creates a persistent actor. Persistent actors extend stateful actors but also add a  persist method to the actor context. When an actor restarts after persisting messages, the persisted messages are played back in order until no futher messages remain. The actor may then start processing new messages. The `persistenceKey` is used to retrieve the  persisted messages from the actor. |
 | `start(...plugins)`                      | `SystemReference`            | Starts the actor system. Plugins is a variadic list of middleware. Currently this is only being used with `configurePersistence` |
 | `state$(actor)`                          | `Observable<'state>`         | Creates an observable which streams the current state of the actor to subscribers. |
-| every(amount).[unit]                     | `Duration | MessageInterval` |                                          |
-| after(amount).[unit]                     | `Duration | MessageInterval` |                                          |
+
 
 ### communication
 

@@ -5,7 +5,7 @@ chai.should();
 const { MockPersistenceEngine } = require('./mock-persistence-engine');
 const { BrokenPersistenceEngine } = require('./broken-persistence-engine');
 const { PartiallyBrokenPersistenceEngine } = require('./partially-broken-persistence-engine');
-const { start, dispatch, query, stop, every } = require('../lib');
+const { start, dispatch, query, stop, messages } = require('../lib');
 const { PersistedEvent, PersistedSnapshot, spawnPersistent, configurePersistence } = require('../lib/persistence');
 const chaiAsPromised = require('chai-as-promised');
 chai.use(chaiAsPromised);
@@ -203,37 +203,18 @@ describe('PersistentActor', () => {
     system = start(configurePersistence(persistenceEngine));
     const actor = spawnPersistent(
       system,
-      concatenativeFunction(''),
+      concatenativeFunction('', async (state, msg, ctx) => { await ctx.persist(msg); }),
       'iceland',
       'test',
-      { snapshot: every(5).messages }
+      { snapshotEvery: 5 * messages }
     );
-    const expectedResult = 'iceland is cold';
+    const expectedResult = 'iceland\'s cold';
     expectedResult.split('').forEach(msg => {
       dispatch(actor, msg);
     });
-    (await query(actor, '!', 30));
+    (await query(actor, '', 30));
     const snapshots = persistenceEngine._snapshots['iceland'];
     snapshots.length.should.equal(3);
-    snapshots[snapshots.length - 1].data.should.equal(expectedResult);
-  });
-
-  it('should be able to persist a snapshot after a specified duration', async () => {
-    const persistenceEngine = new MockPersistenceEngine();
-    system = start(configurePersistence(persistenceEngine));
-    const actor = spawnPersistent(
-      system,
-      concatenativeFunction(''),
-      'iceland',
-      'test',
-      { snapshot: every(40).milliseconds }
-    );
-    const expectedResult = 'iceland is cold';
-    expectedResult.split('').forEach(msg => {
-      dispatch(actor, msg);
-    });
-    await delay(50);
-    const snapshots = persistenceEngine._snapshots['iceland'];
     snapshots[snapshots.length - 1].data.should.equal(expectedResult);
   });
 
@@ -243,22 +224,21 @@ describe('PersistentActor', () => {
     system = start(configurePersistence(persistenceEngine));
     const actor = spawnPersistent(
       system,
-      concatenativeFunction(''),
+      concatenativeFunction('', async (state, msg, ctx) => { await ctx.persist(msg); }),
       'iceland',
       'test',
-      { snapshot: every(5).messages.and(30).milliseconds }
+      { snapshotEvery: 5 * messages }
     );
     const expectedResult = 'iceland is cold';
     expectedResult.split('').forEach(msg => {
       dispatch(actor, msg);
     });
-    await delay(50);
     (await query(actor, '', 30)).should.equal(expectedResult);
   });
 
-  it('should throw if snapshot does not include a duration field', async function () {
+  it('should throw if snapshot is not a number', async function () {
     const persistenceEngine = new MockPersistenceEngine(); // Disable takeSnapshot
     system = start(configurePersistence(persistenceEngine));
-    (() => spawnPersistent(system, ignore, 'test1', undefined, { snapshot: {} })).should.throw(Error);
+    (() => spawnPersistent(system, ignore, 'test1', undefined, { snapshotEvery: {} })).should.throw(Error);
   });
 });
