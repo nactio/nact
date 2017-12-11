@@ -137,14 +137,6 @@ const statefulGreeter = spawn(
 
 If no state is returned or the state returned is `undefined` or `null`, stateful actors automatically shut down.
 
-Another feature of stateful actors is that you can subscribe to state changes by using the `state$` function. `state$(actor)` returns a [RxJS](http://reactivex.io/rxjs/manual/index.html) observable stream, which makes it very composable. You can map, filter, combine, throttle and perform many other operations on the stream. For example, you could create a subscription to the statefulGreeter which prints a count of the number of unique names which have been greeted:
-
-```js
-state$(statefulGreeter)
-               .map(state => Object.keys(state).length)
-               .subscribe(count => console.log(`The statefulGreeter has now greeted ${count} unique names`));
-```
-
 ## Actor Communication
 [![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/nact-ping-pong)
 
