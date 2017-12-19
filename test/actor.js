@@ -395,6 +395,22 @@ describe('Actor', function () {
     });
   });
 
+  describe('#whenChildCrashes', function () {
+    let system;
+    beforeEach(() => { system = start(); });
+    afterEach(() => stop(system));
+
+    const createSupervisor = (parent, name, whenChildCrashes) => spawn(parent, (state = true, msg, ctx) => state, name, { whenChildCrashes });
+
+    it('should be able to continue processing messages without loss of state', async function () {
+
+    });
+
+    it('should be able to be restarted', async function () {
+
+    });
+  });
+
   describe('#state$', function () {
     let system;
     beforeEach(() => { system = start(); });
