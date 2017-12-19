@@ -187,6 +187,14 @@ describe('Actor', function () {
       await retry(() => isStopped(child).should.be.true, 12, 10);
     });
 
+    it('should automatically stop if error is thrown and no supervision policy is specified on the parent', async function () {
+      console.error = ignore;
+      const parent = spawn(system, (state = true, msg) => { return state; });
+      let child = spawn(parent, (msg) => { throw new Error('testError'); });
+      dispatch(child);
+      await retry(() => isStopped(child).should.be.true, 12, 10);
+    });
+
     it('should automatically stop if rejected promise is thrown', async function () {
       console.error = ignore;
       let child = spawn(system, (state = {}, msg) => Promise.reject(new Error('testError')));
@@ -403,11 +411,126 @@ describe('Actor', function () {
     const createSupervisor = (parent, name, whenChildCrashes) => spawn(parent, (state = true, msg, ctx) => state, name, { whenChildCrashes });
 
     it('should be able to continue processing messages without loss of state', async function () {
-
+      const parent = createSupervisor(system, 'test1', (child, msg, err, ctx) => ctx.resume());
+      const child = spawn(parent, (state = 0, msg, ctx) => {
+        if (state + 1 === 3 && msg !== 'msg3') {
+          throw new Error('Very bad thing');
+        }
+        dispatch(ctx.sender, state + 1);
+        return state + 1;
+      });
+      dispatch(child, 'msg0');
+      dispatch(child, 'msg1');
+      dispatch(child, 'msg2');
+      let result = await query(child, 'msg3', 300);
+      result.should.equal(3);
     });
 
-    it('should be able to be restarted', async function () {
+    it('should be able to be reset', async function () {
+      const parent = createSupervisor(system, 'test1', (child, msg, err, ctx) => ctx.reset());
+      const child = spawn(parent, (state = 0, msg, ctx) => {
+        if (state + 1 === 3 && msg !== 'msg3') {
+          throw new Error('Very bad thing');
+        }
+        dispatch(ctx.sender, state + 1);
+        return state + 1;
+      });
 
+      const grandchild = spawn(child, (state = 0, msg, ctx) => {
+        dispatch(ctx.sender, state + 1);
+        return state + 1;
+      });
+
+      dispatch(grandchild, 'msg0');
+      dispatch(child, 'msg0');
+      dispatch(grandchild, 'msg1');
+      dispatch(child, 'msg1');
+      dispatch(grandchild, 'msg2');
+      dispatch(child, 'msg2');
+      let result = await query(child, 'msg3', 300);
+      let result2 = await query(grandchild, 'msg3', 300);
+      result.should.equal(1);
+      result2.should.equal(1);
+    });
+
+    it('should be able to stop', async function () {
+      const parent = createSupervisor(system, 'test1', (child, msg, err, ctx) => ctx.stop());
+      const child = spawn(parent, (state = 0, msg, ctx) => {
+        if (state + 1 === 3 && msg !== 'msg3') {
+          throw new Error('Very bad thing');
+        }
+        dispatch(ctx.sender, state + 1);
+        return state + 1;
+      });
+      dispatch(child, 'msg0');
+      dispatch(child, 'msg1');
+      dispatch(child, 'msg2');
+      await delay(100);
+      isStopped(child).should.be.true;
+    });
+
+    it('should be able to escalate', async function () {
+      const parent = createSupervisor(system, 'test1', (child, msg, err, ctx) => ctx.escalate());
+      const child = spawn(parent, (state = 0, msg, ctx) => {
+        if (state + 1 === 3 && msg !== 'msg3') {
+          throw new Error('Very bad thing');
+        }
+        dispatch(ctx.sender, state + 1);
+        return state + 1;
+      });
+      dispatch(child, 'msg0');
+      dispatch(child, 'msg1');
+      dispatch(child, 'msg2');
+      await delay(100);
+      isStopped(child).should.be.true;
+      isStopped(parent).should.be.true;
+    });
+
+    it('should be able to stop all children', async function () {
+      const parent = createSupervisor(system, 'test1', (child, msg, err, ctx) => ctx.stopAll());
+      const child1 = spawn(parent, (state = 0, msg, ctx) => {
+        if (state + 1 === 3 && msg !== 'msg3') {
+          throw new Error('Very bad thing');
+        }
+        dispatch(ctx.sender, state + 1);
+        return state + 1;
+      });
+      const child2 = spawn(parent, (state = 0, msg, ctx) => {
+        dispatch(ctx.sender, state + 1);
+        return state + 1;
+      });
+      dispatch(child1, 'msg0');
+      dispatch(child1, 'msg1');
+      dispatch(child1, 'msg2');
+      await delay(100);
+      isStopped(child1).should.be.true;
+      isStopped(child2).should.be.true;
+    });
+
+    it('should be able to reset all children', async function () {
+      const parent = createSupervisor(system, 'test1', (child, msg, err, ctx) => ctx.resetAll());
+      const child1 = spawn(parent, (state = 0, msg, ctx) => {
+        if (state + 1 === 3 && msg !== 'msg3') {
+          throw new Error('Very bad thing');
+        }
+        dispatch(ctx.sender, state + 1);
+        return state + 1;
+      });
+      const child2 = spawn(parent, (state = 0, msg, ctx) => {
+        dispatch(ctx.sender, state + 1);
+        return state + 1;
+      });
+      dispatch(child2, 'msg0');
+      dispatch(child1, 'msg0');
+      dispatch(child2, 'msg1');
+      dispatch(child1, 'msg1');
+      dispatch(child2, 'msg2');
+      dispatch(child1, 'msg2');
+      await delay(100);
+      let result = await query(child1, 'msg3', 300);
+      let result2 = await query(child2, 'msg3', 300);
+      result.should.equal(1);
+      result2.should.equal(1);
     });
   });
 
