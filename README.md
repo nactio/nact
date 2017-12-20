@@ -137,14 +137,6 @@ const statefulGreeter = spawn(
 
 If no state is returned or the state returned is `undefined` or `null`, stateful actors automatically shut down.
 
-Another feature of stateful actors is that you can subscribe to state changes by using the `state$` function. `state$(actor)` returns a [RxJS](http://reactivex.io/rxjs/manual/index.html) observable stream, which makes it very composable. You can map, filter, combine, throttle and perform many other operations on the stream. For example, you could create a subscription to the statefulGreeter which prints a count of the number of unique names which have been greeted:
-
-```js
-state$(statefulGreeter)
-               .map(state => Object.keys(state).length)
-               .subscribe(count => console.log(`The statefulGreeter has now greeted ${count} unique names`));
-```
-
 ## Actor Communication
 [![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/remix/nact-ping-pong)
 
@@ -569,7 +561,6 @@ In the code above, the user contacts service stops if it hasn't received a new m
 | `spawnStateless(parent, func, name = auto, options = {})` | `ActorReference`             | Creates a stateless actor. The actor has a processor function with the following signature `('msg, Context) => 'nextState`  Stateless actors process messages concurrently and do not terminate until they are explicitely stopped. |
 | `spawnPersistent(parent, func, persistenceKey, name = auto, options = {})` | `ActorReference`             | Creates a persistent actor. Persistent actors extend stateful actors but also add a  persist method to the actor context. When an actor restarts after persisting messages, the persisted messages are played back in order until no futher messages remain. The actor may then start processing new messages. The `persistenceKey` is used to retrieve the  persisted messages from the actor. |
 | `start(...plugins)`                      | `SystemReference`            | Starts the actor system. Plugins is a variadic list of middleware. Currently this is only being used with `configurePersistence` |
-| `state$(actor)`                          | `Observable<'state>`         | Creates an observable which streams the current state of the actor to subscribers. |
 
 
 ### communication
