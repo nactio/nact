@@ -2,5 +2,13 @@
     "javascript.validate.enable": false,
     "standard.semistandard": true,
     "standard.enable": true,
-    "standard.autoFixOnSave": true
+    "standard.autoFixOnSave": true,
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        "**/coverage": true
+    }    
 }

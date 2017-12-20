@@ -9,7 +9,6 @@ const { start, dispatch, query, stop, messages } = require('../lib');
 const { PersistedEvent, PersistedSnapshot, spawnPersistent, configurePersistence } = require('../lib/persistence');
 const chaiAsPromised = require('chai-as-promised');
 chai.use(chaiAsPromised);
-
 const delay = (duration) => new Promise((resolve, reject) => setTimeout(() => resolve(), duration));
 
 const { applyOrThrowIfStopped } = require('../lib/references');
