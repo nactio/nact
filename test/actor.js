@@ -6,9 +6,8 @@ const chaiAsPromised = require('chai-as-promised');
 chai.use(chaiAsPromised);
 chai.should();
 const { start, spawn, spawnStateless, dispatch, stop, query, state$, milliseconds } = require('../lib');
-const { Promise } = require('bluebird');
+const delay = (duration) => new Promise((resolve, reject) => setTimeout(() => resolve(), duration));
 const { LocalPath } = require('../lib/paths');
-const delay = Promise.delay.bind(Promise);
 const { applyOrThrowIfStopped } = require('../lib/references');
 
 const spawnChildrenEchoer = (parent, name) =>
