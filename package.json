@@ -1,10 +1,11 @@
 {
   "name": "nact",
-  "version": "4.2.0",
+  "version": "4.3.0",
   "description": "nact ⇒ node.js + actors = your services have never been so µ",
   "main": "lib/index.js",
   "scripts": {
     "test": "yarn run lint && nyc mocha ./test/*.js",
+    "test-watch": "yarn run lint && nyc mocha --watch ./test/*.js",
     "interactive-cover": "nyc --reporter=html mocha ./test/*.js && open ./coverage/index.html",
     "lint": "semistandard",
     "coverage": "nyc report --reporter=text-lcov | coveralls",
@@ -16,7 +17,7 @@
   },
   "keywords": [
     "actors",
-    "actor-model",    
+    "actor-model",
     "akka",
     "akka.net",
     "non-blocking",
@@ -31,7 +32,6 @@
     "url": "http://github.com/ncthbrt/nact/issues"
   },
   "dependencies": {
-    "bluebird": "^3.5.0",
     "deep-freeze-node": "^1.1.3",
     "denque": "^1.2.2",
     "rxjs": "^5.4.3"
