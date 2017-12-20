@@ -14,18 +14,19 @@
 [![we are reactive](https://img.shields.io/badge/we_are-reactive-blue.svg?style=flat-square)](https://www.reactivemanifesto.org/)
 
 
-> Note:
->
-> Any and all feedback, comments and suggestions are welcome. Please open an issue if you
-> find anything unclear or misleading in the documentation. 
+
+Any and all feedback, comments and suggestions are welcome. Please open an issue if you
+find anything unclear or misleading in the documentation. 
+
+This is the repository for the javascript implementation. 
+To view/contribute to the ReasonML code, go to http://github.com/ncthbrt/reason-nact 
+
 
 # Sponsored by 
 [![Root Logo](https://raw.githubusercontent.com/ncthbrt/nact/master/root-logo.svg?sanitize=true)](https://root.co.za)
 
 
-# Introduction
-
-Nact is redux but for the server
+## Nact is redux but for the server
 
 Servers today are very different from those even 10 years ago. So why are we still programming like it's the 90s?
 
