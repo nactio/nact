@@ -21,10 +21,10 @@ find anything unclear or misleading in the documentation.
 This is the repository for the javascript implementation. 
 To view/contribute to the ReasonML code, go to http://github.com/ncthbrt/reason-nact 
 
+Project management for nact (for both reason/js) can be found at https://waffle.io/ncthbrt/nact
 
 # Sponsored by 
 [![Root Logo](https://raw.githubusercontent.com/ncthbrt/nact/master/root-logo.svg?sanitize=true)](https://root.co.za)
-
 
 ## Nact is redux but for the server
 
