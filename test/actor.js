@@ -7,7 +7,7 @@ chai.use(chaiAsPromised);
 chai.should();
 const { start, spawn, spawnStateless, dispatch, stop, query, state$, milliseconds } = require('../lib');
 const delay = (duration) => new Promise((resolve, reject) => setTimeout(() => resolve(), duration));
-const { Path } = require('../lib/paths');
+const { ActorPath } = require('../lib/paths');
 const { applyOrThrowIfStopped } = require('../lib/references');
 
 const spawnChildrenEchoer = (parent, name) =>
@@ -59,7 +59,7 @@ describe('ActorReference', function () {
     child.parent.should.equal(system);
     grandchild.parent.should.equal(child);
     child.name.should.be.a('string');
-    child.path.should.be.instanceOf(Path);
+    child.path.should.be.instanceOf(ActorPath);
   });
 });
 
