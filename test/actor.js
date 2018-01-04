@@ -1,14 +1,13 @@
 /* eslint-env mocha */
 /* eslint-disable no-unused-expressions */
 const chai = require('chai');
-// onCompleted
 const chaiAsPromised = require('chai-as-promised');
 chai.use(chaiAsPromised);
 chai.should();
 const { start, spawn, spawnStateless, dispatch, stop, query, state$, milliseconds } = require('../lib');
 const delay = (duration) => new Promise((resolve, reject) => setTimeout(() => resolve(), duration));
 const { ActorPath } = require('../lib/paths');
-const { applyOrThrowIfStopped } = require('../lib/references');
+const { applyOrThrowIfStopped } = require('../lib/system-map');
 
 const spawnChildrenEchoer = (parent, name) =>
   spawnStateless(
@@ -371,7 +370,7 @@ describe('Actor', function () {
     it(`should reject a promise if actor has already stopped`, async function () {
       let actor = spawnStateless(system, ignore);
       stop(actor);
-      await delay(5).then(() => query(actor, {}, 30)).should.be.rejectedWith(Error, 'Actor stopped. Query can never resolve');
+      await delay(5).then(() => query(actor, {}, 30)).should.be.rejectedWith(Error, 'Actor stopped or never existed. Query can never resolve');
     });
 
     it(`should reject a promise if the actor hasn't responded with the given timespan`, async function () {

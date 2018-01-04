@@ -11,7 +11,7 @@ const chaiAsPromised = require('chai-as-promised');
 chai.use(chaiAsPromised);
 const delay = (duration) => new Promise((resolve, reject) => setTimeout(() => resolve(), duration));
 
-const { applyOrThrowIfStopped } = require('../lib/references');
+const { applyOrThrowIfStopped } = require('../lib/system-map');
 
 const isStopped = (reference) => {
   try {

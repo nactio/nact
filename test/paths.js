@@ -40,15 +40,15 @@ describe('Path', function () {
   });
 
   describe('#createChildPath()', function () {
-    it('should append name to end of localParts array if name is valid', function () {
+    it('should append name to end of parts array if name is valid', function () {
       let path1 = ActorPath.root().createChildPath('a');
-      path1.localParts.should.deep.equal(['a']);
+      path1.parts.should.deep.equal(['a']);
 
       let path2 = path1.createChildPath('b');
-      path2.localParts.should.deep.equal(['a', 'b']);
+      path2.parts.should.deep.equal(['a', 'b']);
 
       let path3 = path2.createChildPath('c1234-d4');
-      path3.localParts.should.deep.equal(['a', 'b', 'c1234-d4']);
+      path3.parts.should.deep.equal(['a', 'b', 'c1234-d4']);
     });
 
     it('should throw an exception if the child name is invalid', function () {

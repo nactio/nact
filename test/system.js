@@ -3,7 +3,7 @@
 const chai = require('chai');
 chai.should();
 const { start, spawnStateless, spawn, stop } = require('../lib');
-const { applyOrThrowIfStopped } = require('../lib/references');
+const { applyOrThrowIfStopped } = require('../lib/system-map');
 
 const isStopped = (reference) => {
   try {
