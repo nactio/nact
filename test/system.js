@@ -2,8 +2,8 @@
 /* eslint-disable no-unused-expressions */
 const chai = require('chai');
 chai.should();
-const { start, spawnStateless, spawn, stop } = require('../lib');
-const { applyOrThrowIfStopped } = require('../lib/references');
+const { start, dispatch, query, spawnStateless, spawn, stop } = require('../lib');
+const { applyOrThrowIfStopped } = require('../lib/system-map');
 
 const isStopped = (reference) => {
   try {
@@ -16,6 +16,18 @@ const isStopped = (reference) => {
 const ignore = () => {};
 
 describe('System', function () {
+  it('should sucessfully be able to start multiple systems without conflict', async function () {
+    const system1 = start();
+    const system2 = start();
+
+    const actor1 = spawnStateless(system1, (msg, ctx) => dispatch(ctx.sender, msg * 2), 'child1');
+    const actor2 = spawnStateless(system2, (msg, ctx) => dispatch(ctx.sender, msg), 'child1');
+    const result1 = await query(actor1, 5, 30);
+    const result2 = await query(actor2, 5, 30);
+    result1.should.equal(10);
+    result2.should.equal(5);
+  });
+
   describe('#spawn()', function () {
     let system;
     beforeEach(() => { system = start(); });
