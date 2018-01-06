@@ -11,6 +11,7 @@
     "coverage": "nyc report --reporter=text-lcov | coveralls",
     "prepush": "yarn run test"
   },
+  "homepage": "https://nact.io",
   "repository": {
     "type": "git",
     "url": "git://github.com/ncthbrt/nact"
