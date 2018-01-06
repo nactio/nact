@@ -28,6 +28,11 @@ describe('System', function () {
     result2.should.equal(5);
   });
 
+  it('should be able to have a custom name specified', async function () {
+    const system = start({ name: 'henry' });
+    system.system.name.should.equal('henry');
+  });
+
   describe('#spawn()', function () {
     let system;
     beforeEach(() => { system = start(); });
