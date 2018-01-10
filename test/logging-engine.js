@@ -4,12 +4,16 @@ const chai = require('chai');
 chai.should();
 const {
   LogLevel,
-  logLevelToString,
   LogEvent,
-  AbstractLoggingEngine,
-  NoopLoggingEngine,
   ConsoleLoggingEngine
 } = require('../lib/monitoring');
+
+const {
+  logLevelToString,
+  AbstractLoggingEngine,
+  NoopLoggingEngine,
+  noopLoggingEngine
+} = require('../lib/monitoring/logging-engine');
 
 describe('LogLevel', function () {
   it('log levels should be sorted', function () {
@@ -74,6 +78,16 @@ describe('NoopLoggingEngine', function () {
     it('it should be able to receive log events', function () {
       engine.trace('A trace');
     });
+  });
+});
+
+describe('noopLoggingEngine', function () {
+  it('it should be instance of NoopLoggingEngine', function () {
+    noopLoggingEngine.should.be.instanceOf(NoopLoggingEngine);
+  });
+
+  it('it should be able to receive log events', function () {
+    noopLoggingEngine.trace('A trace');
   });
 });
 
