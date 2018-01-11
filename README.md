@@ -9,7 +9,8 @@
 [![Coveralls](https://img.shields.io/coveralls/ncthbrt/nact.svg?style=flat-square)]() [![Dependencies](https://david-dm.org/ncthbrt/nact.svg?branch=master&style=flat-square)](https://david-dm.org/ncthbrt/nact) [![DeepScan Grade](https://deepscan.io/api/projects/908/branches/1863/badge/grade.svg)](https://deepscan.io/dashboard/#view=project&pid=908&bid=1863)
 
 
-[![npm](https://img.shields.io/npm/v/nact.svg?style=flat-square)](https://www.npmjs.com/package/nact) 
+[![npm](https://img.shields.io/npm/v/nact.svg?style=flat-square)](https://www.npmjs.com/package/nact) [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fncthbrt%2Fnact.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fncthbrt%2Fnact?ref=badge_shield)
+
 [![js-semistandard-style](https://img.shields.io/badge/code%20style-semistandard-blue.svg?style=flat-square)](https://github.com/Flet/semistandard) 
 [![we are reactive](https://img.shields.io/badge/we_are-reactive-blue.svg?style=flat-square)](https://www.reactivemanifesto.org/)
 
@@ -42,3 +43,7 @@ With out of the box support for event sourcing, and a considered implementation 
 Nact is no silver bullet, but it is evolving to tackle ever more demanding use cases. Perhaps one of them is yours?
 
 To get started, head to https://nact.io
+
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fncthbrt%2Fnact.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fncthbrt%2Fnact?ref=badge_large)
