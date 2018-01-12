@@ -31,7 +31,7 @@ describe('configureLogging', () => {
     system && stop(system);
   });
 
-  it('should require that the persistence engine be defined', () => {
+  it('should require that the logging engine be defined', () => {
     (() => configureLogging(undefined)({})).should.throw(Error);
     (() => configureLogging(null)({})).should.throw(Error);
     (() => configureLogging(0)({})).should.throw(Error);

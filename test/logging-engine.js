@@ -39,7 +39,7 @@ describe('logLevelToString', () => {
     chai.expect(logLevelToString(LogLevel.WARNING)).to.equal('WARNING');
     chai.expect(logLevelToString(LogLevel.ERROR)).to.equal('ERROR');
     chai.expect(logLevelToString(LogLevel.CRITICAL)).to.equal('CRITICAL');
-    chai.expect(logLevelToString(100.0)).to.equal('???');
+    chai.expect(logLevelToString(100.0)).to.been.undefined;
   });
 });
 
