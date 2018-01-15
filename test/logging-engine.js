@@ -6,17 +6,11 @@ const sinonChai = require('sinon-chai');
 chai.should();
 chai.use(sinonChai);
 
-const {
-  LogLevel,
-  LogEvent,
-  logToConsole
-} = require('../lib/monitoring');
-
+const { LogLevel, LogEvent, logNothing } = require('../lib/monitoring');
 const {
   logLevelToString,
-  AbstractLoggingEngine,
-  NoopLoggingEngine,
-  logNothing
+  LoggingFacade,
+  LoggingFacadeImpl
 } = require('../lib/monitoring/logging-engine');
 
 describe('LogLevel', () => {
@@ -59,186 +53,242 @@ describe('LogEvent', () => {
   });
 });
 
-describe('AbstractLoggingEngine', () => {
-  it('should throw when functions are invoked', () => {
-    const engine = new AbstractLoggingEngine();
-    (() => engine.log(new LogEvent(100, 'category', 'message'))).should.throw(
-      Error
-    );
-    (() => engine.off('message')).should.throw(Error);
-    (() => engine.trace('message')).should.throw(Error);
-    (() => engine.debug('message')).should.throw(Error);
-    (() => engine.info('message')).should.throw(Error);
-    (() => engine.warning('message')).should.throw(Error);
-    (() => engine.error('message')).should.throw(Error);
-    (() => engine.critical('message')).should.throw(Error);
-    (() => engine.event('request-end')).should.throw(Error);
-    (() => engine.metrics('queue-length')).should.throw(Error);
+describe('LoggingFacade', () => {
+  it('should not be able to be instantiated', () => {
+    (() => new LoggingFacade()).should.throw(Error);
   });
 });
 
-describe('NoopLoggingEngine', () => {
-  describe('When a no-op logging engine is created', () => {
-    const engine = new NoopLoggingEngine();
+describe('LoggingFacadeImpl', () => {
+  it('should be able to be instantiated', () => {
+    (new LoggingFacadeImpl(() => {})).should.been.instanceOf(LoggingFacadeImpl);
+  });
 
-    it('it should be able to receive log events', () => {
-      engine.trace('A trace');
+  describe('When a LoggingFacadeImpl is created with a given logger', () => {
+    let logger;
+    let facade;
+    const message = 'Some message';
+    const properties = { answer: 42 };
+    const metrics = { duration_ms: 1234 };
+
+    beforeEach(() => {
+      logger = sinon.spy();
+      facade = new LoggingFacadeImpl(logger);
+    });
+
+    it('it should call given logger when log method is used', () => {
+      const logEvent = new LogEvent(LogLevel.Info, 'trace', 'Something');
+      facade.log(logEvent);
+      logger.should.have.been.calledWith(logEvent);
+    });
+
+    it('it should call given logger when off method is used', () => {
+      const logEvent = new LogEvent(LogLevel.OFF, 'trace', message, properties, metrics);
+      facade.off(message, properties, metrics);
+      logger.should.have.been.calledWith(logEvent);
+    });
+
+    it('it should call given logger when trace method is used', () => {
+      const logEvent = new LogEvent(LogLevel.TRACE, 'trace', message, properties, metrics);
+      facade.trace(message, properties, metrics);
+      logger.should.have.been.calledWith(logEvent);
+    });
+
+    it('it should call given logger when debug method is used', () => {
+      const logEvent = new LogEvent(LogLevel.DEBUG, 'trace', message, properties, metrics);
+      facade.debug(message, properties, metrics);
+      logger.should.have.been.calledWith(logEvent);
+    });
+
+    it('it should call given logger when info method is used', () => {
+      const logEvent = new LogEvent(LogLevel.INFO, 'trace', message, properties, metrics);
+      facade.info(message, properties, metrics);
+      logger.should.have.been.calledWith(logEvent);
+    });
+
+    it('it should call given logger when warning method is used', () => {
+      const logEvent = new LogEvent(LogLevel.WARNING, 'trace', message, properties, metrics);
+      facade.warning(message, properties, metrics);
+      logger.should.have.been.calledWith(logEvent);
+    });
+
+    it('it should call given logger when error method is used', () => {
+      const logEvent = new LogEvent(LogLevel.ERROR, 'trace', message, properties, metrics);
+      facade.error(message, properties, metrics);
+      logger.should.have.been.calledWith(logEvent);
+    });
+
+    it('it should call given logger when critical method is used', () => {
+      const logEvent = new LogEvent(LogLevel.CRITICAL, 'trace', message, properties, metrics);
+      facade.critical(message, properties, metrics);
+      logger.should.have.been.calledWith(logEvent);
+    });
+
+    it('it should call given logger when event method is used', () => {
+      const logEvent = new LogEvent(LogLevel.INFO, 'event', message, properties, metrics);
+      facade.event(message, properties, metrics);
+      logger.should.have.been.calledWith(logEvent);
+    });
+
+    it('it should call given logger when metrics method is used', () => {
+      const logEvent = new LogEvent(LogLevel.INFO, 'metrics', message, properties, metrics);
+      facade.metrics(message, properties, metrics);
+      logger.should.have.been.calledWith(logEvent);
     });
   });
 });
 
 describe('logNothing', () => {
-  it('it should be instance of NoopLoggingEngine', () => {
-    logNothing.should.be.instanceOf(NoopLoggingEngine);
-  });
+  it('it should be a function', () =>
+    logNothing.should.be.instanceOf(Function));
 
-  it('it should be able to receive log events', () => {
-    logNothing.trace('A trace');
-  });
-});
-
-describe('logToConsole', () => {
-  describe('When a console logging engine is created', () => {
-    let consoleMock = null;
-    let engine = null;
-
-    beforeEach(() => {
-      consoleMock = {
-        trace: sinon.spy(),
-        debug: sinon.spy(),
-        info: sinon.spy(),
-        warn: sinon.spy(),
-        error: sinon.spy()
-      };
-      engine = logToConsole(consoleMock);
-    });
-
-    const testCalled = (positives, negatives) => {
-      positives.forEach(spy => spy.should.have.been.called);
-      negatives.forEach(spy => spy.should.have.not.been.called);
-    };
-
-    it('it should return a logging engine', () => {
-      engine.should.be.instanceOf(AbstractLoggingEngine);
-    });
-
-    it('off should not call any console channel', () => {
-      engine.off('A message that wont show');
-      testCalled(
-        [],
-        [
-          consoleMock.trace,
-          consoleMock.debug,
-          consoleMock.info,
-          consoleMock.warn,
-          consoleMock.error
-        ]
-      );
-    });
-
-    it('should call console trace channel', () => {
-      engine.trace('A trace');
-      testCalled(
-        [consoleMock.trace],
-        [
-          consoleMock.debug,
-          consoleMock.info,
-          consoleMock.warn,
-          consoleMock.error
-        ]
-      );
-    });
-
-    it('should call console debug channel', () => {
-      engine.debug('A debug');
-      testCalled(
-        [consoleMock.debug],
-        [
-          consoleMock.trace,
-          consoleMock.info,
-          consoleMock.warn,
-          consoleMock.error
-        ]
-      );
-    });
-
-    it('should call console info channel', () => {
-      engine.info('A info');
-      testCalled(
-        [consoleMock.info],
-        [
-          consoleMock.trace,
-          consoleMock.debug,
-          consoleMock.warn,
-          consoleMock.error
-        ]
-      );
-    });
-
-    it('should call console warning channel', () => {
-      engine.warning('A warning');
-      testCalled(
-        [consoleMock.warn],
-        [
-          consoleMock.trace,
-          consoleMock.debug,
-          consoleMock.info,
-          consoleMock.error
-        ]
-      );
-    });
-
-    it('should call console error channel', () => {
-      engine.error('A error');
-      testCalled(
-        [consoleMock.error],
-        [
-          consoleMock.trace,
-          consoleMock.debug,
-          consoleMock.info,
-          consoleMock.warn
-        ]
-      );
-    });
-
-    it('should call console critical channel', () => {
-      engine.critical('A critical');
-      testCalled(
-        [consoleMock.error],
-        [
-          consoleMock.trace,
-          consoleMock.debug,
-          consoleMock.info,
-          consoleMock.warn
-        ]
-      );
-    });
-
-    it('unknown level should not call any console channel', () => {
-      engine.log(new LogEvent(100, '', ''));
-      testCalled(
-        [consoleMock.error],
-        [
-          consoleMock.trace,
-          consoleMock.debug,
-          consoleMock.info,
-          consoleMock.warn
-        ]
-      );
-    });
-  });
-
-  describe('When no console proxy is given', () => {
-    const infoStub = sinon.stub(console, 'info');
-    const engine = logToConsole();
-
-    after(() => {
-      infoStub.restore();
-    });
-
-    it('the global console should be used', () => {
-      engine.info('hello');
-      infoStub.should.have.been.calledWith('[INFO] trace: hello');
-    });
+  it('it should return undefined', () => {
+    chai.expect(logNothing({})).to.be.undefined;
   });
 });
+
+// describe('logToConsole', () => {
+//   describe('When a console logging engine is created', () => {
+//     let consoleMock = null;
+//     let engine = null;
+
+//     beforeEach(() => {
+//       consoleMock = {
+//         trace: sinon.spy(),
+//         debug: sinon.spy(),
+//         info: sinon.spy(),
+//         warn: sinon.spy(),
+//         error: sinon.spy()
+//       };
+//       engine = logToConsole(consoleMock);
+//     });
+
+//     const testCalled = (positives, negatives) => {
+//       positives.forEach(spy => spy.should.have.been.called);
+//       negatives.forEach(spy => spy.should.have.not.been.called);
+//     };
+
+//     it('it should return a logging engine', () => {
+//       engine.should.be.instanceOf(AbstractLoggingEngine);
+//     });
+
+//     it('off should not call any console channel', () => {
+//       engine.off('A message that wont show');
+//       testCalled(
+//         [],
+//         [
+//           consoleMock.trace,
+//           consoleMock.debug,
+//           consoleMock.info,
+//           consoleMock.warn,
+//           consoleMock.error
+//         ]
+//       );
+//     });
+
+//     it('should call console trace channel', () => {
+//       engine.trace('A trace');
+//       testCalled(
+//         [consoleMock.trace],
+//         [
+//           consoleMock.debug,
+//           consoleMock.info,
+//           consoleMock.warn,
+//           consoleMock.error
+//         ]
+//       );
+//     });
+
+//     it('should call console debug channel', () => {
+//       engine.debug('A debug');
+//       testCalled(
+//         [consoleMock.debug],
+//         [
+//           consoleMock.trace,
+//           consoleMock.info,
+//           consoleMock.warn,
+//           consoleMock.error
+//         ]
+//       );
+//     });
+
+//     it('should call console info channel', () => {
+//       engine.info('A info');
+//       testCalled(
+//         [consoleMock.info],
+//         [
+//           consoleMock.trace,
+//           consoleMock.debug,
+//           consoleMock.warn,
+//           consoleMock.error
+//         ]
+//       );
+//     });
+
+//     it('should call console warning channel', () => {
+//       engine.warning('A warning');
+//       testCalled(
+//         [consoleMock.warn],
+//         [
+//           consoleMock.trace,
+//           consoleMock.debug,
+//           consoleMock.info,
+//           consoleMock.error
+//         ]
+//       );
+//     });
+
+//     it('should call console error channel', () => {
+//       engine.error('A error');
+//       testCalled(
+//         [consoleMock.error],
+//         [
+//           consoleMock.trace,
+//           consoleMock.debug,
+//           consoleMock.info,
+//           consoleMock.warn
+//         ]
+//       );
+//     });
+
+//     it('should call console critical channel', () => {
+//       engine.critical('A critical');
+//       testCalled(
+//         [consoleMock.error],
+//         [
+//           consoleMock.trace,
+//           consoleMock.debug,
+//           consoleMock.info,
+//           consoleMock.warn
+//         ]
+//       );
+//     });
+
+//     it('unknown level should not call any console channel', () => {
+//       engine.log(new LogEvent(100, '', ''));
+//       testCalled(
+//         [consoleMock.error],
+//         [
+//           consoleMock.trace,
+//           consoleMock.debug,
+//           consoleMock.info,
+//           consoleMock.warn
+//         ]
+//       );
+//     });
+//   });
+
+//   describe('When no console proxy is given', () => {
+//     const infoStub = sinon.stub(console, 'info');
+//     const engine = logToConsole();
+
+//     after(() => {
+//       infoStub.restore();
+//     });
+
+//     it('the global console should be used', () => {
+//       engine.info('hello');
+//       infoStub.should.have.been.calledWith('[INFO] trace: hello');
+//     });
+//   });
+// });
