@@ -9,7 +9,10 @@
     "interactive-cover": "nyc --reporter=html mocha ./test/*.js && open ./coverage/index.html",
     "lint": "semistandard",
     "coverage": "nyc report --reporter=text-lcov | coveralls",
-    "prepush": "yarn run test"
+    "prepush": "yarn run test",
+    "test-only": "nyc mocha ./test/*.js",
+    "test-only-watch": "nyc mocha --watch ./test/*.js",
+    "lint-fix": "semistandard --fix"
   },
   "homepage": "https://nact.io",
   "repository": {
@@ -47,6 +50,8 @@
     "husky": "^0.14.3",
     "mocha": "^4.0.0",
     "nyc": "^11.2.1",
-    "semistandard": "^11.0.0"
+    "semistandard": "^11.0.0",
+    "sinon": "^4.1.4",
+    "sinon-chai": "^2.14.0"
   }
 }
