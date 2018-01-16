@@ -22,20 +22,17 @@ describe('logToConsole', () => {
     let system;
     let consoleProxy = null;
 
-    beforeEach(() => {
-      consoleProxy = {
-        trace: sinon.spy(),
-        debug: sinon.spy(),
-        info: sinon.spy(),
-        warn: sinon.spy(),
-        error: sinon.spy()
+    const initTest = () => {
+      const consoleProxy = {
+        trace: sinon.spy(function trace(){}),
+        debug: sinon.spy(function debug(){}),
+        info: sinon.spy(function info(){}),
+        warn: sinon.spy(function warn(){}),
+        error: sinon.spy(function error(){})
       };
-      system = start(configureLogging(logToConsole(consoleProxy)));
-    });
-
-    afterEach(function () {
-      system && stop(system);
-    });
+      const system = start(configureLogging(logToConsole(consoleProxy)));
+      return [ consoleProxy, system ];
+    };
 
     const testCalled = (positives, negatives) => {
       positives.forEach(spy => spy.should.have.been.called);
@@ -43,6 +40,7 @@ describe('logToConsole', () => {
     };
 
     it('off should not call any console channel', () => {
+      [ consoleProxy, system ] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.trace('A trace');
       });
@@ -63,13 +61,14 @@ describe('logToConsole', () => {
     });
 
     it('should call console trace channel', done => {
+      const [ consoleProxy, system ] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.trace('A trace');
       });
       dispatch(actor, 'hello');
       setTimeout(() => {
         testCalled(
-          [consoleProxy.trace],
+          [ consoleProxy.trace ],
           [
             consoleProxy.debug,
             consoleProxy.info,
@@ -78,10 +77,12 @@ describe('logToConsole', () => {
           ]
         );
         done();
+        stop(system);
       }, 25);
     });
 
     it('should call console debug channel', () => {
+      const [ consoleProxy, system ] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.debug('A trace');
       });
@@ -97,10 +98,12 @@ describe('logToConsole', () => {
           ]
         );
         done();
+        stop(system);
       }, 25);
     });
 
     it('should call console info channel', () => {
+      const [ consoleProxy, system ] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.info('A trace');
       });
@@ -116,12 +119,14 @@ describe('logToConsole', () => {
           ]
         );
         done();
+        stop(system);
       }, 25);
     });
 
-    it('should call console warning channel', () => {
+    it('should call console warn channel', () => {
+      const [ consoleProxy, system ] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
-        ctx.log.warning('A trace');
+        ctx.log.warn('A trace');
       });
       dispatch(actor, 'hello');
       setTimeout(() => {
@@ -135,10 +140,12 @@ describe('logToConsole', () => {
           ]
         );
         done();
+        stop(system);
       }, 25);
     });
 
     it('should call console error channel', () => {
+      const [ consoleProxy, system ] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.error('A trace');
       });
@@ -154,6 +161,7 @@ describe('logToConsole', () => {
           ]
         );
         done();
+        stop(system);
       }, 25);
     });
 
@@ -195,173 +203,6 @@ describe('logToConsole', () => {
     //   }, 25);
     // });
   });
-
-  // describe('When logToConsole is used with a console-proxy with only log', () => {
-  //   let system;
-  //   let consoleProxy = null;
-
-  //   beforeEach(() => {
-  //     consoleProxy = {
-  //       log: sinon.spy(),
-  //     };
-  //     system = start(configureLogging(logToConsole(consoleProxy)));
-  //   });
-
-  //   afterEach(function () {
-  //     system && stop(system);
-  //     system = undefined;
-  //     consoleProxy = undefined;
-  //   });
-
-  //   const testCalled = (positives, negatives) => {
-  //     positives.forEach(spy => spy.should.have.been.called);
-  //     negatives.forEach(spy => spy.should.have.not.been.called);
-  //   };
-
-  //   it('off should not call any console channel', () => {
-  //     const actor = spawnStateless(system, (msg, ctx) => {
-  //       ctx.log.trace('A trace');
-  //     });
-  //     dispatch(actor, 'hello');
-  //     setTimeout(() => {
-  //       testCalled([], [ consoleProxy.log ]);
-  //       done();
-  //     }, 25);
-  //   });
-
-  //   it('should call console trace channel', done => {
-  //     const actor = spawnStateless(system, (msg, ctx) => {
-  //       ctx.log.trace('A trace');
-  //     });
-  //     dispatch(actor, 'hello');
-  //     setTimeout(() => {
-  //       testCalled(
-  //         [consoleProxy.trace],
-  //         [
-  //           consoleProxy.debug,
-  //           consoleProxy.info,
-  //           consoleProxy.warn,
-  //           consoleProxy.error
-  //         ]
-  //       );
-  //       done();
-  //     }, 25);
-  //   });
-
-  //   it('should call console debug channel', () => {
-  //     const actor = spawnStateless(system, (msg, ctx) => {
-  //       ctx.log.trace('A trace');
-  //     });
-  //     dispatch(actor, 'hello');
-  //     setTimeout(() => {
-  //       testCalled(
-  //         [consoleProxy.debug],
-  //         [
-  //           consoleProxy.trace,
-  //           consoleProxy.info,
-  //           consoleProxy.warn,
-  //           consoleProxy.error
-  //         ]
-  //       );
-  //       done();
-  //     }, 25);
-  //   });
-
-  //   it('should call console info channel', () => {
-  //     const actor = spawnStateless(system, (msg, ctx) => {
-  //       ctx.log.trace('A trace');
-  //     });
-  //     dispatch(actor, 'hello');
-  //     setTimeout(() => {
-  //       testCalled(
-  //         [consoleProxy.info],
-  //         [
-  //           consoleProxy.trace,
-  //           consoleProxy.debug,
-  //           consoleProxy.warn,
-  //           consoleProxy.error
-  //         ]
-  //       );
-  //       done();
-  //     }, 25);
-  //   });
-
-  //   it('should call console warning channel', () => {
-  //     const actor = spawnStateless(system, (msg, ctx) => {
-  //       ctx.log.trace('A trace');
-  //     });
-  //     dispatch(actor, 'hello');
-  //     setTimeout(() => {
-  //       testCalled(
-  //         [consoleProxy.warn],
-  //         [
-  //           consoleProxy.trace,
-  //           consoleProxy.debug,
-  //           consoleProxy.info,
-  //           consoleProxy.error
-  //         ]
-  //       );
-  //       done();
-  //     }, 25);
-  //   });
-
-  //   it('should call console error channel', () => {
-  //     const actor = spawnStateless(system, (msg, ctx) => {
-  //       ctx.log.trace('A trace');
-  //     });
-  //     dispatch(actor, 'hello');
-  //     setTimeout(() => {
-  //       testCalled(
-  //         [consoleProxy.error],
-  //         [
-  //           consoleProxy.trace,
-  //           consoleProxy.debug,
-  //           consoleProxy.info,
-  //           consoleProxy.warn
-  //         ]
-  //       );
-  //       done();
-  //     }, 25);
-  //   });
-
-  //   it('should call console critical channel', () => {
-  //     const actor = spawnStateless(system, (msg, ctx) => {
-  //       ctx.log.trace('A trace');
-  //     });
-  //     dispatch(actor, 'hello');
-  //     setTimeout(() => {
-  //       testCalled(
-  //         [consoleProxy.error],
-  //         [
-  //           consoleProxy.trace,
-  //           consoleProxy.debug,
-  //           consoleProxy.info,
-  //           consoleProxy.warn
-  //         ]
-  //       );
-  //       done();
-  //     }, 25);
-  //   });
-
-  //   it('unknown level should not call any console channel', () => {
-  //     const actor = spawnStateless(system, (msg, ctx) => {
-  //       ctx.log.trace('A trace');
-  //     });
-  //     dispatch(actor, 'hello');
-  //     setTimeout(() => {
-  //       testCalled(
-  //         [consoleProxy.error],
-  //         [
-  //           consoleProxy.trace,
-  //           consoleProxy.debug,
-  //           consoleProxy.info,
-  //           consoleProxy.warn
-  //         ]
-  //       );
-  //       done();
-  //     }, 25);
-  //   });
-  // });
 
   // describe('When no console proxy is given', () => {
   //   const infoStub = sinon.stub(console, 'info');

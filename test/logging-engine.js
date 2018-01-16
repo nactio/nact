@@ -18,8 +18,8 @@ describe('LogLevel', () => {
     LogLevel.OFF.should.be.lessThan(LogLevel.TRACE);
     LogLevel.TRACE.should.be.lessThan(LogLevel.DEBUG);
     LogLevel.DEBUG.should.be.lessThan(LogLevel.INFO);
-    LogLevel.INFO.should.be.lessThan(LogLevel.WARNING);
-    LogLevel.WARNING.should.be.lessThan(LogLevel.ERROR);
+    LogLevel.INFO.should.be.lessThan(LogLevel.WARN);
+    LogLevel.WARN.should.be.lessThan(LogLevel.ERROR);
     LogLevel.ERROR.should.be.lessThan(LogLevel.CRITICAL);
   });
 });
@@ -30,7 +30,7 @@ describe('logLevelToString', () => {
     chai.expect(logLevelToString(LogLevel.TRACE)).to.equal('TRACE');
     chai.expect(logLevelToString(LogLevel.DEBUG)).to.equal('DEBUG');
     chai.expect(logLevelToString(LogLevel.INFO)).to.equal('INFO');
-    chai.expect(logLevelToString(LogLevel.WARNING)).to.equal('WARNING');
+    chai.expect(logLevelToString(LogLevel.WARN)).to.equal('WARN');
     chai.expect(logLevelToString(LogLevel.ERROR)).to.equal('ERROR');
     chai.expect(logLevelToString(LogLevel.CRITICAL)).to.equal('CRITICAL');
     chai.expect(logLevelToString(100.0)).to.been.undefined;
@@ -39,7 +39,7 @@ describe('logLevelToString', () => {
 
 describe('LogEvent', () => {
   it('should capture all constructor arguments', () => {
-    const level = LogLevel.WARNING;
+    const level = LogLevel.WARN;
     const category = 'Event-Category';
     const message = 'Event-Message';
     const properties = { authenticated: true };
@@ -106,9 +106,9 @@ describe('LoggingFacadeImpl', () => {
       logger.should.have.been.calledWith(logEvent);
     });
 
-    it('it should call given logger when warning method is used', () => {
-      const logEvent = new LogEvent(LogLevel.WARNING, 'trace', message, properties, metrics);
-      facade.warning(message, properties, metrics);
+    it('it should call given logger when warn method is used', () => {
+      const logEvent = new LogEvent(LogLevel.WARN, 'trace', message, properties, metrics);
+      facade.warn(message, properties, metrics);
       logger.should.have.been.calledWith(logEvent);
     });
 
@@ -225,8 +225,8 @@ describe('logNothing', () => {
 //       );
 //     });
 
-//     it('should call console warning channel', () => {
-//       engine.warning('A warning');
+//     it('should call console warn channel', () => {
+//       engine.warn('A warn');
 //       testCalled(
 //         [consoleMock.warn],
 //         [

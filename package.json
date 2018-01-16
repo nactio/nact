@@ -11,7 +11,8 @@
     "coverage": "nyc report --reporter=text-lcov | coveralls",
     "prepush": "yarn run test",
     "test-only": "nyc mocha ./test/*.js",
-    "test-only-watch": "nyc mocha --watch ./test/*.js"
+    "test-only-watch": "nyc mocha --watch ./test/*.js",
+    "lint-fix": "semistandard --fix"
   },
   "homepage": "https://nact.io",
   "repository": {
