@@ -90,14 +90,14 @@ describe('Actor', function () {
     it('allows stateful behaviour', async function () {
       let actor = spawn(
         system,
-         function (state = '', msg) {
-           if (msg.type === 'query') {
-             dispatch(this.sender, state, this.self);
-             return state;
-           } else if (msg.type === 'append') {
-             return state + msg.payload;
-           }
-         }
+        function (state = '', msg) {
+          if (msg.type === 'query') {
+            dispatch(this.sender, state, this.self);
+            return state;
+          } else if (msg.type === 'append') {
+            return state + msg.payload;
+          }
+        }
       );
 
       dispatch(actor, { payload: 'Hello ', type: 'append' });
@@ -212,7 +212,7 @@ describe('Actor', function () {
 
     it('should automatically stop after timeout if timeout is specified', async function () {
       console.error = ignore;
-      let child = spawnStateless(system, (msg) => {}, 'test', { shutdownAfter: 100 * milliseconds });
+      let child = spawnStateless(system, (msg) => { }, 'test', { shutdownAfter: 100 * milliseconds });
       await delay(110);
       isStopped(child).should.be.true;
     });
