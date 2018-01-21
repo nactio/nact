@@ -5,7 +5,7 @@ const sinon = require('sinon');
 const sinonChai = require('sinon-chai');
 chai.should();
 chai.use(sinonChai);
-
+const delay = (duration) => new Promise((resolve, reject) => setTimeout(() => resolve(), duration));
 const { start, dispatch, stop, spawnStateless } = require('../lib');
 const {
   LogLevel,
@@ -14,9 +14,21 @@ const {
   configureLogging
 } = require('../lib/monitoring');
 
-describe('logToConsole', () => {
-  it('it should be a function', () =>
-    logToConsole.should.be.instanceOf(Function));
+const retry = async (assertion, remainingAttempts, retryInterval = 0) => {
+  if (remainingAttempts <= 1) {
+    return assertion();
+  } else {
+    try {
+      await Promise.resolve(assertion());
+    } catch (e) {
+      await delay(retryInterval);
+      await retry(assertion, remainingAttempts - 1, retryInterval);
+    }
+  }
+};
+
+describe('logToConsole', function () {
+  it('it should be a function', () => logToConsole.should.be.instanceOf(Function));
 
   const testCalled = (positives, negatives) => {
     positives.forEach(spy => spy.should.have.been.called);
@@ -26,15 +38,15 @@ describe('logToConsole', () => {
   describe('When logToConsole is used with a console-proxy', () => {
     const initTest = () => {
       const consoleProxy = {
-        trace: sinon.spy(function trace () {}),
-        debug: sinon.spy(function debug () {}),
-        info: sinon.spy(function info () {}),
-        warn: sinon.spy(function warn () {}),
-        error: sinon.spy(function error () {}),
-        critical: sinon.spy(function critical () {})
+        trace: sinon.spy(function trace () { }),
+        debug: sinon.spy(function debug () { }),
+        info: sinon.spy(function info () { }),
+        warn: sinon.spy(function warn () { }),
+        error: sinon.spy(function error () { }),
+        critical: sinon.spy(function critical () { })
       };
-      const system = start(configureLogging(logToConsole(consoleProxy)));
-      return [ consoleProxy, system ];
+      const system = start(configureLogging(logToConsole({ consoleProxy })));
+      return [consoleProxy, system];
     };
 
     const endTest = (consoleProxy, system) => {
@@ -42,7 +54,7 @@ describe('logToConsole', () => {
     };
 
     it('off should not call any console channel', done => {
-      const [ consoleProxy, system ] = initTest();
+      const [consoleProxy, system] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.off('A trace');
       });
@@ -65,14 +77,14 @@ describe('logToConsole', () => {
     });
 
     it('should call console trace channel', done => {
-      const [ consoleProxy, system ] = initTest();
+      const [consoleProxy, system] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.trace('A trace');
       });
       dispatch(actor, 'hello');
       setTimeout(() => {
         testCalled(
-          [ consoleProxy.trace ],
+          [consoleProxy.trace],
           [
             consoleProxy.debug,
             consoleProxy.info,
@@ -87,7 +99,7 @@ describe('logToConsole', () => {
     });
 
     it('should call console debug channel', done => {
-      const [ consoleProxy, system ] = initTest();
+      const [consoleProxy, system] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.debug('A trace');
       });
@@ -109,7 +121,7 @@ describe('logToConsole', () => {
     });
 
     it('should call console info channel', done => {
-      const [ consoleProxy, system ] = initTest();
+      const [consoleProxy, system] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.info('A trace');
       });
@@ -131,7 +143,7 @@ describe('logToConsole', () => {
     });
 
     it('should call console warn channel', done => {
-      const [ consoleProxy, system ] = initTest();
+      const [consoleProxy, system] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.warn('A trace');
       });
@@ -153,7 +165,7 @@ describe('logToConsole', () => {
     });
 
     it('should call console error channel', done => {
-      const [ consoleProxy, system ] = initTest();
+      const [consoleProxy, system] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.error('A trace');
       });
@@ -175,7 +187,7 @@ describe('logToConsole', () => {
     });
 
     it('should call console critical channel', done => {
-      const [ consoleProxy, system ] = initTest();
+      const [consoleProxy, system] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.critical('A trace');
       });
@@ -197,7 +209,7 @@ describe('logToConsole', () => {
     });
 
     it('an unknown low level should not call any console channel', done => {
-      const [ consoleProxy, system ] = initTest();
+      const [consoleProxy, system] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.log(new LogEvent(LogLevel.OFF - 10, 'trace', 'A trace'));
       });
@@ -220,7 +232,7 @@ describe('logToConsole', () => {
     });
 
     it('an unknown high level should call console critical channel', done => {
-      const [ consoleProxy, system ] = initTest();
+      const [consoleProxy, system] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.log(new LogEvent(LogLevel.CRITICAL + 10, 'trace', 'A trace'));
       });
@@ -245,10 +257,10 @@ describe('logToConsole', () => {
   describe('When logToConsole is used with a console-proxy with single log channel', () => {
     const initTest = () => {
       const consoleProxy = {
-        log: sinon.spy(function log () {})
+        log: sinon.spy(function log () { })
       };
-      const system = start(configureLogging(logToConsole(consoleProxy)));
-      return [ consoleProxy, system ];
+      const system = start(configureLogging(logToConsole({ consoleProxy })));
+      return [consoleProxy, system];
     };
 
     const endTest = (consoleProxy, system) => {
@@ -256,116 +268,116 @@ describe('logToConsole', () => {
     };
 
     it('off should not call any console channel', done => {
-      const [ consoleProxy, system ] = initTest();
+      const [consoleProxy, system] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.off('A trace');
       });
       dispatch(actor, 'hello');
       setTimeout(() => {
-        testCalled([], [ consoleProxy.log ]);
+        testCalled([], [consoleProxy.log]);
         done();
       }, 25);
     });
 
     it('should call console trace channel', done => {
-      const [ consoleProxy, system ] = initTest();
+      const [consoleProxy, system] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.trace('A trace');
       });
       dispatch(actor, 'hello');
       setTimeout(() => {
-        testCalled([ consoleProxy.log ], []);
+        testCalled([consoleProxy.log], []);
         done();
         endTest(consoleProxy, system);
       }, 25);
     });
 
     it('should call console debug channel', done => {
-      const [ consoleProxy, system ] = initTest();
+      const [consoleProxy, system] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.debug('A trace');
       });
       dispatch(actor, 'hello');
       setTimeout(() => {
-        testCalled([ consoleProxy.log ], []);
+        testCalled([consoleProxy.log], []);
         done();
         endTest(consoleProxy, system);
       }, 25);
     });
 
     it('should call console info channel', done => {
-      const [ consoleProxy, system ] = initTest();
+      const [consoleProxy, system] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.info('A trace');
       });
       dispatch(actor, 'hello');
       setTimeout(() => {
-        testCalled([ consoleProxy.log ], []);
+        testCalled([consoleProxy.log], []);
         done();
         endTest(consoleProxy, system);
       }, 25);
     });
 
     it('should call console warn channel', done => {
-      const [ consoleProxy, system ] = initTest();
+      const [consoleProxy, system] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.warn('A trace');
       });
       dispatch(actor, 'hello');
       setTimeout(() => {
-        testCalled([ consoleProxy.log ], []);
+        testCalled([consoleProxy.log], []);
         done();
         endTest(consoleProxy, system);
       }, 25);
     });
 
     it('should call console error channel', done => {
-      const [ consoleProxy, system ] = initTest();
+      const [consoleProxy, system] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.error('A trace');
       });
       dispatch(actor, 'hello');
       setTimeout(() => {
-        testCalled([ consoleProxy.log ], []);
+        testCalled([consoleProxy.log], []);
         done();
         endTest(consoleProxy, system);
       }, 25);
     });
 
     it('should call console critical channel', done => {
-      const [ consoleProxy, system ] = initTest();
+      const [consoleProxy, system] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.critical('A trace');
       });
       dispatch(actor, 'hello');
       setTimeout(() => {
-        testCalled([ consoleProxy.log ], []);
+        testCalled([consoleProxy.log], []);
         done();
         endTest(consoleProxy, system);
       }, 25);
     });
 
     it('an unknown low level should not call any console channel', done => {
-      const [ consoleProxy, system ] = initTest();
+      const [consoleProxy, system] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.log(new LogEvent(LogLevel.OFF - 10, 'trace', 'A trace'));
       });
       dispatch(actor, 'hello');
       setTimeout(() => {
-        testCalled([], [ consoleProxy.log ]);
+        testCalled([], [consoleProxy.log]);
         done();
         endTest(consoleProxy, system);
       }, 25);
     });
 
     it('an unknown high level should call console critical channel', done => {
-      const [ consoleProxy, system ] = initTest();
+      const [consoleProxy, system] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.log(new LogEvent(LogLevel.CRITICAL + 10, 'trace', 'A trace'));
       });
       dispatch(actor, 'hello');
       setTimeout(() => {
-        testCalled([ consoleProxy.log ], []);
+        testCalled([consoleProxy.log], []);
         done();
         endTest(consoleProxy, system);
       }, 25);
@@ -383,7 +395,7 @@ describe('logToConsole', () => {
         error: sinon.stub(console, 'error')
       };
       const system = start(configureLogging(logToConsole()));
-      return [ consoleStubs, system ];
+      return [consoleStubs, system];
     };
 
     const closeTests = (consoleStubs, system) => {
@@ -392,7 +404,7 @@ describe('logToConsole', () => {
     };
 
     it('off should not call any console channel', done => {
-      const [ consoleStubs, system ] = initTest();
+      const [consoleStubs, system] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.off('A trace');
       });
@@ -415,14 +427,14 @@ describe('logToConsole', () => {
     });
 
     it('should call console trace channel', done => {
-      const [ consoleStubs, system ] = initTest();
+      const [consoleStubs, system] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.trace('A trace');
       });
       dispatch(actor, 'hello');
       setTimeout(() => {
         testCalled(
-          [ consoleStubs.trace ],
+          [consoleStubs.trace],
           [
             consoleStubs.log,
             consoleStubs.debug,
@@ -437,7 +449,7 @@ describe('logToConsole', () => {
     });
 
     it('should call console debug channel', done => {
-      const [ consoleStubs, system ] = initTest();
+      const [consoleStubs, system] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.debug('A trace');
       });
@@ -459,7 +471,7 @@ describe('logToConsole', () => {
     });
 
     it('should call console info channel', done => {
-      const [ consoleStubs, system ] = initTest();
+      const [consoleStubs, system] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.info('A trace');
       });
@@ -481,7 +493,7 @@ describe('logToConsole', () => {
     });
 
     it('should call console warn channel', done => {
-      const [ consoleStubs, system ] = initTest();
+      const [consoleStubs, system] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.warn('A trace');
       });
@@ -503,7 +515,7 @@ describe('logToConsole', () => {
     });
 
     it('should call console error channel', done => {
-      const [ consoleStubs, system ] = initTest();
+      const [consoleStubs, system] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.error('A trace');
       });
@@ -525,7 +537,7 @@ describe('logToConsole', () => {
     });
 
     it('should call console critical channel', done => {
-      const [ consoleStubs, system ] = initTest();
+      const [consoleStubs, system] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.critical('A trace');
       });
@@ -547,7 +559,7 @@ describe('logToConsole', () => {
     });
 
     it('an unknown low level should not call any console channel', done => {
-      const [ consoleStubs, system ] = initTest();
+      const [consoleStubs, system] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.log(new LogEvent(LogLevel.OFF - 10, 'trace', 'A trace'));
       });
@@ -570,7 +582,7 @@ describe('logToConsole', () => {
     });
 
     it('an unknown high level should call console critical channel', done => {
-      const [ consoleStubs, system ] = initTest();
+      const [consoleStubs, system] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.log(new LogEvent(LogLevel.CRITICAL + 10, 'trace', 'A trace'));
       });
