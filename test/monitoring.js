@@ -1,7 +1,7 @@
 /* eslint-env mocha */
 /* eslint-disable no-unused-expressions */
 const chai = require('chai');
-// const sinon = require('sinon');
+require('sinon');
 const sinonChai = require('sinon-chai');
 chai.should();
 chai.use(sinonChai);
@@ -12,6 +12,9 @@ const { Nobody } = require('../lib/references');
 const {
   LogLevel,
   LogEvent,
+  LogMetric,
+  LogException,
+  LogTrace,
   logNothing,
   configureLogging
 } = require('../lib/monitoring');
@@ -44,19 +47,18 @@ describe('logLevelToString', () => {
   });
 });
 
-describe('LogEvent', () => {
+describe('LogTrace', () => {
   it('should capture all constructor arguments', () => {
     const level = LogLevel.WARN;
-    const category = 'Event-Category';
     const message = 'Event-Message';
-    const properties = { authenticated: true };
-    const metrics = { duration: 23 };
-    const event = new LogEvent(level, category, message, properties, metrics);
+    const actor = new Nobody();
+    const createdAt = new Date();
+    const event = new LogTrace(level, message, actor, createdAt);
     event.level.should.be.equal(level);
-    event.category.should.be.equal(category);
+    event.type.should.be.equal('trace');
     event.message.should.be.equal(message);
-    event.properties.should.be.equal(properties);
-    event.metrics.should.be.equal(metrics);
+    event.createdAt.should.be.equal(createdAt);
+    event.actor.should.be.equal(actor);
   });
 });
 
@@ -72,6 +74,7 @@ describe('LoggingFacade', () => {
     let system;
     const properties = { answer: 42 };
     const metrics = { duration_ms: 1234 };
+    const name = 'test';
     beforeEach(function () {
       system = start();
       loggingActor = spawn(system, (state = [], msg, ctx) => {
@@ -88,72 +91,66 @@ describe('LoggingFacade', () => {
       stop(system);
     });
 
-    it('it should call given logger when log method is used', async function () {
-      const logEvent = new LogEvent(LogLevel.Info, 'trace', 'Something', new Nobody());
-      facade.log(logEvent);
-      const logs = await query(loggingActor, 'getLogs', 100);
-      logs.should.deep.equal([logEvent]);
-    });
-
-    it('it should call given logger when off method is used', async () => {
-      const logEvent = new LogEvent(LogLevel.OFF, 'trace', message, properties, metrics, new Nobody());
-      facade.off(message, properties, metrics);
-      const logs = await query(loggingActor, 'getLogs', 100);
-      logs.should.deep.equal([logEvent]);
-    });
-
     it('it should call given logger when trace method is used', async () => {
-      const logEvent = new LogEvent(LogLevel.TRACE, 'trace', message, properties, metrics, new Nobody());
-      facade.trace(message, properties, metrics);
+      const logEvent = new LogTrace(LogLevel.TRACE, message, new Nobody());
+      facade.trace(message);
       const logs = await query(loggingActor, 'getLogs', 100);
       logs.should.deep.equal([logEvent]);
     });
 
     it('it should call given logger when debug method is used', async () => {
-      const logEvent = new LogEvent(LogLevel.DEBUG, 'trace', message, properties, metrics, new Nobody());
-      facade.debug(message, properties, metrics);
+      const logEvent = new LogTrace(LogLevel.DEBUG, message, new Nobody());
+      facade.debug(message);
       const logs = await query(loggingActor, 'getLogs', 100);
       logs.should.deep.equal([logEvent]);
     });
 
     it('it should call given logger when info method is used', async () => {
-      const logEvent = new LogEvent(LogLevel.INFO, 'trace', message, properties, metrics, new Nobody());
-      facade.info(message, properties, metrics);
+      const logEvent = new LogTrace(LogLevel.INFO, message, new Nobody());
+      facade.info(message);
       const logs = await query(loggingActor, 'getLogs', 100);
       logs.should.deep.equal([logEvent]);
     });
 
     it('it should call given logger when warn method is used', async () => {
-      const logEvent = new LogEvent(LogLevel.WARN, 'trace', message, properties, metrics, new Nobody());
-      facade.warn(message, properties, metrics);
+      const logEvent = new LogTrace(LogLevel.WARN, message, new Nobody());
+      facade.warn(message);
       const logs = await query(loggingActor, 'getLogs', 100);
       logs.should.deep.equal([logEvent]);
     });
 
     it('it should call given logger when error method is used', async () => {
-      const logEvent = new LogEvent(LogLevel.ERROR, 'trace', message, properties, metrics, new Nobody());
-      facade.error(message, properties, metrics);
+      const logEvent = new LogTrace(LogLevel.ERROR, message, new Nobody());
+      facade.error(message);
       const logs = await query(loggingActor, 'getLogs', 100);
       logs.should.deep.equal([logEvent]);
     });
 
     it('it should call given logger when critical method is used', async () => {
-      const logEvent = new LogEvent(LogLevel.CRITICAL, 'trace', message, properties, metrics, new Nobody());
-      facade.critical(message, properties, metrics);
+      const logEvent = new LogTrace(LogLevel.CRITICAL, message, new Nobody());
+      facade.critical(message);
       const logs = await query(loggingActor, 'getLogs', 100);
       logs.should.deep.equal([logEvent]);
     });
 
     it('it should call given logger when event method is used', async () => {
-      const logEvent = new LogEvent(LogLevel.INFO, 'event', message, properties, metrics, new Nobody());
-      facade.event(message, properties, metrics);
+      const logEvent = new LogEvent(name, properties, new Nobody());
+      facade.event(name, properties);
       const logs = await query(loggingActor, 'getLogs', 100);
       logs.should.deep.equal([logEvent]);
     });
 
     it('it should call given logger when metrics method is used', async () => {
-      const logEvent = new LogEvent(LogLevel.INFO, 'metrics', message, properties, metrics, new Nobody());
-      facade.metrics(message, properties, metrics);
+      const logEvent = new LogMetric(name, metrics, new Nobody());
+      facade.metric(name, metrics);
+      const logs = await query(loggingActor, 'getLogs', 100);
+      logs.should.deep.equal([logEvent]);
+    });
+
+    it('it should call given logger when exception method', async () => {
+      const error = new Error('error');
+      const logEvent = new LogException(error, new Nobody());
+      facade.exception(error);
       const logs = await query(loggingActor, 'getLogs', 100);
       logs.should.deep.equal([logEvent]);
     });

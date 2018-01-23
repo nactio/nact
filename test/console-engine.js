@@ -8,8 +8,6 @@ chai.use(sinonChai);
 const delay = (duration) => new Promise((resolve, reject) => setTimeout(() => resolve(), duration));
 const { start, dispatch, stop, spawnStateless } = require('../lib');
 const {
-  LogLevel,
-  LogEvent,
   logToConsole,
   configureLogging
 } = require('../lib/monitoring');
@@ -49,25 +47,87 @@ describe('logToConsole', function () {
       return [consoleProxy, system];
     };
 
+    const initBrokenTest = () => {
+      const consoleProxy = {
+        critical: sinon.spy(function critical () { })
+      };
+      const system = start(configureLogging(logToConsole({ consoleProxy })));
+      return [consoleProxy, system];
+    };
     const endTest = (consoleProxy, system) => {
       stop(system);
     };
-
-    it('off should not call any console channel', done => {
-      const [consoleProxy, system] = initTest();
+    it('should default to a unit function if the proxy does not include an appropriate channel', done => {
+      const [consoleProxy, system] = initBrokenTest();
       const actor = spawnStateless(system, (msg, ctx) => {
-        ctx.log.off('A trace');
+        ctx.log.event('Name', { value: 1 });
       });
       dispatch(actor, 'hello');
       setTimeout(() => {
         testCalled(
           [],
+          [consoleProxy.critical]
+        );
+        done();
+        endTest(consoleProxy, system);
+      }, 25);
+    });
+    it('should call console info channel for events', done => {
+      const [consoleProxy, system] = initTest();
+      const actor = spawnStateless(system, (msg, ctx) => {
+        ctx.log.event('Name', { value: 1 });
+      });
+      dispatch(actor, 'hello');
+      setTimeout(() => {
+        testCalled(
+          [consoleProxy.info],
           [
-            consoleProxy.trace,
             consoleProxy.debug,
-            consoleProxy.info,
+            consoleProxy.trace,
             consoleProxy.warn,
             consoleProxy.error,
+            consoleProxy.critical
+          ]
+        );
+        done();
+        endTest(consoleProxy, system);
+      }, 25);
+    });
+    it('should call console info channel for metrics', done => {
+      const [consoleProxy, system] = initTest();
+      const actor = spawnStateless(system, (msg, ctx) => {
+        ctx.log.metric('Name', { value: 1 });
+      });
+      dispatch(actor, 'hello');
+      setTimeout(() => {
+        testCalled(
+          [consoleProxy.info],
+          [
+            consoleProxy.debug,
+            consoleProxy.trace,
+            consoleProxy.warn,
+            consoleProxy.error,
+            consoleProxy.critical
+          ]
+        );
+        done();
+        endTest(consoleProxy, system);
+      }, 25);
+    });
+    it('should call console error channel for exceptions', done => {
+      const [consoleProxy, system] = initTest();
+      const actor = spawnStateless(system, (msg, ctx) => {
+        ctx.log.exception(new Error('something bad'));
+      });
+      dispatch(actor, 'hello');
+      setTimeout(() => {
+        testCalled(
+          [consoleProxy.error],
+          [
+            consoleProxy.debug,
+            consoleProxy.trace,
+            consoleProxy.info,
+            consoleProxy.warn,
             consoleProxy.critical
           ]
         );
@@ -207,51 +267,6 @@ describe('logToConsole', function () {
         endTest(consoleProxy, system);
       }, 25);
     });
-
-    it('an unknown low level should not call any console channel', done => {
-      const [consoleProxy, system] = initTest();
-      const actor = spawnStateless(system, (msg, ctx) => {
-        ctx.log.log(new LogEvent(LogLevel.OFF - 10, 'trace', 'A trace'));
-      });
-      dispatch(actor, 'hello');
-      setTimeout(() => {
-        testCalled(
-          [],
-          [
-            consoleProxy.trace,
-            consoleProxy.debug,
-            consoleProxy.info,
-            consoleProxy.warn,
-            consoleProxy.error,
-            consoleProxy.critical
-          ]
-        );
-        done();
-        endTest(consoleProxy, system);
-      }, 25);
-    });
-
-    it('an unknown high level should call console critical channel', done => {
-      const [consoleProxy, system] = initTest();
-      const actor = spawnStateless(system, (msg, ctx) => {
-        ctx.log.log(new LogEvent(LogLevel.CRITICAL + 10, 'trace', 'A trace'));
-      });
-      dispatch(actor, 'hello');
-      setTimeout(() => {
-        testCalled(
-          [consoleProxy.critical],
-          [
-            consoleProxy.trace,
-            consoleProxy.debug,
-            consoleProxy.info,
-            consoleProxy.warn,
-            consoleProxy.error
-          ]
-        );
-        done();
-        endTest(consoleProxy, system);
-      }, 25);
-    });
   });
 
   describe('When logToConsole is used with a console-proxy with single log channel', () => {
@@ -266,18 +281,6 @@ describe('logToConsole', function () {
     const endTest = (consoleProxy, system) => {
       stop(system);
     };
-
-    it('off should not call any console channel', done => {
-      const [consoleProxy, system] = initTest();
-      const actor = spawnStateless(system, (msg, ctx) => {
-        ctx.log.off('A trace');
-      });
-      dispatch(actor, 'hello');
-      setTimeout(() => {
-        testCalled([], [consoleProxy.log]);
-        done();
-      }, 25);
-    });
 
     it('should call console trace channel', done => {
       const [consoleProxy, system] = initTest();
@@ -356,32 +359,6 @@ describe('logToConsole', function () {
         endTest(consoleProxy, system);
       }, 25);
     });
-
-    it('an unknown low level should not call any console channel', done => {
-      const [consoleProxy, system] = initTest();
-      const actor = spawnStateless(system, (msg, ctx) => {
-        ctx.log.log(new LogEvent(LogLevel.OFF - 10, 'trace', 'A trace'));
-      });
-      dispatch(actor, 'hello');
-      setTimeout(() => {
-        testCalled([], [consoleProxy.log]);
-        done();
-        endTest(consoleProxy, system);
-      }, 25);
-    });
-
-    it('an unknown high level should call console critical channel', done => {
-      const [consoleProxy, system] = initTest();
-      const actor = spawnStateless(system, (msg, ctx) => {
-        ctx.log.log(new LogEvent(LogLevel.CRITICAL + 10, 'trace', 'A trace'));
-      });
-      dispatch(actor, 'hello');
-      setTimeout(() => {
-        testCalled([consoleProxy.log], []);
-        done();
-        endTest(consoleProxy, system);
-      }, 25);
-    });
   });
 
   describe('When logToConsole is used with the globals console', () => {
@@ -402,29 +379,6 @@ describe('logToConsole', function () {
       Object.values(consoleStubs).forEach(stub => stub.restore());
       stop(system);
     };
-
-    it('off should not call any console channel', done => {
-      const [consoleStubs, system] = initTest();
-      const actor = spawnStateless(system, (msg, ctx) => {
-        ctx.log.off('A trace');
-      });
-      dispatch(actor, 'hello');
-      setTimeout(() => {
-        testCalled(
-          [],
-          [
-            consoleStubs.log,
-            consoleStubs.trace,
-            consoleStubs.debug,
-            consoleStubs.info,
-            consoleStubs.warn,
-            consoleStubs.error
-          ]
-        );
-        done();
-        closeTests(consoleStubs, system);
-      }, 25);
-    });
 
     it('should call console trace channel', done => {
       const [consoleStubs, system] = initTest();
@@ -540,51 +494,6 @@ describe('logToConsole', function () {
       const [consoleStubs, system] = initTest();
       const actor = spawnStateless(system, (msg, ctx) => {
         ctx.log.critical('A trace');
-      });
-      dispatch(actor, 'hello');
-      setTimeout(() => {
-        testCalled(
-          [consoleStubs.error],
-          [
-            consoleStubs.log,
-            consoleStubs.trace,
-            consoleStubs.debug,
-            consoleStubs.info,
-            consoleStubs.warn
-          ]
-        );
-        done();
-        closeTests(consoleStubs, system);
-      }, 25);
-    });
-
-    it('an unknown low level should not call any console channel', done => {
-      const [consoleStubs, system] = initTest();
-      const actor = spawnStateless(system, (msg, ctx) => {
-        ctx.log.log(new LogEvent(LogLevel.OFF - 10, 'trace', 'A trace'));
-      });
-      dispatch(actor, 'hello');
-      setTimeout(() => {
-        testCalled(
-          [],
-          [
-            consoleStubs.log,
-            consoleStubs.trace,
-            consoleStubs.debug,
-            consoleStubs.info,
-            consoleStubs.warn,
-            consoleStubs.error
-          ]
-        );
-        done();
-        closeTests(consoleStubs, system);
-      }, 25);
-    });
-
-    it('an unknown high level should call console critical channel', done => {
-      const [consoleStubs, system] = initTest();
-      const actor = spawnStateless(system, (msg, ctx) => {
-        ctx.log.log(new LogEvent(LogLevel.CRITICAL + 10, 'trace', 'A trace'));
       });
       dispatch(actor, 'hello');
       setTimeout(() => {
