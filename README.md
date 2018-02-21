@@ -44,6 +44,8 @@ Nact is no silver bullet, but it is evolving to tackle ever more demanding use c
 
 To get started, head to https://nact.io
 
+> Note: Nact currently only able to work on Node 8 and above.
+
 
 ## License
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fncthbrt%2Fnact.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fncthbrt%2Fnact?ref=badge_large)
