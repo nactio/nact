@@ -401,22 +401,23 @@ describe('Actor', function () {
     });
   });
 
-  describe('#whenChildCrashes', function () {
+  describe('#onCrash', function () {
     let system;
     beforeEach(() => { system = start(); });
     afterEach(() => stop(system));
 
-    const createSupervisor = (parent, name, whenChildCrashes) => spawn(parent, (state = true, msg, ctx) => state, name, { whenChildCrashes });
+    const createSupervisor = (parent, name) => spawn(parent, (state = true, msg, ctx) => state, name);
 
     it('should be able to continue processing messages without loss of state', async function () {
-      const parent = createSupervisor(system, 'test1', (msg, err, ctx) => ctx.resume);
+      const resume = (msg, err, ctx) => ctx.resume;
+      const parent = createSupervisor(system, 'test1');
       const child = spawn(parent, (state = 0, msg, ctx) => {
         if (state + 1 === 3 && msg !== 'msg3') {
           throw new Error('Very bad thing');
         }
         dispatch(ctx.sender, state + 1);
         return state + 1;
-      });
+      }, 'test', { onCrash: resume });
       dispatch(child, 'msg0');
       dispatch(child, 'msg1');
       dispatch(child, 'msg2');
@@ -425,14 +426,15 @@ describe('Actor', function () {
     });
 
     it('should be able to be reset', async function () {
-      const parent = createSupervisor(system, 'test1', (msg, err, ctx) => ctx.reset);
+      const reset = (msg, err, ctx) => ctx.reset;
+      const parent = createSupervisor(system, 'test1');
       const child = spawn(parent, (state = 0, msg, ctx) => {
         if (state + 1 === 3 && msg !== 'msg3') {
           throw new Error('Very bad thing');
         }
         dispatch(ctx.sender, state + 1);
         return state + 1;
-      });
+      }, 'test', { onCrash: reset });
 
       const grandchild = spawn(child, (state = 0, msg, ctx) => {
         dispatch(ctx.sender, state + 1);
@@ -452,14 +454,15 @@ describe('Actor', function () {
     });
 
     it('should be able to stop', async function () {
-      const parent = createSupervisor(system, 'test1', (msg, err, ctx) => ctx.stop);
+      const stop = (msg, err, ctx) => ctx.stop;
+      const parent = createSupervisor(system, 'test1');
       const child = spawn(parent, (state = 0, msg, ctx) => {
         if (state + 1 === 3 && msg !== 'msg3') {
           throw new Error('Very bad thing');
         }
         dispatch(ctx.sender, state + 1);
         return state + 1;
-      });
+      }, 'test', { onCrash: stop });
       dispatch(child, 'msg0');
       dispatch(child, 'msg1');
       dispatch(child, 'msg2');
@@ -468,14 +471,15 @@ describe('Actor', function () {
     });
 
     it('should be able to escalate', async function () {
-      const parent = createSupervisor(system, 'test1', (msg, err, ctx) => ctx.escalate);
+      const escalate = (msg, err, ctx) => ctx.escalate;
+      const parent = createSupervisor(system, 'test1');
       const child = spawn(parent, (state = 0, msg, ctx) => {
         if (state + 1 === 3 && msg !== 'msg3') {
           throw new Error('Very bad thing');
         }
         dispatch(ctx.sender, state + 1);
         return state + 1;
-      });
+      }, 'test', { onCrash: escalate });
       dispatch(child, 'msg0');
       dispatch(child, 'msg1');
       dispatch(child, 'msg2');
@@ -485,14 +489,15 @@ describe('Actor', function () {
     });
 
     it('should be able to stop all children', async function () {
-      const parent = createSupervisor(system, 'test1', (msg, err, ctx) => ctx.stopAll);
+      const stopAll = (msg, err, ctx) => ctx.stopAll;
+      const parent = createSupervisor(system, 'test1');
       const child1 = spawn(parent, (state = 0, msg, ctx) => {
         if (state + 1 === 3 && msg !== 'msg3') {
           throw new Error('Very bad thing');
         }
         dispatch(ctx.sender, state + 1);
         return state + 1;
-      });
+      }, 'test', { onCrash: stopAll });
       const child2 = spawn(parent, (state = 0, msg, ctx) => {
         dispatch(ctx.sender, state + 1);
         return state + 1;
@@ -506,14 +511,15 @@ describe('Actor', function () {
     });
 
     it('should be able to reset all children', async function () {
-      const parent = createSupervisor(system, 'test1', (msg, err, ctx) => ctx.resetAll);
+      const resetAll = (msg, err, ctx) => ctx.resetAll;
+      const parent = createSupervisor(system, 'test1');
       const child1 = spawn(parent, (state = 0, msg, ctx) => {
         if (state + 1 === 3 && msg !== 'msg3') {
           throw new Error('Very bad thing');
         }
         dispatch(ctx.sender, state + 1);
         return state + 1;
-      });
+      }, 'test', { onCrash: resetAll });
       const child2 = spawn(parent, (state = 0, msg, ctx) => {
         dispatch(ctx.sender, state + 1);
         return state + 1;
