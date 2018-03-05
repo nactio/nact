@@ -1,6 +1,5 @@
 {
     "editor.tabSize": 2,
-	"prettier.tabWidth": 2,
     "javascript.validate.enable": false,
     "standard.semistandard": true,
     "standard.enable": true,
@@ -12,8 +11,5 @@
         "**/CVS": true,
         "**/.DS_Store": true,
         "**/coverage": true
-    }    
+    }
 }
-    },
-    
-  }
