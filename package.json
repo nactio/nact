@@ -1,6 +1,6 @@
 {
   "name": "nact",
-  "version": "5.0.0",
+  "version": "6.0.0",
   "description": "nact ⇒ node.js + actors = your services have never been so µ",
   "main": "lib/index.js",
   "scripts": {
@@ -36,8 +36,7 @@
     "url": "http://github.com/ncthbrt/nact/issues"
   },
   "dependencies": {
-    "denque": "^1.2.2",
-    "rxjs": "^5.4.3"
+    "denque": "^1.2.2"
   },
   "devDependencies": {
     "chai": "^4.1.1",

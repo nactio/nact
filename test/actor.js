@@ -4,7 +4,7 @@ const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised');
 chai.use(chaiAsPromised);
 chai.should();
-const { start, spawn, spawnStateless, dispatch, stop, query, state$, milliseconds } = require('../lib');
+const { start, spawn, spawnStateless, dispatch, stop, query, milliseconds } = require('../lib');
 const delay = (duration) => new Promise((resolve, reject) => setTimeout(() => resolve(), duration));
 const { ActorPath } = require('../lib/paths');
 const { applyOrThrowIfStopped } = require('../lib/system-map');
@@ -535,51 +535,6 @@ describe('Actor', function () {
       let result2 = await query(child2, 'msg3', 300);
       result.should.equal(1);
       result2.should.equal(1);
-    });
-  });
-
-  describe('#state$', function () {
-    let system;
-    beforeEach(() => { system = start(); });
-    afterEach(() => stop(system));
-
-    it('should allow subscription to state changes', async function () {
-      let actor = spawn(system, (state, msg) => msg);
-      let arr = [];
-      state$(actor).subscribe(value => {
-        arr = [...arr, value];
-      });
-      dispatch(actor, 1);
-      dispatch(actor, 2);
-      dispatch(actor, 3);
-      await retry(() => arr.should.deep.equal([1, 2, 3]), 5, 10);
-    });
-
-    it('should allow only emit when state has changed', async function () {
-      let state1 = { hello: 'world' };
-      let state2 = { it_has: 'been fun' };
-
-      let actor = spawn(system, (state, msg) => msg);
-      let arr = [];
-      state$(actor).subscribe(value => {
-        arr = [...arr, value];
-      });
-      dispatch(actor, state1);
-      dispatch(actor, state1);
-      dispatch(actor, state2);
-
-      await retry(() => arr.should.deep.equal([state1, state2]), 5, 10);
-    });
-
-    it('should emit done when the actor is stopped', async function () {
-      let actor = spawn(system, (state, msg) => msg);
-      let observableClosed = false;
-      state$(actor).last().subscribe(x => { observableClosed = true; });
-      dispatch(actor, 1);
-      dispatch(actor, 2);
-      await delay(10);
-      stop(actor);
-      await retry(() => observableClosed.should.be.true, 5, 10);
     });
   });
 });

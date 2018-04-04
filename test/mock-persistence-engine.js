@@ -1,5 +1,4 @@
 const { AbstractPersistenceEngine } = require('../lib/persistence');
-const { Observable } = require('rxjs');
 
 class MockPersistenceEngine extends AbstractPersistenceEngine {
   constructor (events = {}, snapshots = {}, takeSnapshotIsWorking = true) {
@@ -28,7 +27,7 @@ class MockPersistenceEngine extends AbstractPersistenceEngine {
   events (persistenceKey, offset = 0, limit, tags) {
     const persistedEvents = (this._events[persistenceKey] || []);
     const slice = persistedEvents.slice(offset, limit ? offset + limit : undefined);
-    return Observable.from(slice);
+    return slice;
   }
 
   persist (persistedEvent) {
