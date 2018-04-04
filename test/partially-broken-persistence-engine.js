@@ -1,6 +1,4 @@
 const { AbstractPersistenceEngine } = require('../lib/persistence');
-const Rx = require('rxjs');
-const { Observable } = Rx;
 
 class PartiallyBrokenPersistenceEngine extends AbstractPersistenceEngine {
   constructor (events = new Map(), failIndex, maxFailures) {
@@ -14,7 +12,7 @@ class PartiallyBrokenPersistenceEngine extends AbstractPersistenceEngine {
   events (persistenceKey, offset = 0, limit, tags) {
     const persistedEvents = (this._events[persistenceKey] || []);
     const slice = persistedEvents.slice(offset, limit ? offset + limit : undefined);
-    return Observable.from(slice).map((item, index) => {
+    return slice.map((item, index) => {
       if (index < this.failIndex) {
         return item;
       }
