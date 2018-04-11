@@ -448,9 +448,8 @@ describe('Actor', function () {
       dispatch(grandchild, 'msg2');
       dispatch(child, 'msg2');
       let result = await query(child, 'msg3', 300);
-      let result2 = await query(grandchild, 'msg3', 300);
       result.should.equal(1);
-      result2.should.equal(1);
+      isStopped(grandchild).should.be.true;
     });
 
     it('should be able to stop', async function () {

@@ -79,6 +79,31 @@ describe('PersistentActor', () => {
     (await query(actor, 'c', 30)).should.equal('abc');
   });
 
+  it('should be able to correctly recover when reset after a failure', async function () {
+    const persistenceEngine = new MockPersistenceEngine();
+    system = start(configurePersistence(persistenceEngine));
+    let bTriggered = false;
+    const actor = spawnPersistent(
+      system,
+      concatenativeFunction('', (state, msg, ctx) => {
+        ctx.persist(msg);
+        if (!bTriggered && msg === 'b') {
+          bTriggered = true;
+          throw new Error('bad things are on the rise');
+        }
+      }),
+      'test',
+      'test',
+      {
+        onCrash: (msg, error, ctx) => ctx.reset
+      }
+    );
+    dispatch(actor, 'a');
+    dispatch(actor, 'b');
+    dispatch(actor, 'c');
+    (await query(actor, 'd', 100)).should.equal('abcd');
+  });
+
   it('must have a persistentKey of type string', async () => {
     const persistenceEngine = new MockPersistenceEngine();
     system = start(configurePersistence(persistenceEngine));
