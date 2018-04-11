@@ -1,6 +1,6 @@
 {
   "name": "nact",
-  "version": "6.0.1",
+  "version": "6.0.2",
   "description": "nact ⇒ node.js + actors = your services have never been so µ",
   "main": "lib/index.js",
   "scripts": {
