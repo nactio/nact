@@ -139,37 +139,6 @@ describe('Actor', function () {
       await retry(async () => (await query(listener, {}, 30)).should.deep.equal([1, 2, 3]), 5, 10);
     });
 
-    it('evalutes out of order when returning a promise from a stateless actor function', async function () {
-      let child = spawnStateless(
-        system,
-        async function (msg) {
-          if (msg.number === 2) {
-            await delay(30);
-          }
-          dispatch(msg.listener, { number: msg.number });
-        },
-        'testActor'
-      );
-
-      let listener = spawn(
-        system,
-        async function (state = [], msg) {
-          if (msg.number) {
-            return [...state, msg.number];
-          } else {
-            dispatch(this.sender, state);
-          }
-          return state;
-        },
-        'listener'
-      );
-
-      dispatch(child, { listener, number: 1 });
-      dispatch(child, { listener, number: 2 });
-      dispatch(child, { listener, number: 3 });
-      await retry(async () => (await query(listener, {}, 30)).should.deep.equal([1, 3, 2]), 5, 10);
-    });
-
     it('should not automatically stop if error is thrown and actor is stateless', async function () {
       console.error = ignore;
       let child = spawnStateless(system, (msg) => { throw new Error('testError'); });
