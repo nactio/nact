@@ -132,6 +132,24 @@ describe('PersistentActor', () => {
     (await query(actor, '', 30)).should.equal(expectedResult + '123');
   });
 
+  it('should be able to skip deleted events on startup', async () => {
+    const prevResult = '1234567890';
+    const expectedResult = '123456789';
+    const events = [...prevResult].map((evt, i) => new PersistedEvent(evt, i + 1, 'test', undefined, undefined, evt === '0'));
+    const persistenceEngine = new MockPersistenceEngine({ test: events });
+    system = start(configurePersistence(persistenceEngine));
+    const actor = spawnPersistent(
+      system,
+      concatenativeFunction(''),
+      'test'
+    );
+    dispatch(actor, '1');
+    dispatch(actor, '2');
+    dispatch(actor, '3');
+
+    (await query(actor, '', 30)).should.equal(expectedResult + '123');
+  });
+
   it('should be able to persist events', async () => {
     const persistenceEngine = new MockPersistenceEngine();
     system = start(configurePersistence(persistenceEngine));
