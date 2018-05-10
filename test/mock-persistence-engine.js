@@ -10,7 +10,7 @@ class MockPersistenceEngine extends AbstractPersistenceEngine {
 
   latestSnapshot (persistenceKey) {
     const snapshots = (this._snapshots[persistenceKey] || []);
-    const snapshot = snapshots.length > 0 ? snapshots[snapshots.length - 1] : undefined;
+    const snapshot = snapshots[snapshots.length - 1];
     return Promise.resolve(snapshot);
   }
 

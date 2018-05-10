@@ -251,7 +251,7 @@ describe('PersistentActor', () => {
       'test',
       { snapshotEvery: 5 * messages }
     );
-    const expectedResult = 'iceland\'s cold';
+    const expectedResult = 'iceland\'s cold!';
     expectedResult.split('').forEach(msg => {
       dispatch(actor, msg);
     });

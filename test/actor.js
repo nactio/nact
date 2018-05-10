@@ -249,13 +249,6 @@ describe('Actor', function () {
       isStopped(child2).should.be.true;
     });
 
-    it('is invoked automatically when the next state is not returned', async function () {
-      let child = spawn(system, ignore, 'testActor');
-      dispatch(child, {});
-      await retry(() => isStopped(child).should.be.true, 12, 10);
-      children(system).should.not.include('testActor');
-    });
-
     it('should be able to be invoked multiple times', async function () {
       let child = spawn(system, ignore);
       stop(child);
