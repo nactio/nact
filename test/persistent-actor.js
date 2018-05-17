@@ -5,7 +5,7 @@ chai.should();
 const { MockPersistenceEngine } = require('./mock-persistence-engine');
 const { BrokenPersistenceEngine } = require('./broken-persistence-engine');
 const { PartiallyBrokenPersistenceEngine } = require('./partially-broken-persistence-engine');
-const { start, dispatch, query, stop, messages } = require('../lib');
+const { start, dispatch, query, stop, messages, spawn } = require('../lib');
 const { PersistedEvent, PersistedSnapshot, spawnPersistent, configurePersistence } = require('../lib/persistence');
 const chaiAsPromised = require('chai-as-promised');
 chai.use(chaiAsPromised);
@@ -183,11 +183,121 @@ describe('PersistentActor', () => {
     const events = [...expectedResult].map((evt, i) => new PersistedEvent(evt, i + 1, 'frog'));
     const persistenceEngine = new PartiallyBrokenPersistenceEngine({ frog: events }, 5);
     system = start(configurePersistence(persistenceEngine));
-    const actor = spawnPersistent(
+    let crashed = false;
+    spawnPersistent(
       system,
       concatenativeFunction(''),
-      'frog'
+      'frog',
+      'frog',
+      { onCrash: (_, __, ctx) => { crashed = true; return ctx.stop; } }
     );
+    await retry(() => crashed.should.be.true, 5, 10);
+  });
+
+  it('should be able to continue if an exception is thrown midway through recovery', async () => {
+    console.error = ignore;
+    const expectedResult = 'icelandiscold';
+    const events = [...expectedResult].map((evt, i) => new PersistedEvent(evt, i + 1, 'frog'));
+    const persistenceEngine = new MockPersistenceEngine({ frog: events });
+    system = start(configurePersistence(persistenceEngine));
+    let crashed = false;
+    let actor = spawnPersistent(
+      system,
+      concatenativeFunction('', (state, msg, ctx) => { if (msg === 'a') { throw new Error('"a" error'); } else if (!ctx.recovering) { ctx.persist(msg); } }),
+      'frog',
+      'frog',
+      { onCrash: (_, __, ctx) => { crashed = true; return ctx.resume; } }
+    );
+    await retry(() => crashed.should.be.true, 5, 10);
+    (await query(actor, 'a', 30)).should.equal('icelndiscolda');
+  });
+
+  it('should be able to escalate if an exception is thrown midway through recovery', async () => {
+    console.error = ignore;
+    const expectedResult = 'icelandiscold';
+    const events = [...expectedResult].map((evt, i) => new PersistedEvent(evt, i + 1, 'frog'));
+    const persistenceEngine = new MockPersistenceEngine({ frog: events });
+    system = start(configurePersistence(persistenceEngine));
+    let parent = spawn(system, (state, msg, ctx) => state);
+    let crashed = false;
+    let actor = spawnPersistent(
+      parent,
+      concatenativeFunction('', (state, msg, ctx) => { if (msg === 'a') { throw new Error('"a" error'); } else if (!ctx.recovering) { ctx.persist(msg); } }),
+      'frog',
+      'frog',
+      { onCrash: (_, __, ctx) => { crashed = true; return ctx.escalate; } }
+    );
+    await retry(() => crashed.should.be.true, 5, 10);
+    await retry(() => isStopped(parent).should.be.true, 5, 10);
+    await retry(() => isStopped(actor).should.be.true, 5, 10);
+  });
+
+  it('should be able to reset if an exception is thrown midway through recovery', async () => {
+    console.error = ignore;
+    const expectedResult = 'icelandiscold';
+    const events = [...expectedResult].map((evt, i) => new PersistedEvent(evt, i + 1, 'frog'));
+    const persistenceEngine = new MockPersistenceEngine({ frog: events });
+    system = start(configurePersistence(persistenceEngine));
+    let crashed = false;
+    let actor = spawnPersistent(
+      system,
+      concatenativeFunction('', (state, msg, ctx) => { if (msg === 'a' && !crashed) { throw new Error('"a" error'); } else if (!ctx.recovering) { ctx.persist(msg); } }),
+      'frog',
+      'frog',
+      { onCrash: (_, __, ctx) => { crashed = true; return ctx.reset; } }
+    );
+    await retry(() => crashed.should.be.true, 5, 10);
+    (await query(actor, 'a', 30)).should.equal('icelandiscolda');
+  });
+  it('should be able to resetAll if an exception is thrown midway through recovery', async () => {
+    console.error = ignore;
+    const expectedResult = 'icelandiscold';
+    const events = [...expectedResult].map((evt, i) => new PersistedEvent(evt, i + 1, 'frog'));
+    const persistenceEngine = new MockPersistenceEngine({ frog: events });
+    system = start(configurePersistence(persistenceEngine));
+    let crashed = false;
+    let actor = spawnPersistent(
+      system,
+      concatenativeFunction('', (state, msg, ctx) => { if (msg === 'a' && !crashed) { throw new Error('"a" error'); } else if (!ctx.recovering) { ctx.persist(msg); } }),
+      'frog',
+      'frog',
+      { onCrash: (_, __, ctx) => { crashed = true; return ctx.resetAll; } }
+    );
+    await retry(() => crashed.should.be.true, 5, 10);
+    (await query(actor, 'a', 30)).should.equal('icelandiscolda');
+  });
+  it('should be able to stop if an exception is thrown midway through recovery', async () => {
+    console.error = ignore;
+    const expectedResult = 'icelandiscold';
+    const events = [...expectedResult].map((evt, i) => new PersistedEvent(evt, i + 1, 'frog'));
+    const persistenceEngine = new MockPersistenceEngine({ frog: events });
+    system = start(configurePersistence(persistenceEngine));
+    let crashed = false;
+    let actor = spawnPersistent(
+      system,
+      concatenativeFunction('', (state, msg, ctx) => { if (msg === 'a') { throw new Error('"a" error'); } else if (!ctx.recovering) { ctx.persist(msg); } }),
+      'frog',
+      'frog',
+      { onCrash: (_, __, ctx) => { crashed = true; return ctx.stop; } }
+    );
+    await retry(() => crashed.should.be.true, 5, 10);
+    await retry(() => isStopped(actor).should.be.true, 5, 10);
+  });
+  it('should be able to stopAll if an exception is thrown midway through recovery', async () => {
+    console.error = ignore;
+    const expectedResult = 'icelandiscold';
+    const events = [...expectedResult].map((evt, i) => new PersistedEvent(evt, i + 1, 'frog'));
+    const persistenceEngine = new MockPersistenceEngine({ frog: events });
+    system = start(configurePersistence(persistenceEngine));
+    let crashed = false;
+    let actor = spawnPersistent(
+      system,
+      concatenativeFunction('', (state, msg, ctx) => { if (msg === 'a') { throw new Error('"a" error'); } else if (!ctx.recovering) { ctx.persist(msg); } }),
+      'frog',
+      'frog',
+      { onCrash: (_, __, ctx) => { crashed = true; return ctx.stopAll; } }
+    );
+    await retry(() => crashed.should.be.true, 5, 10);
     await retry(() => isStopped(actor).should.be.true, 5, 10);
   });
 

@@ -1,11 +1,12 @@
 const { AbstractPersistenceEngine } = require('../lib/persistence');
 
 class MockPersistenceEngine extends AbstractPersistenceEngine {
-  constructor (events = {}, snapshots = {}, takeSnapshotIsWorking = true) {
+  constructor (events = {}, snapshots = {}, takeSnapshotIsWorking = true, validateSeqNumber = false) {
     super();
     this._events = events;
     this._snapshots = snapshots;
     this.takeSnapshotIsWorking = takeSnapshotIsWorking;
+    this.validateSeqNumber = validateSeqNumber;
   }
 
   latestSnapshot (persistenceKey) {
@@ -32,7 +33,11 @@ class MockPersistenceEngine extends AbstractPersistenceEngine {
 
   persist (persistedEvent) {
     const prev = this._events[persistedEvent.key] || [];
-    this._events[persistedEvent.key] = [...prev, persistedEvent];
+    let nextEvents = [...prev, persistedEvent];
+    if (this.validateSeqNumber && prev.reduce((prev, current) => prev && current.sequenceNumber !== persistedEvent.sequenceNumber, true)) {
+      return Promise.reject(new Error('Duplicate sequence number'));
+    }
+    this._events[persistedEvent.key] = nextEvents;
     return Promise.resolve(persistedEvent);
   }
 }
