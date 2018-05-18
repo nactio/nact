@@ -130,6 +130,7 @@ describe('PersistentQuery', () => {
       { snapshotKey: 'iceland2' }
     );
     (await query()).should.equal(expectedState);
+    (await query()).should.equal(expectedState);
   });
 
   it('should be able to persist a snapshot after a given number of messages', async () => {
@@ -148,6 +149,24 @@ describe('PersistentQuery', () => {
       const snapshots = persistenceEngine._snapshots['test'];
       snapshots.length.should.equal(1);
       snapshots[0].data.should.equal(expectedResult);
+    }, 10);
+  });
+
+  it('should not persist a snapshot before a given number of messages', async () => {
+    const expectedResult = 'iceland\'s cold!';
+    const previousEvents = [...expectedResult].map((evt, i) => new PersistedEvent(evt, i + 1, 'iceland'));
+    const persistenceEngine = new MockPersistenceEngine({ iceland: previousEvents }, {});
+    system = start(configurePersistence(persistenceEngine));
+    const query = persistentQuery(
+      system,
+      concatenativeFunction(''),
+      'iceland',
+      { snapshotEvery: expectedResult.length + 1, snapshotKey: 'test' }
+    );
+    (await query()).should.equal(expectedResult);
+    await retry(() => {
+      const snapshots = persistenceEngine._snapshots['test'] || [];
+      snapshots.length.should.equal(0);
     }, 10);
   });
 
@@ -215,6 +234,18 @@ describe('PersistentQuery', () => {
       'iceland',
       { snapshotEvery: 'a', snapshotKey: 'test' }
     )).should.throw(Error);
+  });
+
+  it('should reject if the query fails', () => {
+    const expectedResult = '12345678910';
+    const events = [...expectedResult].map((evt, i) => new PersistedEvent(evt, i + 1, 'iceland'));
+    const persistenceEngine = new MockPersistenceEngine({ iceland: events }, undefined, false);
+    system = start(configurePersistence(persistenceEngine));
+    persistentQuery(
+      system,
+      concatenativeFunction('', () => { throw new Error('e'); }),
+      'iceland'
+    )().should.eventually.throw(Error);
   });
   it('should throw an error if cacheDuration is not a number', () => {
     const persistenceEngine = new MockPersistenceEngine();
