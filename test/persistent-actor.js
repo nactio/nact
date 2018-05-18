@@ -132,6 +132,25 @@ describe('PersistentActor', () => {
     (await query(actor, '', 30)).should.equal(expectedResult + '123');
   });
 
+  it('should be able to replay previously persisted events on startup with a custom decoder', async () => {
+    const source = '12345678';
+    const expectedResult = '23456789';
+    const events = [...source].map((evt, i) => new PersistedEvent(evt, i + 1, 'test'));
+    const persistenceEngine = new MockPersistenceEngine({ test: events });
+    system = start(configurePersistence(persistenceEngine));
+    const actor = spawnPersistent(
+      system,
+      concatenativeFunction(''),
+      'test',
+      'test',
+      { decoder: (a) => String.fromCharCode(a.charCodeAt(0) + 1) }
+    );
+    dispatch(actor, '1');
+    dispatch(actor, '2');
+    dispatch(actor, '3');
+    (await query(actor, '', 30)).should.equal(expectedResult + '123');
+  });
+
   it('should be able to skip deleted events on startup', async () => {
     const prevResult = '1234567890';
     const expectedResult = '123456789';
@@ -163,6 +182,23 @@ describe('PersistentActor', () => {
     dispatch(actor, 'c');
     (await query(actor, 'd', 30)).should.equal('abcd');
     persistenceEngine._events['test'].map(x => x.data).should.deep.equal(['a', 'b', 'c', 'd']);
+  });
+
+  it('should be able to persist events with a custom encoder', async () => {
+    const persistenceEngine = new MockPersistenceEngine();
+    system = start(configurePersistence(persistenceEngine));
+    const actor = spawnPersistent(
+      system,
+      concatenativeFunction('', (state, msg, ctx) => !ctx.recovering && ctx.persist(msg)),
+      'test',
+      'test',
+      { encoder: (a) => String.fromCharCode(a.charCodeAt(0) + 1) }
+    );
+    dispatch(actor, 'a');
+    dispatch(actor, 'b');
+    dispatch(actor, 'c');
+    (await query(actor, 'd', 30)).should.equal('abcd');
+    persistenceEngine._events['test'].map(x => x.data).should.deep.equal(['b', 'c', 'd', 'e']);
   });
 
   it('should signal an error if creating restore stream fails', async () => {
@@ -249,6 +285,7 @@ describe('PersistentActor', () => {
     await retry(() => crashed.should.be.true, 5, 10);
     (await query(actor, 'a', 30)).should.equal('icelandiscolda');
   });
+
   it('should be able to resetAll if an exception is thrown midway through recovery', async () => {
     console.error = ignore;
     const expectedResult = 'icelandiscold';
@@ -266,6 +303,7 @@ describe('PersistentActor', () => {
     await retry(() => crashed.should.be.true, 5, 10);
     (await query(actor, 'a', 30)).should.equal('icelandiscolda');
   });
+
   it('should be able to stop if an exception is thrown midway through recovery', async () => {
     console.error = ignore;
     const expectedResult = 'icelandiscold';
@@ -283,6 +321,7 @@ describe('PersistentActor', () => {
     await retry(() => crashed.should.be.true, 5, 10);
     await retry(() => isStopped(actor).should.be.true, 5, 10);
   });
+
   it('should be able to stopAll if an exception is thrown midway through recovery', async () => {
     console.error = ignore;
     const expectedResult = 'icelandiscold';
@@ -337,6 +376,22 @@ describe('PersistentActor', () => {
     (await query(actor, '', 30)).should.equal(expectedState);
   });
 
+  it('should be able to restore a snapshot with a custom decoder and replay events exluding those that were persisted before the snapshot', async () => {
+    const previousState = 'icelandiscold';
+    const expectedState = 'greenlandiscold';
+    const previousEvents = [...previousState].map((evt, i) => new PersistedEvent(evt, i + 1, 'iceland'));
+    const persistenceEngine = new MockPersistenceEngine({ iceland: previousEvents }, { iceland: [new PersistedSnapshot('ice', 3, 'iceland')] });
+    system = start(configurePersistence(persistenceEngine));
+    const actor = spawnPersistent(
+      system,
+      concatenativeFunction(''),
+      'iceland',
+      'iceland',
+      { snapshotDecoder: (state) => 'green' }
+    );
+    (await query(actor, '', 30)).should.equal(expectedState);
+  });
+
   it('should be able to restore a snapshot and replay events exluding those that were persisted before the snapshot', async () => {
     const previousState = 'icelandiscold';
     const expectedState = 'greenlandiscold';
@@ -369,6 +424,44 @@ describe('PersistentActor', () => {
     const snapshots = persistenceEngine._snapshots['iceland'];
     snapshots.length.should.equal(3);
     snapshots[snapshots.length - 1].data.should.equal(expectedResult);
+  });
+
+  it('should be able to persist a snapshot after a given number of messages with a custom encoder', async () => {
+    const persistenceEngine = new MockPersistenceEngine();
+    system = start(configurePersistence(persistenceEngine));
+    const actor = spawnPersistent(
+      system,
+      concatenativeFunction('', async (state, msg, ctx) => { await ctx.persist(msg); }),
+      'iceland',
+      'test',
+      { snapshotEvery: 5 * messages, snapshotEncoder: (snapshot) => snapshot + ' But also beautiful.' }
+    );
+    const expectedResult = 'iceland\'s cold!';
+    expectedResult.split('').forEach(msg => {
+      dispatch(actor, msg);
+    });
+    (await query(actor, '', 30));
+    const snapshots = persistenceEngine._snapshots['iceland'];
+    snapshots.length.should.equal(3);
+    snapshots[snapshots.length - 1].data.should.equal(expectedResult + ' But also beautiful.');
+  });
+
+  it('should be able to continue processing messages even after failing to save a snapshot when snapshotting', async () => {
+    console.error = ignore;
+    const persistenceEngine = new MockPersistenceEngine(undefined, undefined, false); // Disable takeSnapshot
+    system = start(configurePersistence(persistenceEngine));
+    const actor = spawnPersistent(
+      system,
+      concatenativeFunction('', async (state, msg, ctx) => { await ctx.persist(msg); }),
+      'iceland',
+      'test',
+      { snapshotEvery: 5 * messages }
+    );
+    const expectedResult = 'iceland is cold';
+    expectedResult.split('').forEach(msg => {
+      dispatch(actor, msg);
+    });
+    (await query(actor, '', 30)).should.equal(expectedResult);
   });
 
   it('should be able to continue processing messages even after failing to save a snapshot when snapshotting', async () => {

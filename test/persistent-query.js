@@ -3,25 +3,14 @@
 const chai = require('chai');
 chai.should();
 const { MockPersistenceEngine } = require('./mock-persistence-engine');
-// const { BrokenPersistenceEngine } = require('./broken-persistence-engine');
-// const { PartiallyBrokenPersistenceEngine } = require('./partially-broken-persistence-engine');
-const { start, dispatch, stop, persistentQuery } = require('../lib');
-const { configurePersistence } = require('../lib/persistence');
+const { BrokenPersistenceEngine } = require('./broken-persistence-engine');
+const { PartiallyBrokenPersistenceEngine } = require('./partially-broken-persistence-engine');
+const { start, stop, persistentQuery } = require('../lib');
+const { PersistedEvent, PersistedSnapshot, configurePersistence } = require('../lib/persistence');
 const chaiAsPromised = require('chai-as-promised');
 chai.use(chaiAsPromised);
 const delay = (duration) => new Promise((resolve, reject) => setTimeout(() => resolve(), duration));
 
-// const { applyOrThrowIfStopped } = require('../lib/system-map');
-
-// const isStopped = (reference) => {
-//   try {
-//     return applyOrThrowIfStopped(reference).stopped;
-//   } catch (e) {
-//     return true;
-//   }
-// };
-
-// Begin helpers
 const ignore = () => { };
 
 const retry = async (assertion, remainingAttempts, retryInterval = 0) => {
@@ -38,11 +27,8 @@ const retry = async (assertion, remainingAttempts, retryInterval = 0) => {
 };
 
 const concatenativeFunction = (initialState, additionalActions = ignore) =>
-  async function (state = initialState, msg, ctx) {
-    if (!ctx.recovering) {
-      dispatch(ctx.sender, state + msg, ctx.self);
-    }
-    await Promise.resolve(additionalActions(state, msg, ctx));
+  async function (state = initialState, msg) {
+    await Promise.resolve(additionalActions(state, msg));
     return state + msg;
   };
 
@@ -60,7 +46,7 @@ describe('PersistentQuery', () => {
     system = start(configurePersistence(persistenceEngine));
     const query = persistentQuery(
       system,
-      concatenativeFunction(''),
+      (concatenativeFunction('')),
       'test'
     );
     (await query() === undefined).should.equal(true);
@@ -80,291 +66,164 @@ describe('PersistentQuery', () => {
   it('must have a snapshotKey of type string', async () => {
     const persistenceEngine = new MockPersistenceEngine();
     system = start(configurePersistence(persistenceEngine));
-    (() => persistentQuery(system, ignore, 'abc')).should.throw(Error);
-    (() => persistentQuery(system, ignore, null)).should.throw(Error);
-    (() => persistentQuery(system, ignore, 1)).should.throw(Error);
-    (() => persistentQuery(system, ignore, [])).should.throw(Error);
-    (() => persistentQuery(system, ignore, {})).should.throw(Error);
-    (() => persistentQuery(system, ignore, Symbol('A'))).should.throw(Error);
+    (() => persistentQuery(system, ignore, 'abc', { snapshotEvery: 1, snapshotKey: undefined })).should.throw(Error);
+    (() => persistentQuery(system, ignore, 'abc', { snapshotEvery: 1, snapshotKey: null })).should.throw(Error);
+    (() => persistentQuery(system, ignore, 'abc', { snapshotEvery: 1, snapshotKey: 1 })).should.throw(Error);
+    (() => persistentQuery(system, ignore, 'abc', { snapshotEvery: 1, snapshotKey: [] })).should.throw(Error);
+    (() => persistentQuery(system, ignore, 'abc', { snapshotEvery: 1, snapshotKey: {} })).should.throw(Error);
+    (() => persistentQuery(system, ignore, 'abc', { snapshotEvery: 1, snapshotKey: Symbol('A') })).should.throw(Error);
   });
 
-  // it('should be able to replay previously persisted events on startup', async () => {
-  //   const expectedResult = '1234567890';
-  //   const events = [...expectedResult].map((evt, i) => new PersistedEvent(evt, i + 1, 'test'));
-  //   const persistenceEngine = new MockPersistenceEngine({ test: events });
-  //   system = start(configurePersistence(persistenceEngine));
-  //   const actor = spawnPersistent(
-  //     system,
-  //     concatenativeFunction(''),
-  //     'test'
-  //   );
-  //   dispatch(actor, '1');
-  //   dispatch(actor, '2');
-  //   dispatch(actor, '3');
+  it('should be able to replay previously persisted events', async () => {
+    const expectedResult = '1234567890';
+    const events = [...expectedResult].map((evt, i) => new PersistedEvent(evt, i + 1, 'test'));
+    const persistenceEngine = new MockPersistenceEngine({ test: events });
+    system = start(configurePersistence(persistenceEngine));
+    const query = persistentQuery(
+      system,
+      concatenativeFunction(''),
+      'test'
+    );
+    (await query()).should.equal(expectedResult);
+  });
 
-  //   (await query(actor, '', 30)).should.equal(expectedResult + '123');
-  // });
+  it('should be able to skip deleted events', async () => {
+    const prevResult = '1234567890';
+    const expectedResult = '123456789';
+    const events = [...prevResult].map((evt, i) => new PersistedEvent(evt, i + 1, 'test', undefined, undefined, evt === '0'));
+    const persistenceEngine = new MockPersistenceEngine({ test: events });
+    system = start(configurePersistence(persistenceEngine));
+    const query = persistentQuery(
+      system,
+      concatenativeFunction(''),
+      'test'
+    );
+    (await query()).should.equal(expectedResult);
+  });
 
-  // it('should be able to skip deleted events on startup', async () => {
-  //   const prevResult = '1234567890';
-  //   const expectedResult = '123456789';
-  //   const events = [...prevResult].map((evt, i) => new PersistedEvent(evt, i + 1, 'test', undefined, undefined, evt === '0'));
-  //   const persistenceEngine = new MockPersistenceEngine({ test: events });
-  //   system = start(configurePersistence(persistenceEngine));
-  //   const actor = spawnPersistent(
-  //     system,
-  //     concatenativeFunction(''),
-  //     'test'
-  //   );
-  //   dispatch(actor, '1');
-  //   dispatch(actor, '2');
-  //   dispatch(actor, '3');
+  it('should signal an error if creating restore stream fails', () => {
+    console.error = ignore;
+    const persistenceEngine = new BrokenPersistenceEngine();
+    system = start(configurePersistence(persistenceEngine));
+    persistentQuery(system, ignore, 'frog')().should.eventually.throw(Error);
+  });
 
-  //   (await query(actor, '', 30)).should.equal(expectedResult + '123');
-  // });
+  it('should signal an error if restore stream fails midway through recovery', () => {
+    console.error = ignore;
+    const expectedResult = 'icelandiscold';
+    const events = [...expectedResult].map((evt, i) => new PersistedEvent(evt, i + 1, 'frog'));
+    const persistenceEngine = new PartiallyBrokenPersistenceEngine({ frog: events }, 5);
+    system = start(configurePersistence(persistenceEngine));
+    persistentQuery(system, ignore, 'frog')().should.eventually.throw(Error);
+  });
 
-  // it('should be able to persist events', async () => {
-  //   const persistenceEngine = new MockPersistenceEngine();
-  //   system = start(configurePersistence(persistenceEngine));
-  //   const actor = spawnPersistent(
-  //     system,
-  //     concatenativeFunction('', (state, msg, ctx) => !ctx.recovering && ctx.persist(msg)),
-  //     'test'
-  //   );
-  //   dispatch(actor, 'a');
-  //   dispatch(actor, 'b');
-  //   dispatch(actor, 'c');
-  //   (await query(actor, 'd', 30)).should.equal('abcd');
-  //   persistenceEngine._events['test'].map(x => x.data).should.deep.equal(['a', 'b', 'c', 'd']);
-  // });
+  it('should be able to restore a snapshot and replay events exluding those that were persisted before the snapshot', async () => {
+    const previousState = 'icelandiscold';
+    const expectedState = 'greenlandiscold';
+    const previousEvents = [...previousState].map((evt, i) => new PersistedEvent(evt, i + 1, 'iceland'));
+    const persistenceEngine = new MockPersistenceEngine({ iceland: previousEvents }, { iceland2: [new PersistedSnapshot('green', 3, 'iceland2')] });
+    system = start(configurePersistence(persistenceEngine));
+    const query = persistentQuery(
+      system,
+      concatenativeFunction(''),
+      'iceland',
+      { snapshotKey: 'iceland2' }
+    );
+    (await query()).should.equal(expectedState);
+  });
 
-  // it('should signal an error if creating restore stream fails', async () => {
-  //   console.error = ignore;
-  //   const persistenceEngine = new BrokenPersistenceEngine();
-  //   system = start(configurePersistence(persistenceEngine));
-  //   const actor = spawnPersistent(
-  //     system,
-  //     concatenativeFunction(''),
-  //     'test'
-  //   );
-  //   await retry(() => isStopped(actor).should.be.true, 5, 10);
-  // });
+  it('should be able to persist a snapshot after a given number of messages', async () => {
+    const expectedResult = 'iceland\'s cold!';
+    const previousEvents = [...expectedResult].map((evt, i) => new PersistedEvent(evt, i + 1, 'iceland'));
+    const persistenceEngine = new MockPersistenceEngine({ iceland: previousEvents }, {});
+    system = start(configurePersistence(persistenceEngine));
+    const query = persistentQuery(
+      system,
+      concatenativeFunction(''),
+      'iceland',
+      { snapshotEvery: 5, snapshotKey: 'test' }
+    );
+    (await query()).should.equal(expectedResult);
+    await retry(() => {
+      const snapshots = persistenceEngine._snapshots['test'];
+      snapshots.length.should.equal(1);
+      snapshots[0].data.should.equal(expectedResult);
+    }, 10);
+  });
 
-  // it('should signal an error if restore stream fails midway through recovery', async () => {
-  //   console.error = ignore;
-  //   const expectedResult = 'icelandiscold';
-  //   const events = [...expectedResult].map((evt, i) => new PersistedEvent(evt, i + 1, 'frog'));
-  //   const persistenceEngine = new PartiallyBrokenPersistenceEngine({ frog: events }, 5);
-  //   system = start(configurePersistence(persistenceEngine));
-  //   let crashed = false;
-  //   spawnPersistent(
-  //     system,
-  //     concatenativeFunction(''),
-  //     'frog',
-  //     'frog',
-  //     { onCrash: (_, __, ctx) => { crashed = true; return ctx.stop; } }
-  //   );
-  //   await retry(() => crashed.should.be.true, 5, 10);
-  // });
-
-  // it('should be able to continue if an exception is thrown midway through recovery', async () => {
-  //   console.error = ignore;
-  //   const expectedResult = 'icelandiscold';
-  //   const events = [...expectedResult].map((evt, i) => new PersistedEvent(evt, i + 1, 'frog'));
-  //   const persistenceEngine = new MockPersistenceEngine({ frog: events });
-  //   system = start(configurePersistence(persistenceEngine));
-  //   let crashed = false;
-  //   let actor = spawnPersistent(
-  //     system,
-  //     concatenativeFunction('', (state, msg, ctx) => { if (msg === 'a') { throw new Error('"a" error'); } else if (!ctx.recovering) { ctx.persist(msg); } }),
-  //     'frog',
-  //     'frog',
-  //     { onCrash: (_, __, ctx) => { crashed = true; return ctx.resume; } }
-  //   );
-  //   await retry(() => crashed.should.be.true, 5, 10);
-  //   (await query(actor, 'a', 30)).should.equal('icelndiscolda');
-  // });
-
-  // it('should be able to escalate if an exception is thrown midway through recovery', async () => {
-  //   console.error = ignore;
-  //   const expectedResult = 'icelandiscold';
-  //   const events = [...expectedResult].map((evt, i) => new PersistedEvent(evt, i + 1, 'frog'));
-  //   const persistenceEngine = new MockPersistenceEngine({ frog: events });
-  //   system = start(configurePersistence(persistenceEngine));
-  //   let parent = spawn(system, (state, msg, ctx) => state);
-  //   let crashed = false;
-  //   let actor = spawnPersistent(
-  //     parent,
-  //     concatenativeFunction('', (state, msg, ctx) => { if (msg === 'a') { throw new Error('"a" error'); } else if (!ctx.recovering) { ctx.persist(msg); } }),
-  //     'frog',
-  //     'frog',
-  //     { onCrash: (_, __, ctx) => { crashed = true; return ctx.escalate; } }
-  //   );
-  //   await retry(() => crashed.should.be.true, 5, 10);
-  //   await retry(() => isStopped(parent).should.be.true, 5, 10);
-  //   await retry(() => isStopped(actor).should.be.true, 5, 10);
-  // });
-
-  // it('should be able to reset if an exception is thrown midway through recovery', async () => {
-  //   console.error = ignore;
-  //   const expectedResult = 'icelandiscold';
-  //   const events = [...expectedResult].map((evt, i) => new PersistedEvent(evt, i + 1, 'frog'));
-  //   const persistenceEngine = new MockPersistenceEngine({ frog: events });
-  //   system = start(configurePersistence(persistenceEngine));
-  //   let crashed = false;
-  //   let actor = spawnPersistent(
-  //     system,
-  //     concatenativeFunction('', (state, msg, ctx) => { if (msg === 'a' && !crashed) { throw new Error('"a" error'); } else if (!ctx.recovering) { ctx.persist(msg); } }),
-  //     'frog',
-  //     'frog',
-  //     { onCrash: (_, __, ctx) => { crashed = true; return ctx.reset; } }
-  //   );
-  //   await retry(() => crashed.should.be.true, 5, 10);
-  //   (await query(actor, 'a', 30)).should.equal('icelandiscolda');
-  // });
-  // it('should be able to resetAll if an exception is thrown midway through recovery', async () => {
-  //   console.error = ignore;
-  //   const expectedResult = 'icelandiscold';
-  //   const events = [...expectedResult].map((evt, i) => new PersistedEvent(evt, i + 1, 'frog'));
-  //   const persistenceEngine = new MockPersistenceEngine({ frog: events });
-  //   system = start(configurePersistence(persistenceEngine));
-  //   let crashed = false;
-  //   let actor = spawnPersistent(
-  //     system,
-  //     concatenativeFunction('', (state, msg, ctx) => { if (msg === 'a' && !crashed) { throw new Error('"a" error'); } else if (!ctx.recovering) { ctx.persist(msg); } }),
-  //     'frog',
-  //     'frog',
-  //     { onCrash: (_, __, ctx) => { crashed = true; return ctx.resetAll; } }
-  //   );
-  //   await retry(() => crashed.should.be.true, 5, 10);
-  //   (await query(actor, 'a', 30)).should.equal('icelandiscolda');
-  // });
-  // it('should be able to stop if an exception is thrown midway through recovery', async () => {
-  //   console.error = ignore;
-  //   const expectedResult = 'icelandiscold';
-  //   const events = [...expectedResult].map((evt, i) => new PersistedEvent(evt, i + 1, 'frog'));
-  //   const persistenceEngine = new MockPersistenceEngine({ frog: events });
-  //   system = start(configurePersistence(persistenceEngine));
-  //   let crashed = false;
-  //   let actor = spawnPersistent(
-  //     system,
-  //     concatenativeFunction('', (state, msg, ctx) => { if (msg === 'a') { throw new Error('"a" error'); } else if (!ctx.recovering) { ctx.persist(msg); } }),
-  //     'frog',
-  //     'frog',
-  //     { onCrash: (_, __, ctx) => { crashed = true; return ctx.stop; } }
-  //   );
-  //   await retry(() => crashed.should.be.true, 5, 10);
-  //   await retry(() => isStopped(actor).should.be.true, 5, 10);
-  // });
-  // it('should be able to stopAll if an exception is thrown midway through recovery', async () => {
-  //   console.error = ignore;
-  //   const expectedResult = 'icelandiscold';
-  //   const events = [...expectedResult].map((evt, i) => new PersistedEvent(evt, i + 1, 'frog'));
-  //   const persistenceEngine = new MockPersistenceEngine({ frog: events });
-  //   system = start(configurePersistence(persistenceEngine));
-  //   let crashed = false;
-  //   let actor = spawnPersistent(
-  //     system,
-  //     concatenativeFunction('', (state, msg, ctx) => { if (msg === 'a') { throw new Error('"a" error'); } else if (!ctx.recovering) { ctx.persist(msg); } }),
-  //     'frog',
-  //     'frog',
-  //     { onCrash: (_, __, ctx) => { crashed = true; return ctx.stopAll; } }
-  //   );
-  //   await retry(() => crashed.should.be.true, 5, 10);
-  //   await retry(() => isStopped(actor).should.be.true, 5, 10);
-  // });
-
-  // it('should be able to restore and then persist new events (with correct seqNumbers)', async () => {
-  //   const previousState = 'icelandiscold';
-  //   const previousEvents = [...previousState].map((evt, i) => new PersistedEvent(evt, i + 1, 'iceland'));
-  //   const persistenceEngine = new MockPersistenceEngine({ iceland: previousEvents });
-  //   system = start(configurePersistence(persistenceEngine));
-  //   const actor = spawnPersistent(
-  //     system,
-  //     concatenativeFunction('', async (state, msg, ctx) => {
-  //       if (!ctx.recovering) {
-  //         console.log('persisting');
-  //         await ctx.persist(msg);
-  //       }
-  //     }),
-  //     'iceland'
-  //   );
-  //   dispatch(actor, ', very cold indeed');
-  //   await retry(() =>
-  //     persistenceEngine._events['iceland'].map((evt, i) => evt.sequenceNumber === i + 1)
-  //       .should.deep.equal(new Array(previousState.length + 1).fill(true))
-  //     , 5, 20);
-  // });
-
-  // it('should be able to restore a snapshot and replay events exluding those that were persisted before the snapshot', async () => {
-  //   const previousState = 'icelandiscold';
-  //   const expectedState = 'greenlandiscold';
-  //   const previousEvents = [...previousState].map((evt, i) => new PersistedEvent(evt, i + 1, 'iceland'));
-  //   const persistenceEngine = new MockPersistenceEngine({ iceland: previousEvents }, { iceland: [new PersistedSnapshot('green', 3, 'iceland')] });
-  //   system = start(configurePersistence(persistenceEngine));
-  //   const actor = spawnPersistent(
-  //     system,
-  //     concatenativeFunction(''),
-  //     'iceland'
-  //   );
-  //   (await query(actor, '', 30)).should.equal(expectedState);
-  // });
-
-  // it('should be able to restore a snapshot and replay events exluding those that were persisted before the snapshot', async () => {
-  //   const previousState = 'icelandiscold';
-  //   const expectedState = 'greenlandiscold';
-  //   const previousEvents = [...previousState].map((evt, i) => new PersistedEvent(evt, i + 1, 'iceland'));
-  //   const persistenceEngine = new MockPersistenceEngine({ iceland: previousEvents }, { iceland: [new PersistedSnapshot('green', 3, 'iceland')] });
-  //   system = start(configurePersistence(persistenceEngine));
-  //   const actor = spawnPersistent(
-  //     system,
-  //     concatenativeFunction(''),
-  //     'iceland'
-  //   );
-  //   (await query(actor, '', 30)).should.equal(expectedState);
-  // });
-
-  // it('should be able to persist a snapshot after a given number of messages', async () => {
-  //   const persistenceEngine = new MockPersistenceEngine();
-  //   system = start(configurePersistence(persistenceEngine));
-  //   const actor = spawnPersistent(
-  //     system,
-  //     concatenativeFunction('', async (state, msg, ctx) => { await ctx.persist(msg); }),
-  //     'iceland',
-  //     'test',
-  //     { snapshotEvery: 5 * messages }
-  //   );
-  //   const expectedResult = 'iceland\'s cold!';
-  //   expectedResult.split('').forEach(msg => {
-  //     dispatch(actor, msg);
-  //   });
-  //   (await query(actor, '', 30));
-  //   const snapshots = persistenceEngine._snapshots['iceland'];
-  //   snapshots.length.should.equal(3);
-  //   snapshots[snapshots.length - 1].data.should.equal(expectedResult);
-  // });
-
-  // it('should be able to continue processing messages even after failing to save a snapshot when snapshotting', async () => {
-  //   console.error = ignore;
-  //   const persistenceEngine = new MockPersistenceEngine(undefined, undefined, false); // Disable takeSnapshot
-  //   system = start(configurePersistence(persistenceEngine));
-  //   const actor = spawnPersistent(
-  //     system,
-  //     concatenativeFunction('', async (state, msg, ctx) => { await ctx.persist(msg); }),
-  //     'iceland',
-  //     'test',
-  //     { snapshotEvery: 5 * messages }
-  //   );
-  //   const expectedResult = 'iceland is cold';
-  //   expectedResult.split('').forEach(msg => {
-  //     dispatch(actor, msg);
-  //   });
-  //   (await query(actor, '', 30)).should.equal(expectedResult);
-  // });
-
-  // it('should throw if snapshot is not a number', async function () {
-  //   const persistenceEngine = new MockPersistenceEngine(); // Disable takeSnapshot
-  //   system = start(configurePersistence(persistenceEngine));
-  //   (() => spawnPersistent(system, ignore, 'test1', undefined, { snapshotEvery: {} })).should.throw(Error);
-  // });
+  it('should be able to replay previously persisted events and then when called again, use new events', async () => {
+    const initialResults = '12345678910';
+    const additionalResults = '1112131415';
+    const events = [...initialResults].map((evt, i) => new PersistedEvent(evt, i + 1, 'test'));
+    const persistenceEngine = new MockPersistenceEngine({ test: events });
+    system = start(configurePersistence(persistenceEngine));
+    const query = persistentQuery(
+      system,
+      concatenativeFunction(''),
+      'test'
+    );
+    (await query()).should.equal(initialResults);
+    events.push(...([...additionalResults].map((evt, i) => new PersistedEvent(evt, initialResults.length + i + 1, 'test'))));
+    (await query()).should.equal(initialResults + additionalResults);
+  });
+  it('should be able to continue processing messages even after failing to save a snapshot when snapshotting', async () => {
+    console.error = ignore;
+    const expectedResult = '12345678910';
+    const events = [...expectedResult].map((evt, i) => new PersistedEvent(evt, i + 1, 'iceland'));
+    const persistenceEngine = new MockPersistenceEngine({ iceland: events }, undefined, false);
+    system = start(configurePersistence(persistenceEngine));
+    const query = persistentQuery(
+      system,
+      concatenativeFunction(''),
+      'iceland',
+      { snapshotEvery: 5, snapshotKey: 'test' }
+    );
+    (await query()).should.equal(expectedResult);
+  });
+  it('should set cacheDuration to a safe default if it is very large', async () => {
+    const expectedResult = '1234567890';
+    const events = [...expectedResult].map((evt, i) => new PersistedEvent(evt, i + 1, 'test'));
+    const persistenceEngine = new MockPersistenceEngine({ iceland: events });
+    system = start(configurePersistence(persistenceEngine));
+    const query = persistentQuery(
+      system,
+      concatenativeFunction(''),
+      'iceland',
+      { snapshotEvery: 5, snapshotKey: 'test', cacheDuration: Number.MAX_SAFE_INTEGER }
+    );
+    (await query()).should.equal(expectedResult);
+  });
+  it('should return the same promise if the query has not yet returned', async () => {
+    const expectedResult = '1234567890';
+    const events = [...expectedResult].map((evt, i) => new PersistedEvent(evt, i + 1, 'test'));
+    const persistenceEngine = new MockPersistenceEngine({ iceland: events });
+    system = start(configurePersistence(persistenceEngine));
+    const query = persistentQuery(
+      system,
+      concatenativeFunction('', () => delay(1000)),
+      'iceland',
+      { snapshotEvery: 5, snapshotKey: 'test' }
+    );
+    (query()).should.equal(query());
+  });
+  it('should throw an error if snapshotEvery is not a number', () => {
+    const persistenceEngine = new MockPersistenceEngine();
+    system = start(configurePersistence(persistenceEngine));
+    (() => persistentQuery(
+      system,
+      concatenativeFunction('', () => delay(1000)),
+      'iceland',
+      { snapshotEvery: 'a', snapshotKey: 'test' }
+    )).should.throw(Error);
+  });
+  it('should throw an error if cacheDuration is not a number', () => {
+    const persistenceEngine = new MockPersistenceEngine();
+    system = start(configurePersistence(persistenceEngine));
+    (() => persistentQuery(
+      system,
+      concatenativeFunction('', () => delay(1000)),
+      'iceland',
+      { cacheDuration: {}, snapshotKey: 'test' }
+    )).should.throw(Error);
+  });
 });
