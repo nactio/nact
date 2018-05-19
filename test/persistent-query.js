@@ -87,6 +87,20 @@ describe('PersistentQuery', () => {
     (await query()).should.equal(expectedResult);
   });
 
+  it('should allow an initial state to be specified', async () => {
+    const expectedResult = '1234567890';
+    const events = [...expectedResult].map((evt, i) => new PersistedEvent(evt, i + 1, 'test'));
+    const persistenceEngine = new MockPersistenceEngine({ test: events });
+    system = start(configurePersistence(persistenceEngine));
+    const query = persistentQuery(
+      system,
+      concatenativeFunction(''),
+      'test',
+      { initialState: 'abc' }
+    );
+    (await query()).should.equal('abc' + expectedResult);
+  });
+
   it('should be able to skip deleted events', async () => {
     const prevResult = '1234567890';
     const expectedResult = '123456789';

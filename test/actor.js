@@ -108,6 +108,28 @@ describe('Actor', function () {
       result.should.equal('Hello World. The time has come!!');
     });
 
+    it('allows an initial state to be specified', async function () {
+      let actor = spawn(
+        system,
+        function (state, msg) {
+          if (msg.type === 'query') {
+            dispatch(this.sender, state, this.self);
+            return state;
+          } else if (msg.type === 'append') {
+            return state + msg.payload;
+          }
+        },
+        'test',
+        { initialState: 'A joyous ' }
+      );
+
+      dispatch(actor, { payload: 'Hello ', type: 'append' });
+      dispatch(actor, { payload: 'World. ', type: 'append' });
+      dispatch(actor, { payload: 'The time has come!!', type: 'append' });
+      let result = await query(actor, { type: 'query' }, 30);
+      result.should.equal('A joyous Hello World. The time has come!!');
+    });
+
     it('evalutes in order when returning a promise from a stateful actor function', async function () {
       let child = spawn(
         system,

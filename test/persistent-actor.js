@@ -79,6 +79,21 @@ describe('PersistentActor', () => {
     (await query(actor, 'c', 30)).should.equal('abc');
   });
 
+  it('should allow an initial state to be specified', async function () {
+    const persistenceEngine = new MockPersistenceEngine();
+    system = start(configurePersistence(persistenceEngine));
+    const actor = spawnPersistent(
+      system,
+      concatenativeFunction(''),
+      'test',
+      'test',
+      { initialState: '123' }
+    );
+    dispatch(actor, 'a');
+    dispatch(actor, 'b');
+    (await query(actor, 'c', 30)).should.equal('123abc');
+  });
+
   it('should be able to correctly recover when reset after a failure', async function () {
     const persistenceEngine = new MockPersistenceEngine();
     system = start(configurePersistence(persistenceEngine));
