@@ -437,6 +437,33 @@ describe('Actor', function () {
       isStopped(grandchild).should.be.true;
     });
 
+    it('should be able to be reset and use initial state', async function () {
+      const reset = (msg, err, ctx) => ctx.reset;
+      const parent = createSupervisor(system, 'test1');
+      const child = spawn(parent, (state, msg, ctx) => {
+        if (state + 1 === 3 && msg !== 'msg3') {
+          throw new Error('Very bad thing');
+        }
+        dispatch(ctx.sender, state + 1);
+        return state + 1;
+      }, 'test', { onCrash: reset, initialState: 1 });
+
+      const grandchild = spawn(child, (state = 0, msg, ctx) => {
+        dispatch(ctx.sender, state + 1);
+        return state + 1;
+      });
+
+      dispatch(grandchild, 'msg0');
+      dispatch(child, 'msg0');
+      dispatch(grandchild, 'msg1');
+      dispatch(child, 'msg1');
+      dispatch(grandchild, 'msg2');
+      dispatch(child, 'msg2');
+      let result = await query(child, 'msg3', 300);
+      result.should.equal(3);
+      isStopped(grandchild).should.be.true;
+    });
+
     it('should be able to stop', async function () {
       const stop = (msg, err, ctx) => ctx.stop;
       const parent = createSupervisor(system, 'test1');
