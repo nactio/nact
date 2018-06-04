@@ -75,6 +75,7 @@ describe('LoggingFacade', () => {
     const properties = { answer: 42 };
     const metrics = { duration_ms: 1234 };
     const name = 'test';
+
     beforeEach(function () {
       system = start();
       loggingActor = spawn(system, (state = [], msg, ctx) => {
@@ -147,7 +148,7 @@ describe('LoggingFacade', () => {
       logs.should.deep.equal([logEvent]);
     });
 
-    it('it should call given logger when exception method', async () => {
+    it('it should call given logger when exception method is called', async () => {
       const error = new Error('error');
       const logEvent = new LogException(error, new Nobody());
       facade.exception(error);

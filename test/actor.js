@@ -130,6 +130,65 @@ describe('Actor', function () {
       result.should.equal('A joyous Hello World. The time has come!!');
     });
 
+    it('allows an promise returning initial state function to be specified', async function () {
+      let actor = spawn(
+        system,
+        function (state, msg, ctx) {
+          if (msg.type === 'query') {
+            dispatch(ctx.sender, state, ctx.self);
+            return state;
+          } else if (msg.type === 'append') {
+            return state + msg.payload;
+          }
+        },
+        'Nact',
+        { initialStateFunc: (ctx) => Promise.resolve(`Hello ${ctx.name}! Is today not a joyous occasion?`) }
+      );
+
+      dispatch(actor, { payload: ' It is indeed', type: 'append' });
+      let result = await query(actor, { type: 'query' }, 30);
+      result.should.equal('Hello Nact! Is today not a joyous occasion? It is indeed');
+    });
+
+    it('allows an initial state function to be specified', async function () {
+      let actor = spawn(
+        system,
+        function (state, msg, ctx) {
+          if (msg.type === 'query') {
+            dispatch(ctx.sender, state, ctx.self);
+            return state;
+          } else if (msg.type === 'append') {
+            return state + msg.payload;
+          }
+        },
+        'Nact',
+        { initialStateFunc: (ctx) => `Hello ${ctx.name}! Is today not a joyous occasion?` }
+      );
+
+      dispatch(actor, { payload: ' It is indeed', type: 'append' });
+      let result = await query(actor, { type: 'query' }, 30);
+      result.should.equal('Hello Nact! Is today not a joyous occasion? It is indeed');
+    });
+
+    it('correctly handles an initial state function which throws an error', async function () {
+      let handled = false;
+      let actor = spawn(
+        system,
+        function (state, msg, ctx) {
+          if (msg.type === 'query') {
+            dispatch(ctx.sender, state, ctx.self);
+            return state;
+          } else if (msg.type === 'append') {
+            return state + msg.payload;
+          }
+        },
+        'Nact',
+        { initialStateFunc: (ctx) => { throw new Error('A bad moon is on the rise'); }, onCrash: (_, __, ctx) => { handled = true; return ctx.stop; } }
+      );
+      await retry(() => isStopped(actor).should.be.true, 12, 10);
+      handled.should.be.true;
+    });
+
     it('evalutes in order when returning a promise from a stateful actor function', async function () {
       let child = spawn(
         system,
