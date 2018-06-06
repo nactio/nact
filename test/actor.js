@@ -130,26 +130,6 @@ describe('Actor', function () {
       result.should.equal('A joyous Hello World. The time has come!!');
     });
 
-    it('allows an promise returning initial state function to be specified', async function () {
-      let actor = spawn(
-        system,
-        function (state, msg, ctx) {
-          if (msg.type === 'query') {
-            dispatch(ctx.sender, state, ctx.self);
-            return state;
-          } else if (msg.type === 'append') {
-            return state + msg.payload;
-          }
-        },
-        'Nact',
-        { initialStateFunc: (ctx) => Promise.resolve(`Hello ${ctx.name}! Is today not a joyous occasion?`) }
-      );
-
-      dispatch(actor, { payload: ' It is indeed', type: 'append' });
-      let result = await query(actor, { type: 'query' }, 30);
-      result.should.equal('Hello Nact! Is today not a joyous occasion? It is indeed');
-    });
-
     it('allows an initial state function to be specified', async function () {
       let actor = spawn(
         system,
