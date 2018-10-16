@@ -3,7 +3,6 @@
 **nact ⇒ node.js + actors**\
 *your services have never been so µ*
 
-
 <!-- Badges -->
 [![Travis branch](https://img.shields.io/travis/ncthbrt/nact/master.svg?style=flat-square)]()
 [![Coveralls](https://img.shields.io/coveralls/ncthbrt/nact.svg?style=flat-square)]() [![Dependencies](https://david-dm.org/ncthbrt/nact.svg?branch=master&style=flat-square)](https://david-dm.org/ncthbrt/nact) [![DeepScan Grade](https://deepscan.io/api/projects/908/branches/1863/badge/grade.svg)](https://deepscan.io/dashboard/#view=project&pid=908&bid=1863)
