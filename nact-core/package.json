@@ -1,0 +1,54 @@
+{
+  "name": "nact-core",
+  "description": "NAct in TypeScript",
+  "version": "0.1.0",
+  "private": true,
+  "homepage": "https://nact.io",
+  "license": "Apache License 2.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/civilizeddev/ts-nact"
+  },
+  "scripts": {
+    "build": "tsc --build --force",
+    "build-watch": "tsc --build --watch",
+    "test": "jest --coverage --errorOnDeprecated --noStackTrace --passWithNoTests",
+    "test-watch": "jest --watch",
+    "tslint": "tslint --format codeFrame --project ."
+  },
+  "dependencies": {
+    "autobind-decorator": "^2.4",
+    "denque": "^1.4"
+  },
+  "devDependencies": {
+    "@types/jest": "^24.0",
+    "@types/node": "^8",
+    "jest": "^24.7",
+    "ts-jest": "^24.0",
+    "tslint": "^5.15",
+    "tslint-config-prettier": "^1.18",
+    "typescript": "^3.4"
+  },
+  "jest": {
+    "globals": {
+      "ts-jest": {
+        "diagnostics": true
+      }
+    },
+    "moduleDirectories": [
+      "node_modules",
+      "src"
+    ],
+    "moduleFileExtensions": [
+      "ts",
+      "js"
+    ],
+    "testEnvironment": "node",
+    "testRegex": "\\.test\\.ts$",
+    "transform": {
+      "^.+\\.ts$": "ts-jest"
+    }
+  }
+}
