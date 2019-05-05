@@ -29,14 +29,22 @@ bower_components
 # node-waf configuration
 .lock-wscript
 
+<<<<<<< HEAD
+# Compiled binary addons (http://nodejs.org/api/addons.html)
+=======
 # Compiled binary addons (https://nodejs.org/api/addons.html)
+>>>>>>> dev-ts
 build/Release
 
 # Dependency directories
 node_modules/
 jspm_packages/
 
+<<<<<<< HEAD
+# Typescript v1 declaration files
+=======
 # TypeScript v1 declaration files
+>>>>>>> dev-ts
 typings/
 
 # Optional npm cache directory
@@ -56,9 +64,12 @@ typings/
 
 # dotenv environment variables file
 .env
+<<<<<<< HEAD
+=======
 
 # next.js build output
 .next
 
 tsconfig.tsbuildinfo
 dist/
+>>>>>>> dev-ts

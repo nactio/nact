@@ -1,0 +1,46 @@
+{
+  "name": "nact-monitoring",
+  "description": "Nact Logger",
+  "version": "0.1.0",
+  "private": true,
+  "homepage": "https://nact.io",
+  "license": "Apache License 2.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/civilizeddev/ts-nact"
+  },
+  "scripts": {
+    "build": "tsc --build --force",
+    "build-watch": "tsc --build --watch",
+    "test": "jest --coverage --errorOnDeprecated --noStackTrace --passWithNoTests",
+    "test-watch": "jest --watch",
+    "tslint": "tslint --format codeFrame --project ."
+  },
+  "dependencies": {
+    "autobind-decorator": "^2.4",
+    "denque": "^1.4",
+    "nact-core": "*"
+  },
+  "jest": {
+    "globals": {
+      "ts-jest": {
+        "diagnostics": true
+      }
+    },
+    "moduleDirectories": [
+      "node_modules",
+      "src"
+    ],
+    "moduleFileExtensions": [
+      "ts",
+      "js"
+    ],
+    "testEnvironment": "node",
+    "testRegex": "\\.test\\.ts$",
+    "transform": {
+      "^.+\\.ts$": "ts-jest"
+    }
+  }
+}
