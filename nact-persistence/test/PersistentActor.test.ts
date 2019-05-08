@@ -50,16 +50,16 @@ const retry = async (
   }
 }
 
-// function concatenativeFunction<MSG, ST = MSG>(
-//   initialState: ST,
+// function concatenativeFunction<Msg, State = Msg>(
+//   initialState: State,
 //   additionalActions: (..._: any) => void = ignore,
-// ): Promise<MessageHandlerFunc<MSG, ST>> {
-//   return async (state: ST = initialState, msg: MSG, ctx: Context & any) => {
+// ): Promise<MessageHandlerFunc<Msg, State>> {
+//   return async (state: State = initialState, msg: Msg, ctx: Context & any) => {
 //     if (!ctx.recovering) {
 //       dispatch(ctx.sender, (state as any) + (msg as any), ctx.self)
 //     }
 //     await Promise.resolve(additionalActions(state, msg, ctx))
-//     return ((state as any) + (msg as any)) as ST
+//     return ((state as any) + (msg as any)) as State
 //   }
 // }
 

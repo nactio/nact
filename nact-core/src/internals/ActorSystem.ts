@@ -2,7 +2,7 @@ import assert from 'assert'
 import { boundMethod } from 'autobind-decorator'
 import { randomBytes } from 'crypto'
 
-import { Actor, ActorLike, ActorName, Deferral, SystemRegistry, Temporary } from '.'
+import { Actor, ActorLike, ActorName, Deferral, SystemRegistry, Temporary } from '../actor'
 import { Extension } from '../Extension'
 import { stop } from '../functions'
 import { ActorPath } from '../paths'

@@ -1,18 +1,16 @@
-import { ActorSystem, ActorSystemName } from '../actor'
-
 export class ActorPath {
   public static isValidName(name: string) {
     const actorNameRegex = /^[a-z0-9-_]+$/i
     return !!name && typeof name === 'string' && !!name.match(actorNameRegex)
   }
 
-  public static root(system: ActorSystem) {
+  public static root(system: {name: string}) {
     return new ActorPath([], system)
   }
 
   constructor(
     public readonly parts: string[],
-    public readonly system: ActorSystem | { name: ActorSystemName },
+    public readonly system: { name: string },
   ) {}
 
   public createChildPath(name: string) {

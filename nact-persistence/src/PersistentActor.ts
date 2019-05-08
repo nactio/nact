@@ -20,20 +20,20 @@ import {
   SnapshotEncoder,
 } from './PersistentActorConfig'
 
-export class PersistentActor<MSG, ST> extends Actor<MSG, ST> {
+export class PersistentActor<Msg, State> extends Actor<Msg, State> {
   private messagesToNextSnapshot: number
   private sequenceNumber: number = 0
   private readonly snapshotEvery: number
-  private readonly snapshotEncoder: SnapshotEncoder<ST>
-  private readonly snapshotDecoder: SnapshotDecoder<ST>
-  private readonly encoder: EventEncoder<MSG>
-  private readonly decoder: EventDecoder<MSG>
+  private readonly snapshotEncoder: SnapshotEncoder<State>
+  private readonly snapshotDecoder: SnapshotDecoder<State>
+  private readonly encoder: EventEncoder<Msg>
+  private readonly decoder: EventDecoder<Msg>
 
   constructor(
     parent: ActorLike,
     name: string | undefined,
     system: ActorSystem,
-    f: MessageHandlerFunc<MSG, ST>,
+    f: MessageHandlerFunc<Msg, State>,
     private readonly key: string,
     private readonly persistenceEngine: AbstractPersistenceEngine,
     {
@@ -43,7 +43,7 @@ export class PersistentActor<MSG, ST> extends Actor<MSG, ST> {
       encoder = id,
       decoder = id,
       ...properties
-    }: PersistentActorConfig<MSG, ST> = {},
+    }: PersistentActorConfig<Msg, State> = {},
   ) {
     super(parent, name, system, f, properties)
 
@@ -101,7 +101,7 @@ export class PersistentActor<MSG, ST> extends Actor<MSG, ST> {
 
   @boundMethod
   protected async handleFaultedRecovery(
-    msg: MSG,
+    msg: Msg,
     sender: ActorRef = Nobody,
     error: Error,
   ) {
@@ -156,7 +156,7 @@ export class PersistentActor<MSG, ST> extends Actor<MSG, ST> {
         this.key,
         this.sequenceNumber,
       )
-      const result = await events.reduce<Promise<[ST, number, number]>>(
+      const result = await events.reduce<Promise<[State, number, number]>>(
         async (prev, msg, index) => {
           const [prevState, prevIndex] = await prev
           if (msg.isDeleted) {
@@ -202,7 +202,7 @@ export class PersistentActor<MSG, ST> extends Actor<MSG, ST> {
   }
 
   @boundMethod
-  protected async persist(msg: MSG, tags: string[] = []) {
+  protected async persist(msg: Msg, tags: string[] = []) {
     --this.messagesToNextSnapshot
     const persistedEvent = new PersistedEvent(
       this.encoder(msg),

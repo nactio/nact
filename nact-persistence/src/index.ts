@@ -23,13 +23,13 @@ export function configurePersistence(
   }
 }
 
-export function spawnPersistent<MSG = any, ST = any>(
+export function spawnPersistent<Msg = any, State = any>(
   parent: ActorRef,
-  f: MessageHandlerFunc<MSG, ST>,
+  f: MessageHandlerFunc<Msg, State>,
   key: string,
   name?: string,
-  properties?: PersistentActorConfig<MSG, ST>,
-): ActorReference<MSG> {
+  properties?: PersistentActorConfig<Msg, State>,
+): ActorReference<Msg> {
   return SystemRegistry.applyOrThrowIfStopped(
     parent,
     (p: ActorLike) =>

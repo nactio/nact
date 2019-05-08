@@ -1,4 +1,4 @@
-export class Deferral<T = any> {
+export class Deferral<T> {
   public readonly promise: Promise<T>
   public done: boolean = false
   public reject: (err: Error) => void = undefined!

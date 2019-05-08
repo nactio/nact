@@ -1,58 +1,45 @@
-import {
-  Actor,
-  ActorConfig,
-  ActorName,
-  ActorSystem,
-  ActorSystemName,
-  Context,
-  MessageHandlerFunc,
-  StatefulActorConfig,
-  StatelessActorMessageHandlerFunc,
-  SystemRegistry,
-} from './actor'
 import { Extension } from './Extension'
-import { ActorRef, Nobody } from './references'
-import { ActorReference } from './references/ActorReference'
-import { ActorSystemReference } from './references/ActorSystemReference'
+import { ActorReference, ActorSystemReference, Nobody } from './references'
+import { StatelessActorConfig, StatefulActorConfig } from './ActorConfig';
+import { SystemRegistry } from './internals/ActorSystemRegistry';
 
 export function start(
-  head?: Extension | ActorSystemName | { name: ActorSystemName },
+  head?: Extension | string | { name: string },
   ...tail: Extension[]
 ): ActorSystemReference {
   return new ActorSystem(head, ...tail).reference
 }
 
-export function stop(actor: ActorRef) {
+export function stop<Msg>(actor: ActorReference<Msg> | ActorSystemReference) {  
   const concreteActor = SystemRegistry.find(actor.system.name, actor)
   if (concreteActor) {
     concreteActor.stop()
   }
 }
 
-export function query<RESP = any, MSG = any>(
-  actor: ActorRef<MSG>,
-  msg: MSG,
+export function query<Response = any, Msg = any>(
+  actor: ActorReference<Msg>,
+  msg: (sender: ActorReference<Response>) => Msg,
   timeout: number,
-): Promise<RESP> {
+): Promise<Response> {
   if (!timeout) {
     throw new Error('A timeout is required to be specified')
   }
 
   const concreteActor = SystemRegistry.find(actor.system.name, actor) as
-    | Actor<MSG>
+    | Actor<Msg>
     | undefined
 
   if (concreteActor) {
-    return concreteActor.query<RESP>(msg, timeout)
+    return concreteActor.query<Response>(msg, timeout)
   } else {
     throw new Error('Actor stopped or never existed. Query can never resolve')
   }
 }
 
-export function dispatch<MSG>(
-  actor: ActorRef<MSG>,
-  msg: MSG,
-  sender: ActorRef = Nobody,
+export function dispatch<Msg>(
+  actor: ActorRef<Msg>,
+  msg: Msg
 ) {
   const concreteActor = SystemRegistry.find(actor.system.name, actor)
 
@@ -61,32 +48,32 @@ export function dispatch<MSG>(
   }
 }
 
-export function spawn<MSG = any, ST = any>(
-  parent: ActorRef,
-  f: MessageHandlerFunc<MSG, ST>,
+export function spawn<Msg, ParentMsg, State>(
+  parent: ActorRef<ParentMsg>,
+  f: MessageHandlerFunc<Msg, State>,
   name?: ActorName,
-  properties?: StatefulActorConfig<MSG, ST>,
-): ActorReference<MSG> {
+  properties?: StatefulActorConfig<Msg, State>,
+): ActorReference<Msg> {
   return SystemRegistry.applyOrThrowIfStopped(parent, p => {
     p.assertNotStopped()
     return new Actor(p, name, p.system, f, properties).reference
   })
 }
 
-export function spawnStateless<MSG>(
-  parent: ActorRef,
-  f: StatelessActorMessageHandlerFunc<MSG>,
+export function spawnStateless<Msg, ParentMsg>(
+  parent: ActorRef<ParentMsg>,
+  f: StatelessActorMessageHandlerFunc<Msg>,
   name?: ActorName,
-  properties?: ActorConfig<MSG>,
-): ActorReference<MSG> {
+  properties?: StatelessActorConfig<Msg>,
+): ActorReference<Msg> {
   return spawn(
     parent,
-    (_: unknown, msg: MSG, ctx: Context) => f.call(ctx, msg, ctx),
+    (_: void, msg: Msg, ctx: Context<Msg, ParentMsg, void>) => f.call(ctx, msg, ctx),
     name,
     {
       ...properties,
-      initialState: {},
+      initialState: undefined,
       onCrash: (_, __, ctx) => ctx.resume,
-    } as StatefulActorConfig<MSG>,
+    } as StatefulActorConfig<Msg, ParentMsg, void>,
   )
 }

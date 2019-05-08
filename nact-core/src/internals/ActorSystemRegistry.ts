@@ -1,7 +1,7 @@
 import { boundMethod } from 'autobind-decorator'
 
-import { ActorLike, ActorSystem, ActorSystemName } from '.'
-import { ActorRef, ActorReference } from '../references'
+import { ActorLike, ActorSystem, ActorSystemName } from '../actor'
+import { UntypedActorRef } from './UntypedActorRef'
 
 class ActorSystemRegistry {
   private readonly systemMap: Map<ActorSystemName, ActorSystem> = new Map()
@@ -14,8 +14,8 @@ class ActorSystemRegistry {
   @boundMethod
   public find(
     systemName: ActorSystemName,
-    reference?: ActorRef,
-  ): ActorLike | undefined {
+    reference?: UntypedActorRef,
+  ): ActorLike<Msg> | undefined {
     const system = this.systemMap.get(systemName)
     if (system) {
       if (reference) {
@@ -34,8 +34,8 @@ class ActorSystemRegistry {
   }
 
   @boundMethod
-  public applyOrThrowIfStopped<MSG, R>(
-    reference: ActorRef,
+  public applyOrThrowIfStopped<R>(
+    reference: UntypedActorRef,
     f: (parent: ActorLike) => R | undefined,
   ): R {
     const actor = this.find(reference.system.name, reference)

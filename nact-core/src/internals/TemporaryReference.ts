@@ -1,9 +1,8 @@
-import { ActorRef, ActorReferenceType } from '.'
-import { ActorSystemName } from '../actor'
+import { TemporaryReference } from '../references'
 
-export class TemporaryReference implements ActorRef {
-  public readonly system: { name: ActorSystemName }
-  public readonly id: TemporaryReferenceId
+export class TemporaryReferenceImpl<Msg> implements ActorRef<Msg> {
+  public readonly system: { name: string }
+  public readonly id: number
 
   constructor(systemName: string) {
     this.system = { name: systemName }
@@ -23,4 +22,3 @@ export class TemporaryReference implements ActorRef {
   }
 }
 
-export type TemporaryReferenceId = number

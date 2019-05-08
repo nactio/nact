@@ -1,19 +1,19 @@
 import { boundMethod } from 'autobind-decorator'
 
-import { Actor, ActorLike, ActorName, ActorSystem } from '.'
+import { ActorLike } from './ActorLike'
 import { ActorPath } from '../paths'
 import { ActorRef } from '../references'
 
-export class Temporary<MSG> implements ActorLike<MSG> {
+export class Temporary<Msg> implements ActorLike<Msg> {
   public readonly path: ActorPath = undefined!
   public readonly children: Map<ActorName, Actor> = undefined!
   public readonly reference: ActorRef = undefined!
   public readonly system: ActorSystem = undefined!
 
   constructor(
-    public readonly name: ActorName,
+    public readonly name: string,
     // tslint:disable-next-line: no-shadowed-variable
-    public readonly dispatch: (message: MSG) => void,
+    public readonly dispatch: (message: Msg) => void,
   ) {}
 
   @boundMethod
@@ -26,25 +26,6 @@ export class Temporary<MSG> implements ActorLike<MSG> {
     throw new Error('Method not implemented.')
   }
 
-  @boundMethod
-  public childStopped(child: Actor): void {
-    throw new Error('Method not implemented.')
-  }
-
-  @boundMethod
-  public childSpawned(child: Actor) {
-    throw new Error('Method not implemented.')
-  }
-
-  @boundMethod
-  public handleFault(msg: unknown, sender: ActorRef, error: Error) {
-    throw new Error('Method not implemented.')
-  }
-
-  @boundMethod
-  public reset(): void {
-    throw new Error('Method not implemented.')
-  }
   
   public get stopped(): boolean {
     return false
