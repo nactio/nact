@@ -2,17 +2,24 @@ import assert from 'assert'
 import { boundMethod } from 'autobind-decorator'
 import Queue from 'denque'
 import { ActorPath } from '../ActorPath';
-import { ActorReference } from '../References';
-import { ActorLike, SupervisedActorLike } from './ActorLike';
+import { ActorReference, TemporaryReference, Reference, ActorSystemReference } from '../References';
 import { ActorSystem } from './ActorSystem';
 import { Deferral } from './Deferral';
-import { TemporaryReference } from './TemporaryReference';
 import { SupervisionActions, SupervisionContext, SupervisionPolicy, defaultSupervisionPolicy } from '../Supervision';
 import { Context } from '../Context';
-import { stop } from '../functions';
 import { StatefulActorConfig } from '../ActorConfig';
+import { SystemRegistry } from './ActorSystemRegistry';
 
-export class Actor<Msg, ParentMsg, State> implements SupervisedActorLike<Msg> {
+
+export function stop<Msg>(actor: ActorReference<Msg> | ActorSystemReference) {
+  const concreteActor = SystemRegistry.find(actor.systemName, actor);
+  if (concreteActor) {
+    concreteActor.stop()
+  }
+};
+
+export class Actor<Msg, ParentMsg, State> {
+  public readonly type = 'actor';
   public static getSafeTimeout(timeoutDuration: number = 0) {
     const MAX_TIMEOUT = 2147483647
     return Math.min(MAX_TIMEOUT, timeoutDuration)
@@ -23,7 +30,7 @@ export class Actor<Msg, ParentMsg, State> implements SupervisedActorLike<Msg> {
   }
 
   public readonly name: string
-  public readonly children: Map<ActorName, SupervisedActorLike<unknown>> = new Map()
+  public readonly children: Map<string, Actor<unknown, Msg, unknown>> = new Map()
   public readonly childReferences: Map<string, ActorReference<unknown>> = new Map()
   public busy: boolean = false
   public readonly path: ActorPath
@@ -38,13 +45,13 @@ export class Actor<Msg, ParentMsg, State> implements SupervisedActorLike<Msg> {
   protected timeout?: any
   
   constructor(
-    public readonly parent: ActorLike<ParentMsg>,
-    name: ActorName | undefined,
+    public readonly parent: Actor<ParentMsg, unknown, unknown> | ActorSystem,
+    name: string | undefined,
     public readonly system: ActorSystem,
     protected readonly f: MessageHandlerFunc<Msg, ParentMsg, State>,
     protected readonly config: StatefulActorConfig<Msg, ParentMsg, State> = {}
   ) {
-    this.name = Actor.getName(name);          
+    this.name = Actor.getName(name);
     if (parent.children.has(this.name)) {
       throw new Error(`child actor of name ${this.name} already exists`)
     }
@@ -56,7 +63,7 @@ export class Actor<Msg, ParentMsg, State> implements SupervisedActorLike<Msg> {
       this.path,
       this.name,
     )    
-    this.log = this.system.createLogger(this.reference)
+    this.log = this.system.createLogger(this.reference)    
     this.parent.childSpawned(this);
     this.onCrash = config.onCrash || defaultSupervisionPolicy
 
@@ -77,7 +84,7 @@ export class Actor<Msg, ParentMsg, State> implements SupervisedActorLike<Msg> {
   }
 
   @boundMethod
-  public query<Response = any>(message: (tempReference: TemporaryReference<Response>) => Msg, timeout: number): Promise<Response> {
+  public query<Response>(message: (tempReference: Reference<Response>) => Msg, timeout: number): Promise<Response> {
     this.assertNotStopped()
     assert(timeout !== undefined && timeout !== null)
     const defered = new Deferral<Response>()
@@ -87,7 +94,7 @@ export class Actor<Msg, ParentMsg, State> implements SupervisedActorLike<Msg> {
     }, Actor.getSafeTimeout(timeout))
 
     const tempReference = new TemporaryReference(this.system.name)
-    this.system.addTempReference(tempReference, defered)
+    this.system.addTempReference(tempReference, defered as Deferral<unknown>)
 
     defered.promise
       .then(() => {
@@ -114,13 +121,13 @@ export class Actor<Msg, ParentMsg, State> implements SupervisedActorLike<Msg> {
   }
 
   @boundMethod
-  public childStopped(child: SupervisedActorLike<unknown>) {
+  public childStopped<T extends Actor<unknown, Msg, unknown>>(child: T) {
     this.children.delete(child.name)
     this.childReferences.delete(child.name)
   }
 
   @boundMethod
-  public childSpawned(child: SupervisedActorLike<unknown>) {
+  public childSpawned<T extends Actor<unknown, Msg, unknown>>(child: T) {
     this.children.set(child.name, child)
     this.childReferences.set(child.name, child.reference)
   }
@@ -165,7 +172,7 @@ export class Actor<Msg, ParentMsg, State> implements SupervisedActorLike<Msg> {
         break
       case SupervisionActions.escalate:
       default:
-        this.parent.handleFault(msg, error, this)
+        this.parent.handleFault(undefined, error)
         break
     }
   }
@@ -261,7 +268,7 @@ export class Actor<Msg, ParentMsg, State> implements SupervisedActorLike<Msg> {
   }
 }
 
-const unit = () => {
+const unit: () => void = () => {
   // no-op
 }
 
@@ -276,4 +283,3 @@ export type StatelessActorMessageHandlerFunc<Msg, ParentMsg> = (
   ctx: Context<Msg, ParentMsg>,
 ) => void
 
-export type ActorName = string

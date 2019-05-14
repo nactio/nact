@@ -8,39 +8,77 @@ export enum ReferenceType {
 }
 
 export interface Reference<Msg> {
-  readonly type: ReferenceType,
-  readonly name: string
-  readonly system?: { name: string }
+  readonly type: ReferenceType
 }
 
+export interface ConcreteReference<Msg> extends Reference<Msg> {
+  readonly type: ReferenceType.actor | ReferenceType.temp | ReferenceType.system
+  readonly systemName: string
+}
 
-export const Nobody: Reference<any> = new class implements Reference<any> { 
-  public readonly type: ReferenceType.nobody
-  public readonly name: ReferenceType.nobody
-  constructor() {
-    this.type = ReferenceType.nobody
-    this.name = ReferenceType.nobody;
-  }
+export interface NullReference extends Reference<any> {  
+  readonly type: ReferenceType.nobody
+}
+
+export const Nobody: NullReference = new class implements NullReference {
+  public readonly type: ReferenceType.nobody = ReferenceType.nobody  
 }();
 
 
-export interface ActorReference<Msg> extends Reference<Msg> {
-  readonly type: ReferenceType.actor,
-  readonly system: { name: string },
-  readonly name: string,
-  readonly path: ActorPath,  
-  readonly parent: ActorReference<unknown>
+
+export class ActorReference<Msg> implements ConcreteReference<Msg> {
+  public readonly type = ReferenceType.actor;
+      
+  constructor(
+    public readonly systemName: string,    
+    public readonly parent: ActorReference<unknown> | ActorSystemReference,
+    public readonly path: ActorPath,
+    public readonly name: string    
+  ) {      
+  }
 }
 
 
-export interface TemporaryReference<Msg> extends Reference<Msg> {
-  readonly type: ReferenceType.temp,
-  readonly system: { name: string }
+export class TemporaryReference<Msg> implements ConcreteReference<Msg> {
+  public readonly type = ReferenceType.temp;  
+  public readonly id: number
+
+  constructor(public readonly systemName: string) {  
+    this.id = (Math.random() * Number.MAX_SAFE_INTEGER) | 0;
+  }
 }
 
-export interface ActorSystemReference extends Reference<never> {
-  readonly type: ReferenceType.system,
-  readonly system: { name: string },
-  readonly name: string
+export class ActorSystemReference implements ConcreteReference<never> {
+  public readonly type = ReferenceType.system  
+
+  constructor(public readonly systemName: string, public readonly path: ActorPath) {      
+  }
 }
 
+export function isConcreteReference<T>(reference: Reference<T>) : reference is ConcreteReference<T> {
+  const type = (<ConcreteReference<T>>reference).type;
+  switch(type) {
+    case ReferenceType.actor: 
+    case ReferenceType.system:
+    case ReferenceType.temp:
+      return true;
+    default: 
+      return false;
+  }
+}
+
+export function isSystemReference<T>(reference: Reference<T>): reference is ActorSystemReference {
+  const type = (<ConcreteReference<T>>reference).type;
+  return type == ReferenceType.system;
+}
+
+
+export function isActorReference<T>(reference: Reference<T>): reference is ActorReference<T> {
+  const type = (<ConcreteReference<T>>reference).type;
+  return type == ReferenceType.actor;
+}
+
+export function isTemporaryReference<T>(reference: Reference<T>): reference is TemporaryReference<T> {
+  const type = (<ConcreteReference<T>>reference).type;
+  return type == ReferenceType.actor;
+}

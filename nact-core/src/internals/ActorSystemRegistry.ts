@@ -1,10 +1,14 @@
 import { boundMethod } from 'autobind-decorator'
 
-import { ActorLike, ActorSystem, ActorSystemName } from '../actor'
-import { UntypedActorRef } from './UntypedActorRef'
+import { Actor } from './Actor';
+import { ActorReference, ConcreteReference, ActorSystemReference } from 'src/References';
+import { ActorSystem } from './ActorSystem';
+import { InferActorTypeFromReference, InferMessageType } from './TypeHelpers';
+
+
 
 class ActorSystemRegistry {
-  private readonly systemMap: Map<ActorSystemName, ActorSystem> = new Map()
+  private readonly systemMap: Map<string, ActorSystem> = new Map()
 
   @boundMethod
   public add(system: ActorSystem) {
@@ -12,33 +16,28 @@ class ActorSystemRegistry {
   }
 
   @boundMethod
-  public find(
-    systemName: ActorSystemName,
-    reference?: UntypedActorRef,
-  ): ActorLike<Msg> | undefined {
-    const system = this.systemMap.get(systemName)
-    if (system) {
-      if (reference) {
-        return system.find(reference)
-      } else {
-        return system
-      }
-    } else {
-      return undefined
-    }
+  public find<T extends ConcreteReference<InferMessageType<T>>>(
+    systemName: string,
+    reference: T,
+  ): InferActorTypeFromReference<T>  {
+    const system = this.systemMap.get(systemName);
+    if(!system) {
+      return undefined;
+    }             
+    return system.find(reference) as InferActorTypeFromReference<T>;            
   }
 
   @boundMethod
-  public remove(systemName: ActorSystemName) {
+  public remove(systemName: string) {
     this.systemMap.delete(systemName)
   }
 
   @boundMethod
-  public applyOrThrowIfStopped<R>(
-    reference: UntypedActorRef,
-    f: (parent: ActorLike) => R | undefined,
-  ): R {
-    const actor = this.find(reference.system.name, reference)
+  public applyOrThrowIfStopped<Msg,Returns>(
+    reference: ActorReference<Msg> | ActorSystemReference,
+    f: (parent: Actor<Msg, unknown, unknown> | ActorSystem) => Returns,
+  ): Returns {
+    const actor = this.find(reference.systemName, reference)
     if (actor) {
       return f(actor)!
     } else {

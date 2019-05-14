@@ -1,19 +1,13 @@
 import { Context } from "./Context";
 
-const escalate = Symbol('escalate')
-const reset = Symbol('reset')
-const resetAll = Symbol('resetAll')
-const resume = Symbol('resume')
-const stop = Symbol('stop')
-const stopAll = Symbol('stopAll')
-
-export type SupervisionAction =
-  | typeof escalate
-  | typeof reset
-  | typeof resetAll
-  | typeof resume
-  | typeof stop
-  | typeof stopAll
+export enum SupervisionAction {
+  escalate = 'escalate',
+  reset = 'reset',
+  resetAll = 'resetAll',
+  resume = 'resume',
+  stop = 'stop',
+  stopAll = 'stopAll'
+};
 
 export const SupervisionActions: {
   escalate: SupervisionAction
@@ -21,15 +15,15 @@ export const SupervisionActions: {
   resetAll: SupervisionAction
   resume: SupervisionAction
   stop: SupervisionAction
-  stopAll: SupervisionAction
+  stopAll: SupervisionAction,
 } = Object.freeze({
-  escalate,
-  reset,
-  resetAll,
-  resume,
-  stop,
-  stopAll,
-})
+  escalate: SupervisionAction.escalate,
+  reset: SupervisionAction.escalate,
+  resetAll: SupervisionAction.escalate,
+  resume: SupervisionAction.escalate,
+  stop: SupervisionAction.escalate,
+  stopAll: SupervisionAction.escalate
+});
 
 export type SupervisionContext<Msg, ParentMsg> = Context<Msg, ParentMsg> & typeof SupervisionActions
 
