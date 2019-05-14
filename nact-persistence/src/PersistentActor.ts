@@ -1,14 +1,5 @@
 import { boundMethod } from 'autobind-decorator'
-import {
-  Actor,
-  ActorLike,
-  ActorRef,
-  ActorSystem,
-  MessageHandlerFunc,
-  Nobody,
-  SupervisionActions,
-} from 'nact-core'
-
+import { Actor } from 'nact-core/src/internals/Actor';
 import { AbstractPersistenceEngine } from './AbstractPersistenceEngine'
 import { PersistedEvent } from './PersistedEvent'
 import { PersistedSnapshot } from './PersistedSnapshot'
@@ -20,7 +11,7 @@ import {
   SnapshotEncoder,
 } from './PersistentActorConfig'
 
-export class PersistentActor<Msg, State> extends Actor<Msg, State> {
+export class PersistentActor<Msg, ParentMsg, State> extends Actor<Msg, ParentMsg, State> {
   private messagesToNextSnapshot: number
   private sequenceNumber: number = 0
   private readonly snapshotEvery: number

@@ -3,7 +3,7 @@ import { ActorReference, ActorSystemReference, Reference, isActorReference, isTe
 import { StatelessActorConfig, StatefulActorConfig } from './ActorConfig';
 import { SystemRegistry } from './internals/ActorSystemRegistry';
 import { ActorSystem } from './internals/ActorSystem';
-import { Actor } from './internals/Actor';
+import { Actor, stop as internalStop } from './internals/Actor';
 import { Context } from './Context';
 
 export type ActorSystemName = string;
@@ -13,10 +13,7 @@ export function start(head?: Extension | ActorSystemName, ...tail: Extension[]):
 }
 
 export function stop<Msg>(actor: ActorSystemReference | ActorReference<Msg>) {
-  const concreteActor = SystemRegistry.find(actor.systemName, actor)
-  if (concreteActor) {
-    concreteActor.stop()
-  }
+  internalStop(actor);
 }
 
 

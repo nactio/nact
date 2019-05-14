@@ -2,7 +2,7 @@ import assert from 'assert'
 import { boundMethod } from 'autobind-decorator'
 import Queue from 'denque'
 import { ActorPath } from '../ActorPath';
-import { ActorReference, TemporaryReference, Reference, ActorSystemReference } from '../References';
+import { ActorReference, TemporaryReference, Reference, ActorSystemReference, isSystemReference } from '../References';
 import { ActorSystem } from './ActorSystem';
 import { Deferral } from './Deferral';
 import { SupervisionActions, SupervisionContext, SupervisionPolicy, defaultSupervisionPolicy } from '../Supervision';
@@ -17,6 +17,11 @@ export function stop<Msg>(actor: ActorReference<Msg> | ActorSystemReference) {
     concreteActor.stop()
   }
 };
+
+export function isSystemActor<ParentMsg>(actor: Actor<ParentMsg, unknown, unknown> | ActorSystem): actor is ActorSystem {  
+  return actor.type == 'system';
+}
+
 
 export class Actor<Msg, ParentMsg, State> {
   public readonly type = 'actor';
@@ -63,8 +68,14 @@ export class Actor<Msg, ParentMsg, State> {
       this.path,
       this.name,
     )    
-    this.log = this.system.createLogger(this.reference)    
-    this.parent.childSpawned(this);
+    this.log = this.system.createLogger(this.reference)        
+    if (this.parent) {
+      if (isSystemActor(this.parent)) {
+        this.parent.childStopped(this as Actor<unknown, never, unknown>);
+      } else {
+        this.parent.childStopped(this as Actor<unknown, ParentMsg, unknown>);
+      }
+    }
     this.onCrash = config.onCrash || defaultSupervisionPolicy
 
     if (config.shutdownAfter) {
@@ -119,6 +130,7 @@ export class Actor<Msg, ParentMsg, State> {
       this.mailbox.push(message)
     }
   }
+    
 
   @boundMethod
   public childStopped<T extends Actor<unknown, Msg, unknown>>(child: T) {
@@ -137,7 +149,11 @@ export class Actor<Msg, ParentMsg, State> {
     this.clearImmediate()
     this.clearTimeout()
     if (this.parent) {
-      this.parent.childStopped(this)
+      if(isSystemActor(this.parent)) {
+        this.parent.childStopped(this as Actor<unknown, never, unknown>);
+      } else {
+        this.parent.childStopped(this as Actor<unknown, ParentMsg, unknown>);
+      }      
     }
     // delete this.parent
     this.childReferences.forEach(stop)
