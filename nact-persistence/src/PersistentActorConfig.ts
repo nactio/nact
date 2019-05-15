@@ -9,9 +9,9 @@ export interface PersistentActorConfig<Msg, State>
   decoder?: EventDecoder<Msg>
 }
 
-export type SnapshotData = any
-export type SnapshotEncoder<State> = (state: State) => SnapshotData
-export type SnapshotDecoder<State> = (data: SnapshotData) => State
+export type JSON = any
+export type SnapshotEncoder<State> = (state: State) => JSON
+export type SnapshotDecoder<State> = (data: JSON) => State
 export type EventData = any
 export type EventEncoder<Msg> = (event: Msg) => EventData
 export type EventDecoder<Msg> = (data: EventData) => Msg

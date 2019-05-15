@@ -23,7 +23,7 @@ export function configurePersistence(
   }
 }
 
-export function spawnPersistent<Msg = any, State = any>(
+export function spawnPersistent<Msg, State>(
   parent: ActorRef,
   f: MessageHandlerFunc<Msg, State>,
   key: string,

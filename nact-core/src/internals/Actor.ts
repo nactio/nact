@@ -67,7 +67,7 @@ export class Actor<Msg, ParentMsg, State> {
       this.parent.reference,
       this.path,
       this.name,
-    )    
+    )
     this.log = this.system.createLogger(this.reference)        
     if (this.parent) {
       if (isSystemActor(this.parent)) {
@@ -292,10 +292,10 @@ export type MessageHandlerFunc<Msg, ParentMsg, State> = (
   state: State,
   msg: Msg,
   ctx: Context<Msg, ParentMsg>
-) => State
+) => State | Promise<State>
 
 export type StatelessActorMessageHandlerFunc<Msg, ParentMsg> = (
   msg: Msg,
   ctx: Context<Msg, ParentMsg>,
-) => void
+) => any;
 

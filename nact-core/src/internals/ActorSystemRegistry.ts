@@ -23,7 +23,7 @@ class ActorSystemRegistry {
     const system = this.systemMap.get(systemName);
     if(!system) {
       return undefined;
-    }             
+    }
     return system.find(reference) as InferActorTypeFromReference<T>;            
   }
 

@@ -47,7 +47,7 @@ export function dispatch<Msg>(
 
 export function spawn<Msg, ParentMsg, State>(
   parent: ActorReference<ParentMsg> | ActorSystemReference,
-  f: (state: State, msg: Msg, ctx: Context<Msg, ParentMsg>) => State,
+  f: (state: State, msg: Msg, ctx: Context<Msg, ParentMsg>) => State | Promise<State>,
   name?: string,
   properties?: StatefulActorConfig<Msg, State>,
 ): ActorReference<Msg> {
@@ -59,7 +59,7 @@ export function spawn<Msg, ParentMsg, State>(
 
 export function spawnStateless<Msg, ParentMsg>(
   parent: ActorReference<ParentMsg> | ActorSystemReference,
-  f: (msg: Msg, ctx: Context<Msg, ParentMsg>) => void,
+  f: (msg: Msg, ctx: Context<Msg, ParentMsg>) => any,
   name?: string,
   properties?: StatelessActorConfig<Msg, ParentMsg>,
 ): ActorReference<Msg> {

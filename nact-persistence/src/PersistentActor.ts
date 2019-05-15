@@ -1,5 +1,8 @@
 import { boundMethod } from 'autobind-decorator'
 import { Actor } from 'nact-core/src/internals/Actor';
+import { Context } from 'nact-core';
+
+import { ActorSystem } from 'nact-core/src/internals/ActorSystem';
 import { AbstractPersistenceEngine } from './AbstractPersistenceEngine'
 import { PersistedEvent } from './PersistedEvent'
 import { PersistedSnapshot } from './PersistedSnapshot'
@@ -11,6 +14,14 @@ import {
   SnapshotEncoder,
 } from './PersistentActorConfig'
 
+
+interface PersistentActorContext<Msg, ParentMsg> extends Context<Msg, ParentMsg> {
+  persist(msg :Msg) : Promise<Msg>;
+};
+
+type PersistentMessageHandlerFunc<Msg, ParentMsg, State> =  
+  (state: State, msg: Msg, ctx: PersistentActorContext<Msg, ParentMsg>) => State | Promise<State>;
+
 export class PersistentActor<Msg, ParentMsg, State> extends Actor<Msg, ParentMsg, State> {
   private messagesToNextSnapshot: number
   private sequenceNumber: number = 0
@@ -21,10 +32,10 @@ export class PersistentActor<Msg, ParentMsg, State> extends Actor<Msg, ParentMsg
   private readonly decoder: EventDecoder<Msg>
 
   constructor(
-    parent: ActorLike,
+    parent: Actor<ParentMsg, unknown, unknown> | ActorSystem,
     name: string | undefined,
     system: ActorSystem,
-    f: MessageHandlerFunc<Msg, State>,
+    f: PersistentMessageHandlerFunc<Msg, ParentMsg, State>,
     private readonly key: string,
     private readonly persistenceEngine: AbstractPersistenceEngine,
     {
@@ -205,9 +216,9 @@ export class PersistentActor<Msg, ParentMsg, State> extends Actor<Msg, ParentMsg
   }
 
   @boundMethod
-  protected createContext(sender: ActorRef) {
+  protected createContext(): PersistentActorContext<Msg, ParentMsg> {
     return {
-      ...super.createContext(sender),
+      ...super.createContext(),
       persist: this.persist,
     }
   }
