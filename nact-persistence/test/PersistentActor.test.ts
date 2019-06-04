@@ -1,19 +1,4 @@
-import {
-  ActorLike,
-  ActorRef,
-  ActorSystemReference,
-  dispatch,
-  query,
-  start,
-  stop,
-  SystemRegistry,
-} from 'nact-core'
-
-import { configurePersistence } from '../src'
-import { spawnPersistent } from '../src'
-import { MockPersistenceEngine } from './MockPersistenceEngine'
-import { Context } from '../../nact-core/dist/actor/Context'
-import { MessageHandlerFunc } from '../../nact-core/src/actor/Actor'
+import { ActorLike, ActorRef, ActorSystemReference, stop, SystemRegistry } from '../../nact-core/src'
 
 const { applyOrThrowIfStopped } = SystemRegistry
 
@@ -83,4 +68,7 @@ describe('PersistentActor', () => {
   //   dispatch(actor, 'b')
   //   expect(await query(actor, 'c', 30)).toEqual('abc')
   // })
+  it('ok', () => {
+    expect(true).toBe(true)
+  })
 })

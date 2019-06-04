@@ -1,6 +1,6 @@
 {
-  "name": "nact-core",
-  "description": "NAct Core",
+  "name": "nact",
+  "description": "NAct in TypeScript",
   "version": "7.3.0",
   "private": true,
   "homepage": "https://nact.io",
@@ -19,8 +19,10 @@
     "tslint": "tslint --format codeFrame --project ."
   },
   "dependencies": {
-    "autobind-decorator": "^2.4",
-    "denque": "^1.4"
+    "nact-core": "^7.3.0",
+    "nact-monad": "^7.3.0",
+    "nact-monitoring": "^7.3.0",
+    "nact-persistence": "^7.3.0"
   },
   "devDependencies": {
     "@types/jest": "^24.0",

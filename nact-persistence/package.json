@@ -1,7 +1,7 @@
 {
   "name": "nact-persistence",
   "description": "Nact Persistence",
-  "version": "0.1.0",
+  "version": "7.3.0",
   "private": true,
   "homepage": "https://nact.io",
   "license": "Apache License 2.0",
@@ -9,7 +9,7 @@
   "types": "dist/index.d.ts",
   "repository": {
     "type": "git",
-    "url": "git://github.com/civilizeddev/ts-nact"
+    "url": "git://github.com/ncthbrt/nact"
   },
   "scripts": {
     "build": "tsc --build --force",
@@ -20,26 +20,16 @@
   },
   "dependencies": {
     "autobind-decorator": "^2.4",
-    "nact-core": "*"
+    "nact-core": "^7.3.0"
   },
-  "jest": {
-    "globals": {
-      "ts-jest": {
-        "diagnostics": true
-      }
-    },
-    "moduleDirectories": [
-      "node_modules",
-      "src"
-    ],
-    "moduleFileExtensions": [
-      "ts",
-      "js"
-    ],
-    "testEnvironment": "node",
-    "testRegex": "\\.test\\.ts$",
-    "transform": {
-      "^.+\\.ts$": "ts-jest"
-    }
+  "devDependencies": {
+    "@types/jest": "^24.0",
+    "@types/node": "^10",
+    "jest": "^24.8",
+    "jest-extended": "^0.11",
+    "ts-jest": "^24.0",
+    "tslint": "^5.17",
+    "tslint-config-prettier": "^1.18",
+    "typescript": "^3.5"
   }
 }

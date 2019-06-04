@@ -1,0 +1,1 @@
+export { logToConsole } from './ConsoleLoggingEngineFactory'

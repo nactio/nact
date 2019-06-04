@@ -1,7 +1,13 @@
 language: node_js
 node_js:
-- '8'
-after_success: yarn run coverage
+  - '10'
+sudo: false
+before_install:
+  - curl -o- -L https://yarnpkg.com/install.sh | bash -s -- --version 1.16.0
+  - export PATH=$HOME/.yarn/bin:$PATH
+cache:
+  yarn: true
+# after_success: yarn run coverage
 deploy:
   provider: npm
   email: nick@cuthbert.co.za
