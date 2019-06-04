@@ -1,1 +1,1 @@
-// Hello World
+export const nothing = {}
