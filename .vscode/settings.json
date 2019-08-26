@@ -11,5 +11,6 @@
         "**/CVS": true,
         "**/.DS_Store": true,
         "**/coverage": true
-    }
+    },
+    "semistandard.autoFixOnSave": true
 }
