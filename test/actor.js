@@ -32,7 +32,7 @@ const children = (reference) => {
   }
 };
 
-const ignore = () => {};
+const ignore = () => { };
 
 const retry = async (assertion, remainingAttempts, retryInterval = 0) => {
   if (remainingAttempts <= 1) {
@@ -55,7 +55,7 @@ describe('ActorReference', function () {
   it('should have name, path, parent, properties', function () {
     let child = spawnStateless(system, ignore);
     let grandchild = spawnStateless(child, ignore);
-    console.error(child.parent);
+    console.log(child.parent);
     child.parent.should.equal(system);
     grandchild.parent.should.equal(child);
     child.name.should.be.a('string');
