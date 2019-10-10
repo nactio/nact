@@ -4,13 +4,13 @@
   "description": "nact ⇒ node.js + actors = your services have never been so µ",
   "main": "lib/index.js",
   "scripts": {
-    "test": "yarn run lint && nyc mocha ./test/*.js",
+    "test": "yarn run lint && mocha ./test/*.js",
     "test-watch": "yarn run lint && nyc mocha --watch ./test/*.js",
     "interactive-cover": "nyc --reporter=html mocha ./test/*.js && open ./coverage/index.html",
     "lint": "semistandard",
     "coverage": "nyc report --reporter=text-lcov | coveralls",
-    "prepush": "yarn run test-only",
-    "test-only": "nyc mocha ./test/*.js",
+    "prepush": "yarn run test",
+    "test-only": "mocha ./test/*.js",
     "test-only-watch": "nyc mocha --watch ./test/*.js",
     "lint-fix": "semistandard --fix"
   },
