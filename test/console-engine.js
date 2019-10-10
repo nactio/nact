@@ -36,12 +36,12 @@ describe('logToConsole', function () {
   describe('When logToConsole is used with a console-proxy', () => {
     const initTest = () => {
       const consoleProxy = {
-        trace: sinon.spy(function trace() { }),
-        debug: sinon.spy(function debug() { }),
-        info: sinon.spy(function info() { }),
-        warn: sinon.spy(function warn() { }),
-        error: sinon.spy(function error() { }),
-        critical: sinon.spy(function critical() { })
+        trace: sinon.spy(function trace () { }),
+        debug: sinon.spy(function debug () { }),
+        info: sinon.spy(function info () { }),
+        warn: sinon.spy(function warn () { }),
+        error: sinon.spy(function error () { }),
+        critical: sinon.spy(function critical () { })
       };
       const system = start(configureLogging(logToConsole({ consoleProxy })));
       return [consoleProxy, system];
@@ -49,7 +49,7 @@ describe('logToConsole', function () {
 
     const initBrokenTest = () => {
       const consoleProxy = {
-        critical: sinon.spy(function critical() { })
+        critical: sinon.spy(function critical () { })
       };
       const system = start(configureLogging(logToConsole({ consoleProxy })));
       return [consoleProxy, system];
@@ -272,7 +272,7 @@ describe('logToConsole', function () {
   describe('When logToConsole is used with a console-proxy with single log channel', () => {
     const initTest = () => {
       const consoleProxy = {
-        log: sinon.spy(function log() { })
+        log: sinon.spy(function log () { })
       };
       const system = start(configureLogging(logToConsole({ consoleProxy })));
       return [consoleProxy, system];
