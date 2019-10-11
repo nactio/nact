@@ -1,4 +1,4 @@
-const { configurePersistence } = require('../persistence');
+const { configurePersistence } = require('../lib/persistence');
 
 const SPAWN_PERSISTENT = Symbol('spawnPersistent');
 const PERSIST = Symbol('persist');

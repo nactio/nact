@@ -2,10 +2,10 @@ const { spawn, spawnStateless } = require('./actor');
 const { stop, query, dispatch } = require('./functions');
 const { spawnPersistent, configurePersistence, persistentQuery } = require('./persistence');
 const { io, asyncIO } = require('./io');
-const { Nobody } = require('../references');
+const { Nobody } = require('../lib/references');
 const { logNothing, logToConsole } = require('./monitoring');
 
-const time = require('../time');
+const time = require('../lib/time');
 
 module.exports = {
   ...require('./system'),

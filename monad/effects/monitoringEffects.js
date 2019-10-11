@@ -1,7 +1,7 @@
-const { LOG } = require('../monitoring');
+const { LOG } = require('../../lib/monitoring');
 
 const effects = {
-  [LOG]: ({facade, level, args}) => facade[level](...args)
+  [LOG]: ({ facade, level, args }) => facade[level](...args)
 };
 
 const logHandler = {

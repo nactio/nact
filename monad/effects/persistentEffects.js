@@ -1,24 +1,24 @@
 const { SPAWN_PERSISTENT, PERSISTENCE_QUERY, PERSIST } = require('../persistence');
-const { spawnPersistent, persistentQuery } = require('../../persistence');
+const { spawnPersistent, persistentQuery } = require('../../lib/persistence');
 const { wrapFunction } = require('../utility');
 const ctxHandler = require('./contextHandler');
 const { wrapSupervisionPolicy } = require('./supervisionPolicy');
 
 const effects = {
-  [SPAWN_PERSISTENT]: ({parent, f, key, name, properties: {additionalEffects = {}, onCrash, ...properties} = {}}) =>
+  [SPAWN_PERSISTENT]: ({ parent, f, key, name, properties: { additionalEffects = {}, onCrash, ...properties } = {} }) =>
     spawnPersistent(
       parent,
-      wrapActorFunction(f, {...additionalEffects, ...allowedEffectsForPersistentActor}),
+      wrapActorFunction(f, { ...additionalEffects, ...allowedEffectsForPersistentActor }),
       key,
       name,
-      {...properties, onCrash: onCrash && wrapSupervisionPolicy(onCrash, allowedEffectsForPersistentActor)}
+      { ...properties, onCrash: onCrash && wrapSupervisionPolicy(onCrash, allowedEffectsForPersistentActor) }
     ),
-  [PERSISTENCE_QUERY]: ({parent, f, key, properties: {additionalEffects = {}, ...properties} = {}}) =>
+  [PERSISTENCE_QUERY]: ({ parent, f, key, properties: { additionalEffects = {}, ...properties } = {} }) =>
     persistentQuery(
       parent,
-      wrapFunction(f, {...allowedEffectsForPersistentQuery, ...additionalEffects}),
+      wrapFunction(f, { ...allowedEffectsForPersistentQuery, ...additionalEffects }),
       key,
-      {...properties}
+      { ...properties }
     ),
   [PERSIST]: ({ ctx, msg, tags }) => ctx.persist(msg, tags)
 };

@@ -103,10 +103,11 @@ declare module 'nact' {
     shutdownAfter?: Milliseconds,
     onCrash?: SupervisionActorFunc<Msg, ParentRef>,
     initialState?: State,
-    initialStateFunc?: (ctx: ActorContext<Msg, ParentRef>) => State
+    initialStateFunc?: (ctx: ActorContext<Msg, ParentRef>) => State,
+    afterStop?: (state: State) => void | Promise<void>
   };
 
-  export type StatelessActorProps<Msg, ParentRef extends Ref<any>> = Omit<ActorProps<any, Msg, ParentRef>, 'initialState' | 'initialStateFunc'>;
+  export type StatelessActorProps<Msg, ParentRef extends Ref<any>> = Omit<ActorProps<any, Msg, ParentRef>, 'initialState' | 'initialStateFunc' | 'afterStop'>;
 
 
   export type NumberOfMessages = number;
@@ -172,7 +173,10 @@ declare module 'nact' {
 
   export function dispatch<T>(actor: Ref<T>, msg: T): void;
 
-  export function query<T>(actor: Ref<T>, msg: T, timeout: Milliseconds): Promise<unknown>;
+
+  export type QueryMsgFactory<Req, Res> = (tempRef: Ref<Res>) => Req;
+  export type InferResponseFromMsgFactory<T extends QueryMsgFactory<any, any>> = T extends QueryMsgFactory<any, infer Res> ? Res : never;
+  export function query<Msg, MsgCreator extends QueryMsgFactory<Msg, any>>(actor: Ref<Msg>, queryFactory: MsgCreator, timeout: Milliseconds): Promise<InferResponseFromMsgFactory<MsgCreator>>;
 
 
   export function persistentQuery<Func extends PersistentQueryFunc<any, any>>(
@@ -292,3 +296,8 @@ declare module 'nact' {
   export function configurePersistence(engine: PersistenceEngine): Plugin;
 
 }
+
+// declare module 'nact/monad' {
+//   export abstract class Effect<> { }; 
+//   export function* start(program: funct): void;
+// }

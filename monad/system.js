@@ -1,4 +1,4 @@
-const { start } = require('../system');
+const { start } = require('../lib/system');
 const { wrapFunction } = require('./utility');
 
 const ioEffects = require('./effects/ioEffects');

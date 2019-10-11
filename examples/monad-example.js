@@ -1,4 +1,4 @@
-const { start, spawn, spawnStateless, dispatch, io } = require('../lib/monad');
+const { start, spawn, spawnStateless, dispatch, io } = require('../monad');
 
 const function1 = function * (state, msg, ct) {
   const nextState = state ? state + '\n' + msg : msg;

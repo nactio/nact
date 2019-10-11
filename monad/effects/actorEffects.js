@@ -1,5 +1,5 @@
 const { SPAWN, SPAWN_STATELESS } = require('../actor');
-const { spawn, spawnStateless } = require('../../actor');
+const { spawn, spawnStateless } = require('../../lib/actor');
 const { wrapFunction } = require('../utility');
 const ctxHandler = require('./contextHandler');
 const { wrapSupervisionPolicy } = require('./supervisionPolicy');
@@ -15,19 +15,19 @@ const wrapStatelessActorFunction = (f, effects) => {
 };
 
 const effects = {
-  [SPAWN]: ({parent, f, name, properties: {additionalEffects = {}, onCrash, ...properties} = {}}) =>
+  [SPAWN]: ({ parent, f, name, properties: { additionalEffects = {}, onCrash, ...properties } = {} }) =>
     spawn(
       parent,
-      wrapActorFunction(f, {...allowedEffects, ...additionalEffects}),
+      wrapActorFunction(f, { ...allowedEffects, ...additionalEffects }),
       name,
-      {...properties, onCrash: onCrash && wrapSupervisionPolicy(onCrash, allowedEffects)}
+      { ...properties, onCrash: onCrash && wrapSupervisionPolicy(onCrash, allowedEffects) }
     ),
-  [SPAWN_STATELESS]: ({parent, f, name, properties: {additionalEffects = {}, onCrash, ...properties} = {}}) =>
+  [SPAWN_STATELESS]: ({ parent, f, name, properties: { additionalEffects = {}, onCrash, ...properties } = {} }) =>
     spawnStateless(
       parent,
-      wrapStatelessActorFunction(f, {...allowedEffects, ...additionalEffects}),
+      wrapStatelessActorFunction(f, { ...allowedEffects, ...additionalEffects }),
       name,
-      {...properties, onCrash: onCrash && wrapSupervisionPolicy(onCrash, allowedEffects)}
+      { ...properties, onCrash: onCrash && wrapSupervisionPolicy(onCrash, allowedEffects) }
     )
 };
 
