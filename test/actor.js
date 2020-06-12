@@ -538,6 +538,31 @@ describe('Actor', function () {
       isStopped(parent).should.be.true;
     });
 
+    it('should be able to access other messages in the queue', async function () {
+      const onCrash = (msg, err, ctx) => {
+        ctx.mailbox.length.should.equal(2);
+        ctx.mailbox[0].message.should.equal('msg1');
+        ctx.mailbox[1].message.should.equal('msg2');
+        return ctx.escalate;
+      };
+      const parent = createSupervisor(system, 'test1');
+      const child = spawn(parent, async (state = 0, msg, ctx) => {
+        // Wait for messages to queue up, then fail on msg0
+        if (state + 1 === 1) {
+          await delay(50);
+          throw new Error('Very bad thing');
+        }
+        dispatch(ctx.sender, state + 1);
+        return state + 1;
+      }, 'test', { onCrash });
+      dispatch(child, 'msg0');
+      dispatch(child, 'msg1');
+      dispatch(child, 'msg2');
+      await delay(100);
+      isStopped(child).should.be.true;
+      isStopped(parent).should.be.true;
+    });
+
     it('should be able to escalate to system (which stops child)', async function () {
       const escalate = (msg, err, ctx) => ctx.escalate;
       const child = spawn(system, (state = 0, msg, ctx) => {
@@ -601,6 +626,31 @@ describe('Actor', function () {
       let result2 = await query(child2, 'msg3', 300);
       result.should.equal(1);
       result2.should.equal(1);
+    });
+  });
+
+  describe('#afterStop', function () {
+    let system;
+    beforeEach(() => { system = start(); });
+    afterEach(() => {
+      stop(system);
+      // reset console
+      delete console.error;
+    });
+
+    it('should be able to act on context after stop', async function () {
+      const afterStop = (state, ctx) => {
+        ctx.mailbox.length.should.equal(1);
+        ctx.mailbox[0].message.should.equal(1);
+      }
+
+      const child = spawn(system, async (state = {}, _msg, _ctx) => {
+        await delay(100);
+        return state;
+      }, 'test', { afterStop });
+
+      dispatch(child, 1);
+      stop(child);
     });
   });
 });

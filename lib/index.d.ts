@@ -72,13 +72,16 @@ declare module 'nact' {
   export type PersistentActorContext<Msg, ParentRef extends Ref<any>> =
     ActorContext<MSGesture, ParentRef> & { persist: (msg: Msg) => Promise<void> };
 
-  export type SupervisionContext<Msg, ParentRef extends Ref<any>> = ActorContext<Msg, ParentRef> & {
+  export type ActorContextWithMailbox<Msg, ParentRef extends Ref<any>> = ActorContext<Msg, ParentRef> & { mailbox: Msg[] };
+
+  export type SupervisionContext<Msg, ParentRef extends Ref<any>> = ActorContextWithMailbox<Msg, ParentRef> & {
     stop: Symbol,
     stopAll: Symbol,
     escalate: Symbol,
     resume: Symbol,
     reset: Symbol,
-    resetAll: Symbol
+    resetAll: Symbol,
+    mailbox: Msg[]
   };
 
 
@@ -104,7 +107,7 @@ declare module 'nact' {
     onCrash?: SupervisionActorFunc<Msg, ParentRef>,
     initialState?: State,
     initialStateFunc?: (ctx: ActorContext<Msg, ParentRef>) => State,
-    afterStop?: (state: State) => void | Promise<void>
+    afterStop?: (state: State, ctx: ActorContextWithMailbox<Msg, ParentRef>) => void | Promise<void>
   };
 
   export type StatelessActorProps<Msg, ParentRef extends Ref<any>> = Omit<ActorProps<any, Msg, ParentRef>, 'initialState' | 'initialStateFunc' | 'afterStop'>;
