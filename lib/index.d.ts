@@ -66,7 +66,8 @@ declare module 'nact' {
     self: Ref<Msg>,
     name: ActorName,
     children: Map<ActorName, Ref<unknown>>,
-    log: Logger
+    log: Logger,
+    mailbox: Msg[]
   };
 
   export type PersistentActorContext<Msg, ParentRef extends Ref<any>> =

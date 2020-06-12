@@ -538,6 +538,31 @@ describe('Actor', function () {
       isStopped(parent).should.be.true;
     });
 
+    it('should be able to access other messages in the queue', async function () {
+      const onCrash = (msg, err, ctx) => {
+        ctx.mailbox.length.should.equal(2);
+        ctx.mailbox[0].message.should.equal('msg1');
+        ctx.mailbox[1].message.should.equal('msg2');
+        return ctx.escalate;
+      };
+      const parent = createSupervisor(system, 'test1');
+      const child = spawn(parent, (state = 0, msg, ctx) => {
+        // Wait for messages to queue up, then fail on msg0
+        if (state + 1 === 1) {
+          delay(100);
+          throw new Error('Very bad thing');
+        }
+        dispatch(ctx.sender, state + 1);
+        return state + 1;
+      }, 'test', { onCrash });
+      dispatch(child, 'msg0');
+      dispatch(child, 'msg1');
+      dispatch(child, 'msg2');
+      await delay(100);
+      isStopped(child).should.be.true;
+      isStopped(parent).should.be.true;
+    });
+
     it('should be able to escalate to system (which stops child)', async function () {
       const escalate = (msg, err, ctx) => ctx.escalate;
       const child = spawn(system, (state = 0, msg, ctx) => {
