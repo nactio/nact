@@ -638,11 +638,14 @@ describe('Actor', function () {
       delete console.error;
     });
 
-    it('should be able to act on context after stop', async function () {
+    it('should be able to act on context after stop', function (done) {
       const afterStop = (state, ctx) => {
         ctx.mailbox.length.should.equal(1);
-        ctx.mailbox[0].message.should.equal(1);
-      }
+        ctx.mailbox[0].message.should.equal(2);
+
+        ctx.parent.should.equal(system);
+        done();
+      };
 
       const child = spawn(system, async (state = {}, _msg, _ctx) => {
         await delay(100);
@@ -650,6 +653,7 @@ describe('Actor', function () {
       }, 'test', { afterStop });
 
       dispatch(child, 1);
+      dispatch(child, 2);
       stop(child);
     });
   });
