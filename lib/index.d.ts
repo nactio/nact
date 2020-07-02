@@ -174,6 +174,13 @@ declare module 'nact' {
 
   export function stop(actor: Ref<any>): void;
 
+  /** Note: Sender when using dispatch has been intentionally omitted from the typescript bindings.  
+   *        Sender simply cannot be strongly typed. A safer alternative is to include the sender 
+   *        as part of the message protocol. For example: 
+   *        ``` 
+   *            dispatch(pizzaActor, { sender: deliveryActor, order: ['ONE_LARGE_PEPPERONI']  });
+   *        ``` 
+   */  
   export function dispatch<T>(actor: Ref<T>, msg: T): void;
 
 
