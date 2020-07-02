@@ -174,7 +174,7 @@ declare module 'nact' {
 
   export function stop(actor: Ref<any>): void;
 
-  export function dispatch<T>(actor: Ref<T>, msg: T): void;
+  export function dispatch<T>(actor: Ref<T>, msg: T, sender?: Ref<T>): void;
 
 
   export type QueryMsgFactory<Req, Res> = (tempRef: Ref<Res>) => Req;
