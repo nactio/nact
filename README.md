@@ -33,6 +33,9 @@ To get started, head to https://nact.io
 
 > Note: Nact currently only able to work on Node 8 and above.
 
+### A note on regularity of commits
+Nact sees daily usage by the project maintainer. The project is extremely stable and has been around for a few years. As the project made the deliberate choice to minimise dependencies, particularly runtime dependencies, there is not a huge need for updates to the project, besides for the occasional introduction of new features. This means that it can be a few months since the last commit. This does not mean the project is dead, but rather that it is working as designed.  
+
 ## How are you using Nact?
 We would love to hear how you're using Nact. If you'd like to send feedback (bad or good) please email Nick Cuthbert at  github@ncthbrt.com or join the [Discord](https://nact.io/en_uk/community).
 
