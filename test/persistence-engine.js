@@ -48,7 +48,7 @@ describe('PersistedEvent', function () {
   });
 
   describe('#createdAt', function () {
-    it('should be able to be explicitely set', function () {
+    it('should be able to be explicitly set', function () {
       new PersistedEvent({ msg: 'test' }, 1, 'test-key', [], 123456).createdAt.should.equal(123456);
     });
 
