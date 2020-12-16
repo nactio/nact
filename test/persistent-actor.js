@@ -3,6 +3,7 @@
 const chai = require('chai');
 chai.should();
 const { MockPersistenceEngine } = require('./mock-persistence-engine');
+const { MockPersistenceEngineProperties } = require('./mock-persistence-engine-properties');
 const { BrokenPersistenceEngine } = require('./broken-persistence-engine');
 const { PartiallyBrokenPersistenceEngine } = require('./partially-broken-persistence-engine');
 const { start, dispatch, query, stop, messages, spawn } = require('../lib');
@@ -214,6 +215,23 @@ describe('PersistentActor', () => {
     dispatch(actor, 'c');
     (await query(actor, 'd', 30)).should.equal('abcd');
     persistenceEngine._events['test'].map(x => x.data).should.deep.equal(['b', 'c', 'd', 'e']);
+  });
+
+  it('should be able to persist events with additional properties', async () => {
+    const persistenceEngine = new MockPersistenceEngineProperties();
+    system = start(configurePersistence(persistenceEngine));
+    const actor = spawnPersistent(
+      system,
+      concatenativeFunction('', (state, msg, ctx) => !ctx.recovering && ctx.persist(msg, [], {[msg]: msg}, {[msg]: msg})),
+      'test'
+    );
+    dispatch(actor, 'a');
+    dispatch(actor, 'b');
+    dispatch(actor, 'c');
+    (await query(actor, 'd', 30)).should.equal('abcd');
+    persistenceEngine._events['test'].map(x => x.data).should.deep.equal(['a', 'b', 'c', 'd']);
+    persistenceEngine._annotations.should.deep.equal([{'a': 'a'}, {'b': 'b'}, {'c': 'c'}, {'d': 'd'}]);
+    persistenceEngine._metadata.should.deep.equal([{'a': 'a'}, {'b': 'b'}, {'c': 'c'}, {'d': 'd'}]);
   });
 
   it('should signal an error if creating restore stream fails', async () => {
