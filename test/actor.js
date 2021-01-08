@@ -635,6 +635,34 @@ describe('Actor', function () {
       isStopped(sibling).should.be.true;
     });
 
+    it('should be able to escalate to parent (which resumes child and resumes)', async function () {
+      const stopChildAndResumeOrEscalate = (msg, err, ctx, _child) => {
+        if (_child) {
+          return ctx.resume;
+        } else {
+          return ctx.escalate;
+        }
+      };
+      const escalate = (msg, err, ctx) => ctx.escalate;
+      const parent = spawn(system, (state = 0, msg, ctx) => {
+        throw new Error('Very bad thing');
+      }, 'parent-of-test', { onCrash: stopChildAndResumeOrEscalate });
+      const child = spawn(parent, (state = 0, msg, ctx) => {
+        if (state + 1 === 3 && msg !== 'msg3') {
+          throw new Error('Very bad thing');
+        }
+        dispatch(ctx.sender, state + 1);
+        return state + 1;
+      }, 'test', { onCrash: escalate });
+      dispatch(child, 'msg0');
+      dispatch(child, 'msg1');
+      dispatch(child, 'msg2');
+      await delay(100);
+      isStopped(child).should.be.false;
+      isStopped(parent).should.be.false;
+      dispatch(child, 'msg3');
+    });
+
     it('should be able to stop all children', async function () {
       const stopAll = (msg, err, ctx) => ctx.stopAll;
       const parent = createSupervisor(system, 'test1');
