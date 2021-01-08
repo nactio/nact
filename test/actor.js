@@ -602,7 +602,7 @@ describe('Actor', function () {
     it('should be able to escalate to parent (which stops child and resumes)', async function () {
       const stopChildAndResumeOrEscalate = (msg, err, ctx, _child) => {
         if (_child) {
-          _child.stop();
+          stop(_child);
           return ctx.resume;
         } else {
           return ctx.escalate;
