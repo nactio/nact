@@ -619,15 +619,20 @@ describe('Actor', function () {
         dispatch(ctx.sender, state + 1);
         return state + 1;
       }, 'test', { onCrash: escalate });
+      const sibling = spawn(parent, (state = 0, msg, ctx) => {
+        throw new Error('Very bad thing');
+      }, 'sibling-of-test', { onCrash: escalate });
       dispatch(child, 'msg0');
       dispatch(child, 'msg1');
       dispatch(child, 'msg2');
       await delay(100);
       isStopped(child).should.be.true;
       isStopped(parent).should.be.false;
+      isStopped(sibling).should.be.false;
       dispatch(parent, 'parent-msg0');
       await delay(100);
       isStopped(parent).should.be.true;
+      isStopped(sibling).should.be.true;
     });
 
     it('should be able to stop all children', async function () {
