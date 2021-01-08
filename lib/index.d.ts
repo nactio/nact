@@ -96,7 +96,7 @@ declare module 'nact' {
   export type PersistentActorFunc<State, Msg, ParentRef extends Ref<any>> = (state: State, msg: Msg, ctx: ActorContext<Msg, ParentRef>) =>
     State | Promise<State>;
 
-  export type SupervisionActorFunc<Msg, ParentRef extends Ref<any>> = (msg: Msg | undefined, err: Error | undefined, ctx: SupervisionContext<Msg, ParentRef>) => Symbol | Promise<Symbol>;
+  export type SupervisionActorFunc<Msg, ParentRef extends Ref<any>, ChildRef extends Ref<any>> = (msg: Msg | undefined, err: Error | undefined, ctx: SupervisionContext<Msg, ParentRef>, child: ChildRef | undefined) => Symbol | Promise<Symbol>;
 
   export type PersistentQueryFunc<State, Msg> = (state: State, msg: Msg) => State | Promise<State>;
 
@@ -104,7 +104,7 @@ declare module 'nact' {
   // Actor configuration
   export type ActorProps<State, Msg, ParentRef extends Ref<any>> = {
     shutdownAfter?: Milliseconds,
-    onCrash?: SupervisionActorFunc<Msg, ParentRef>,
+    onCrash?: SupervisionActorFunc<Msg, ParentRef, Ref<any>>,
     initialState?: State,
     initialStateFunc?: (ctx: ActorContext<Msg, ParentRef>) => State,
     afterStop?: (state: State, ctx: ActorContextWithMailbox<Msg, ParentRef>) => void | Promise<void>
@@ -174,13 +174,13 @@ declare module 'nact' {
 
   export function stop(actor: Ref<any>): void;
 
-  /** Note: Sender when using dispatch has been intentionally omitted from the typescript bindings.  
-   *        Sender simply cannot be strongly typed. A safer alternative is to include the sender 
-   *        as part of the message protocol. For example: 
-   *        ``` 
+  /** Note: Sender when using dispatch has been intentionally omitted from the typescript bindings.
+   *        Sender simply cannot be strongly typed. A safer alternative is to include the sender
+   *        as part of the message protocol. For example:
+   *        ```
    *            dispatch(pizzaActor, { sender: deliveryActor, order: ['ONE_LARGE_PEPPERONI']  });
-   *        ``` 
-   */  
+   *        ```
+   */
   export function dispatch<T>(actor: Ref<T>, msg: T): void;
 
 
@@ -265,7 +265,7 @@ declare module 'nact' {
 
   export function configureLogging(engine: LoggingEngine): Plugin;
 
-  // Persistence 
+  // Persistence
   export type PersistedSnapshot = {
     data: Json,
     sequenceNumber: number,
@@ -308,6 +308,6 @@ declare module 'nact' {
 }
 
 // declare module 'nact/monad' {
-//   export abstract class Effect<> { }; 
+//   export abstract class Effect<> { };
 //   export function* start(program: funct): void;
 // }

@@ -563,7 +563,7 @@ describe('Actor', function () {
       isStopped(parent).should.be.true;
     });
 
-    it('should be able to escalate to system (which stops child)', async function () {
+    it('should be able to escalate to system (which stops child by default)', async function () {
       const escalate = (msg, err, ctx) => ctx.escalate;
       const child = spawn(system, (state = 0, msg, ctx) => {
         if (state + 1 === 3 && msg !== 'msg3') {
@@ -577,6 +577,90 @@ describe('Actor', function () {
       dispatch(child, 'msg2');
       await delay(100);
       isStopped(child).should.be.true;
+    });
+
+    it('should be able to escalate to parent (which escalates to system)', async function () {
+      const escalate = (msg, err, ctx, _child) => ctx.escalate;
+      const parent = spawn(system, (state = 0, msg, ctx) => {
+        throw new Error('Very bad thing');
+      }, 'parent-of-test', { });
+      const child = spawn(parent, (state = 0, msg, ctx) => {
+        if (state + 1 === 3 && msg !== 'msg3') {
+          throw new Error('Very bad thing');
+        }
+        dispatch(ctx.sender, state + 1);
+        return state + 1;
+      }, 'test', { onCrash: escalate });
+      dispatch(child, 'msg0');
+      dispatch(child, 'msg1');
+      dispatch(child, 'msg2');
+      await delay(100);
+      isStopped(child).should.be.true;
+      isStopped(parent).should.be.true;
+    });
+
+    it('should be able to escalate to parent (which stops child and resumes)', async function () {
+      const stopChildAndResumeOrEscalate = (msg, err, ctx, _child) => {
+        if (_child) {
+          stop(_child);
+          return ctx.resume;
+        } else {
+          return ctx.escalate;
+        }
+      };
+      const escalate = (msg, err, ctx) => ctx.escalate;
+      const parent = spawn(system, (state = 0, msg, ctx) => {
+        throw new Error('Very bad thing');
+      }, 'parent-of-test', { onCrash: stopChildAndResumeOrEscalate });
+      const child = spawn(parent, (state = 0, msg, ctx) => {
+        if (state + 1 === 3 && msg !== 'msg3') {
+          throw new Error('Very bad thing');
+        }
+        dispatch(ctx.sender, state + 1);
+        return state + 1;
+      }, 'test', { onCrash: escalate });
+      const sibling = spawn(parent, (state = 0, msg, ctx) => {
+        throw new Error('Very bad thing');
+      }, 'sibling-of-test', { onCrash: escalate });
+      dispatch(child, 'msg0');
+      dispatch(child, 'msg1');
+      dispatch(child, 'msg2');
+      await delay(100);
+      isStopped(child).should.be.true;
+      isStopped(parent).should.be.false;
+      isStopped(sibling).should.be.false;
+      dispatch(parent, 'parent-msg0');
+      await delay(100);
+      isStopped(parent).should.be.true;
+      isStopped(sibling).should.be.true;
+    });
+
+    it('should be able to escalate to parent (which resumes child and resumes)', async function () {
+      const stopChildAndResumeOrEscalate = (msg, err, ctx, _child) => {
+        if (_child) {
+          return ctx.resume;
+        } else {
+          return ctx.escalate;
+        }
+      };
+      const escalate = (msg, err, ctx) => ctx.escalate;
+      const parent = spawn(system, (state = 0, msg, ctx) => {
+        throw new Error('Very bad thing');
+      }, 'parent-of-test', { onCrash: stopChildAndResumeOrEscalate });
+      const child = spawn(parent, (state = 0, msg, ctx) => {
+        if (state + 1 === 3 && msg !== 'msg3') {
+          throw new Error('Very bad thing');
+        }
+        dispatch(ctx.sender, state + 1);
+        return state + 1;
+      }, 'test', { onCrash: escalate });
+      dispatch(child, 'msg0');
+      dispatch(child, 'msg1');
+      dispatch(child, 'msg2');
+      await delay(100);
+      isStopped(child).should.be.false;
+      isStopped(parent).should.be.false;
+      dispatch(child, 'msg3');
     });
 
     it('should be able to stop all children', async function () {
