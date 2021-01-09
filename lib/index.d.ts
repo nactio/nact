@@ -77,10 +77,14 @@ declare module 'nact' {
   export type SupervisionContext<Msg, ParentRef extends Ref<any>> = ActorContextWithMailbox<Msg, ParentRef> & {
     stop: Symbol,
     stopAll: Symbol,
+    stopChild: Symbol,
+    stopAllChildren: Symbol,
     escalate: Symbol,
     resume: Symbol,
     reset: Symbol,
     resetAll: Symbol,
+    resetChild: Symbol,
+    resetAllChildren: Symbol,
     mailbox: Msg[]
   };
 
