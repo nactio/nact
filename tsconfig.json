@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "es6",
+    "module": "esnext",
+    "lib": [
+      "DOM",
+      "ES2017"
+    ],
+    "skipLibCheck": true,
+    "jsx": "react",
+    "sourceMap": true,
+    "strict": true,
+    "noUnusedParameters": true,
+    "noUnusedLocals": true,
+    "moduleResolution": "node",
+    "outDir": "dist",
+    "typeRoots": [
+      "node_modules/@types"
+    ],
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    // Ensure that Babel can safely transpile files in the TypeScript project
+    "isolatedModules": true,
+    // Ensure that .d.ts files are created by tsc, but not .js files
+    "declaration": true,
+    "emitDeclarationOnly": false,
+  },
+  "include": [
+    "lib"
+  ],
+}

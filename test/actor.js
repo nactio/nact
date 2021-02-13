@@ -47,7 +47,7 @@ const retry = async (assertion, remainingAttempts, retryInterval = 0) => {
   }
 };
 
-describe('ActorReference', function () {
+describe('ActorRef', function () {
   let system;
   beforeEach(() => { system = start(); });
   afterEach(() => stop(system));
@@ -583,7 +583,7 @@ describe('Actor', function () {
       const escalate = (msg, err, ctx, _child) => ctx.escalate;
       const parent = spawn(system, (state = 0, msg, ctx) => {
         throw new Error('Very bad thing');
-      }, 'parent-of-test', { });
+      }, 'parent-of-test', {});
       const child = spawn(parent, (state = 0, msg, ctx) => {
         if (state + 1 === 3 && msg !== 'msg3') {
           throw new Error('Very bad thing');

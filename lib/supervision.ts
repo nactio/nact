@@ -1,4 +1,4 @@
-const SupervisionActions = {
+export const SupervisionActions = {
   // Stop Self
   stop: Symbol('stop'),
   // Stop Self and Peers
@@ -21,7 +21,7 @@ const SupervisionActions = {
   resetAllChildren: Symbol('resetAllChildren')
 };
 
-const defaultSupervisionPolicy = (msg, err, ctx, child = undefined) => {
+export function defaultSupervisionPolicy(msg, err, ctx, child = undefined) {
   let path = ctx.path.toString();
   if (child) {
     console.log(`${path}: The following error was escalated when raised by child '${child.name}' processing message %O:\n%O\nTerminating faulted actor`, msg, err);
@@ -31,7 +31,3 @@ const defaultSupervisionPolicy = (msg, err, ctx, child = undefined) => {
   return ctx.stop;
 };
 
-module.exports = {
-  defaultSupervisionPolicy,
-  SupervisionActions
-};
