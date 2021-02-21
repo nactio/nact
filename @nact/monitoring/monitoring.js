@@ -1,4 +1,4 @@
-const { Nobody } = require('../references');
+const { Nobody } = require('../core/references');
 
 const LogLevel = {
   OFF: 0,
@@ -23,7 +23,7 @@ const logLevelAsText = [
 const logLevelToString = (level) => logLevelAsText[level];
 
 class LogTrace {
-  constructor (level, message, actor, createdAt) {
+  constructor(level, message, actor, createdAt) {
     this.level = level;
     this.type = 'trace';
     this.message = message;
@@ -33,7 +33,7 @@ class LogTrace {
 }
 
 class LogEvent {
-  constructor (name, eventProperties, actor, createdAt) {
+  constructor(name, eventProperties, actor, createdAt) {
     this.type = 'event';
     this.name = name;
     this.properties = eventProperties;
@@ -43,7 +43,7 @@ class LogEvent {
 }
 
 class LogMetric {
-  constructor (name, values, actor, createdAt) {
+  constructor(name, values, actor, createdAt) {
     this.type = 'metric';
     this.name = name;
     this.values = values;
@@ -53,7 +53,7 @@ class LogMetric {
 }
 
 class LogException {
-  constructor (exception, actor, createdAt) {
+  constructor(exception, actor, createdAt) {
     this.type = 'exception';
     this.exception = exception;
     this.actor = actor;
@@ -62,48 +62,48 @@ class LogException {
 }
 
 const log = (facade, logEvent) => {
-  const { dispatch } = require('../functions');
+  const { dispatch } = require('../core/functions');
   dispatch(facade.loggingActor, logEvent, facade.reference);
 };
 
 class LoggingFacade {
-  constructor (loggingActor, reference) {
+  constructor(loggingActor, reference) {
     this.loggingActor = loggingActor;
     this.reference = reference;
   }
 
-  trace (message) {
+  trace(message) {
     log(this, new LogTrace(LogLevel.TRACE, String(message), this.reference));
   }
 
-  debug (message) {
+  debug(message) {
     log(this, new LogTrace(LogLevel.DEBUG, String(message), this.reference));
   }
 
-  info (message) {
+  info(message) {
     log(this, new LogTrace(LogLevel.INFO, String(message), this.reference));
   }
 
-  warn (message) {
+  warn(message) {
     log(this, new LogTrace(LogLevel.WARN, String(message), this.reference));
   }
 
-  critical (message) {
+  critical(message) {
     log(this, new LogTrace(LogLevel.CRITICAL, String(message), this.reference));
   }
 
-  error (message) {
+  error(message) {
     log(this, new LogTrace(LogLevel.ERROR, String(message), this.reference));
   }
 
-  event (name, eventProperties) {
+  event(name, eventProperties) {
     log(this, new LogEvent(String(name), eventProperties, this.reference));
   }
-  exception (exception) {
+  exception(exception) {
     log(this, new LogException(exception, this.reference));
   }
 
-  metric (name, values) {
+  metric(name, values) {
     log(this, new LogMetric(String(name), values, this.reference));
   }
 }

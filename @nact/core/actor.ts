@@ -1,4 +1,4 @@
-import { Ref } from "./references";
+import { ActorSystemRef, Ref } from "./references";
 import { Deferral } from './deferral';
 import { applyOrThrowIfStopped } from './system-map';
 import { ActorRef, TemporaryRef, Nobody } from './references';
@@ -9,36 +9,37 @@ import { defaultSupervisionPolicy, SupervisionActions } from './supervision';
 import { ActorPath } from "./paths";
 import { Milliseconds } from ".";
 import { ActorSystem } from "./system";
+import { addMacrotask, clearMacrotask } from './macrotask'
 
-function unit<T>(x: T) { };
+function unit(): void { };
 
 export type ActorName = string;
 
 type InferMsgFromRef<R extends Ref<any>> = R extends Ref<infer Msg> ? Msg : never;
 
-class Actor<State, Msg, ParentRef extends Ref<any>> {
+class Actor<State, Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> {
   parent: Actor<any, InferMsgFromRef<ParentRef>, any> | ActorSystem;
   name: ActorName;
   path: ActorPath;
   system: ActorSystem;
   afterStop: (state: State, ctx: ActorContextWithMailbox<Msg, ParentRef>) => void | Promise<void>;
-  reference: ActorRef<unknown, any>;
-  log: any;
+  reference: ActorRef<Msg, ParentRef>;
   f: ActorFunc<State, Msg, ParentRef>;
   stopped: boolean;
-  children: Map<any, any>;
-  childReferences: Map<any, any>;
+  children: Map<any, Actor<unknown, unknown, ActorRef<Msg, ParentRef>>>;
+  childReferences: Map<any, ActorRef<unknown, ActorRef<Msg, ParentRef>>>;
   busy: boolean;
-  mailbox: Queue<any>;
-  immediate: undefined;
+  mailbox: Queue<{ message: Msg }>;
+  immediate: number | undefined;
   onCrash: SupervisionActorFunc<Msg, ParentRef, Ref<any>> | ((msg: any, err: any, ctx: any, child?: undefined) => any);
   initialState: State | undefined;
   initialStateFunc: ((ctx: ActorContext<Msg, ParentRef>) => State) | undefined;
   shutdownPeriod?: Milliseconds;
   state: any;
   timeout?: Milliseconds;
+  setTimeout: () => void;
 
-  constructor(parent: Actor<any, InferMsgFromRef<ParentRef>, any> | ActorSystem, name: string | undefined, system: any, f: ActorFunc<State, Msg, ParentRef>, { shutdownAfter, onCrash, initialState, initialStateFunc, afterStop }: ActorProps<State, Msg, ParentRef> = {}) {
+  constructor(parent: (Actor<any, InferMsgFromRef<ParentRef>, any>) | ActorSystem, name: string | undefined, system: any, f: ActorFunc<State, Msg, ParentRef>, { shutdownAfter, onCrash, initialState, initialStateFunc, afterStop }: ActorProps<State, Msg, ParentRef> = {}) {
     this.parent = parent;
     if (!name) {
       name = `anonymous-${Math.abs(Math.random() * Number.MAX_SAFE_INTEGER) | 0}`;
@@ -67,6 +68,9 @@ class Actor<State, Msg, ParentRef extends Ref<any>> {
         throw new Error('Shutdown should be specified as a number in milliseconds');
       }
       this.shutdownPeriod = Actor.getSafeTimeout(shutdownAfter);
+      this.setTimeout = () => {
+        this.timeout = setTimeout(() => this.stop(), this.shutdownPeriod);
+      };
     } else {
       this.setTimeout = unit;
     }
@@ -77,7 +81,7 @@ class Actor<State, Msg, ParentRef extends Ref<any>> {
   initializeState() {
     if (this.initialStateFunc) {
       try {
-        this.state = this.initialStateFunc(this.createContext(undefined));
+        this.state = this.initialStateFunc(this.createContext());
       } catch (e) {
         this.handleFault(undefined, undefined, e);
       }
@@ -86,9 +90,6 @@ class Actor<State, Msg, ParentRef extends Ref<any>> {
     }
   }
 
-  setTimeout() {
-    this.timeout = setTimeout(() => this.stop(), this.shutdownPeriod);
-  }
 
   reset() {
     [...this.children.values()].forEach(x => x.stop());
@@ -101,7 +102,7 @@ class Actor<State, Msg, ParentRef extends Ref<any>> {
   }
 
   clearImmediate() {
-    clearImmediate(this.immediate);
+    clearMacrotask(this.immediate);
   }
 
   static getSafeTimeout(timeoutDuration) {
@@ -113,13 +114,13 @@ class Actor<State, Msg, ParentRef extends Ref<any>> {
   assertNotStopped() { assert(!this.stopped); return true; }
   afterMessage() { }
 
-  dispatch(message, sender = new Nobody()) {
+  dispatch(message) {
     this.assertNotStopped();
     this.clearTimeout();
     if (!this.busy) {
-      this.handleMessage(message, sender);
+      this.handleMessage(message);
     } else {
-      this.mailbox.push({ message, sender });
+      this.mailbox.push({ message });
     }
   }
 
@@ -142,7 +143,7 @@ class Actor<State, Msg, ParentRef extends Ref<any>> {
     if (typeof (message) === 'function') {
       message = message(tempReference);
     }
-    this.dispatch(message, tempReference);
+    this.dispatch(message);
     return deferred.promise;
   }
 
@@ -157,7 +158,7 @@ class Actor<State, Msg, ParentRef extends Ref<any>> {
   }
 
   stop() {
-    const context = this.createContextWithMailbox(this);
+    const context = this.createContextWithMailbox();
 
     this.clearImmediate();
     this.clearTimeout();
@@ -166,14 +167,14 @@ class Actor<State, Msg, ParentRef extends Ref<any>> {
     [...this.children.values()].forEach(stop);
     this.stopped = true;
 
-    setImmediate(() => this.afterStop(this.state, context));
+    addMacrotask(() => this.afterStop(this.state, context));
   }
 
   processNext() {
     if (!this.stopped) {
       const nextMsg = this.mailbox.shift();
       if (nextMsg) {
-        this.handleMessage(nextMsg.message, nextMsg.sender);
+        this.handleMessage(nextMsg.message);
       } else {
         this.busy = false;
         // Counter is now ticking until actor is killed
@@ -182,8 +183,8 @@ class Actor<State, Msg, ParentRef extends Ref<any>> {
     }
   }
 
-  async handleFault(msg, sender, error, child = undefined) {
-    const ctx = this.createSupervisionContext(msg, sender, error);
+  async handleFault(msg, error, child = undefined) {
+    const ctx = this.createSupervisionContext();
     const decision = await Promise.resolve(this.onCrash(msg, error, ctx, child));
     switch (decision) {
       // Stop Self
@@ -225,7 +226,7 @@ class Actor<State, Msg, ParentRef extends Ref<any>> {
       // Escalate to Parent
       case SupervisionActions.escalate:
       default:
-        this.parent.handleFault(msg, sender, error, this.reference);
+        this.parent.handleFault(msg, error, this.reference);
         break;
     }
   }
@@ -234,39 +235,37 @@ class Actor<State, Msg, ParentRef extends Ref<any>> {
     this.processNext();
   }
 
-  createSupervisionContext(msg, sender, error) {
-    const ctx = this.createContextWithMailbox(this);
+  createSupervisionContext() {
+    const ctx = this.createContextWithMailbox();
     return { ...ctx, ...SupervisionActions };
   }
 
-  createContextWithMailbox(sender) {
-    const ctx = this.createContext(sender);
+  createContextWithMailbox() {
+    const ctx = this.createContext();
     return { ...ctx, mailbox: this.mailbox.toArray() };
   }
 
-  createContext(sender) {
+  createContext(): ActorContext<Msg, ParentRef> {
     return {
-      parent: this.parent ? this.parent.reference : undefined,
+      parent: this.parent.reference,
       path: this.path,
       self: this.reference,
       name: this.name,
       children: new Map(this.childReferences),
-      sender,
-      log: this.log
     };
   }
 
-  handleMessage(message, sender) {
+  handleMessage(message) {
     this.busy = true;
-    this.immediate = setImmediate(async () => {
+    this.immediate = addMacrotask(async () => {
       try {
-        let ctx = this.createContext(sender);
+        let ctx = this.createContext();
         let next = await Promise.resolve(this.f.call(ctx, this.state, message, ctx));
         this.state = next;
         this.afterMessage();
         this.processNext();
       } catch (e) {
-        this.handleFault(message, sender, e);
+        this.handleFault(message, e);
       }
     });
   }
@@ -282,12 +281,12 @@ export type ActorContext<Msg, ParentRef extends Ref<any>> = {
   children: Map<ActorName, Ref<unknown>>,
 };
 
-export type PersistentActorContext<Msg, ParentRef extends Ref<any>> =
-  ActorContext<MSGesture, ParentRef> & { persist: (msg: Msg) => Promise<void> };
+// export type PersistentActorContext<Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> =
+//   ActorContext<MSGesture, ParentRef> & { persist: (msg: Msg) => Promise<void> };
 
-export type ActorContextWithMailbox<Msg, ParentRef extends Ref<any>> = ActorContext<Msg, ParentRef> & { mailbox: Msg[] };
+export type ActorContextWithMailbox<Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> = ActorContext<Msg, ParentRef> & { mailbox: Msg[] };
 
-export type SupervisionContext<Msg, ParentRef extends Ref<any>> = ActorContextWithMailbox<Msg, ParentRef> & {
+export type SupervisionContext<Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> = ActorContextWithMailbox<Msg, ParentRef> & {
   stop: Symbol,
   stopAll: Symbol,
   stopChild: Symbol,
@@ -302,15 +301,13 @@ export type SupervisionContext<Msg, ParentRef extends Ref<any>> = ActorContextWi
 };
 
 // Functions
-export type ActorFunc<State, Msg, ParentRef extends Ref<any>> = (state: State, msg: Msg, ctx: ActorContext<Msg, ParentRef>) =>
+export type ActorFunc<State, Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> = (state: State, msg: Msg, ctx: ActorContext<Msg, ParentRef>) =>
   State | Promise<State>;
 
-export type StatelessActorFunc<Msg, ParentRef extends Ref<any>> = (msg: Msg, ctx: ActorContext<Msg, ParentRef>) =>
-  void | Promise<void>;
+export type StatelessActorFunc<Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> = (msg: Msg, ctx: ActorContext<Msg, ParentRef>) => any;
 
 
-
-export type SupervisionActorFunc<Msg, ParentRef extends Ref<any>, ChildRef extends Ref<any>> = (msg: Msg | undefined, err: Error | undefined, ctx: SupervisionContext<Msg, ParentRef>, child: ChildRef | undefined) => Symbol | Promise<Symbol>;
+export type SupervisionActorFunc<Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>, ChildRef extends Ref<any>> = (msg: Msg | undefined, err: Error | undefined, ctx: SupervisionContext<Msg, ParentRef>, child: ChildRef | undefined) => Symbol | Promise<Symbol>;
 
 // Inference helpers
 type InferMsgFromFunc<T extends ActorFunc<any, any, any>> = T extends ActorFunc<any, infer Msg, any> ? Msg : never;
@@ -322,7 +319,7 @@ type InferMsgFromStatelessFunc<T extends StatelessActorFunc<any, any>> = T exten
 export type NumberOfMessages = number;
 export type Json = unknown;
 
-export type ActorProps<State, Msg, ParentRef extends Ref<any>> = {
+export type ActorProps<State, Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> = {
   shutdownAfter?: Milliseconds,
   onCrash?: SupervisionActorFunc<Msg, ParentRef, Ref<any>>,
   initialState?: State,
@@ -330,19 +327,19 @@ export type ActorProps<State, Msg, ParentRef extends Ref<any>> = {
   afterStop?: (state: State, ctx: ActorContextWithMailbox<Msg, ParentRef>) => void | Promise<void>
 };
 
-export type StatelessActorProps<Msg, ParentRef extends Ref<any>> = Omit<ActorProps<any, Msg, ParentRef>, 'initialState' | 'initialStateFunc' | 'afterStop'>;
+export type StatelessActorProps<Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> = Omit<ActorProps<any, Msg, ParentRef>, 'initialState' | 'initialStateFunc' | 'afterStop'>;
 
 
-export function spawn<ParentRef extends Ref<any>, Func extends ActorFunc<any, any, ParentRef>>(
+export function spawn<ParentRef extends ActorSystemRef | ActorRef<any, any>, Func extends ActorFunc<any, any, ParentRef>>(
   parent: ParentRef,
   f: Func,
   name?: string,
   properties?: ActorProps<InferStateFromFunc<Func>, InferMsgFromFunc<Func>, ParentRef>
 ): Ref<InferMsgFromFunc<Func>> {
-  return applyOrThrowIfStopped(parent, (p: Actor | ActorSystem) => p.assertNotStopped() && new Actor(p, name, p.system, f, properties).reference);
+  return applyOrThrowIfStopped(parent, (p: (Actor<any, InferMsgFromRef<ParentRef>, ParentRef>) | ActorSystem) => p.assertNotStopped() && new Actor(p, name, p.system, f, properties).reference);
 }
 
-export function spawnStateless<ParentRef extends Ref<any>, Func extends StatelessActorFunc<any, ParentRef>>(
+export function spawnStateless<ParentRef extends ActorSystemRef | ActorRef<any, any>, Func extends StatelessActorFunc<any, ParentRef>>(
   parent: ParentRef,
   f: Func,
   name?: any,
@@ -350,8 +347,9 @@ export function spawnStateless<ParentRef extends Ref<any>, Func extends Stateles
 ): Ref<InferMsgFromStatelessFunc<Func>> {
   return spawn(
     parent,
-    function stateLessActorFunc(_state: undefined, msg: InferMsgFromStatelessFunc<Func>, ctx: ActorContext<InferMsgFromStatelessFunc<Func>, ParentRef>) {
+    (_state: undefined, msg: InferMsgFromStatelessFunc<Func>, ctx: ActorContext<InferMsgFromStatelessFunc<Func>, ParentRef>): undefined => {
       f.call(ctx, msg, ctx);
+      return undefined;
     },
     name,
     { ...properties, onCrash: (_, __, ctx) => ctx.resume }

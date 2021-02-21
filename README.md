@@ -36,7 +36,7 @@ To get started, head to https://nact.io
 Nact sees daily usage by the project maintainer. The project is extremely stable and has been around for a few years. As the project made the deliberate choice to minimise dependencies, particularly runtime dependencies, there is not a huge need for updates to the project, besides for the occasional introduction of new features. This means that it can be a few months since the last commit. This does not mean the project is dead, but rather that it is working as designed.  
 
 ## How are you using Nact?
-We would love to hear how you're using Nact. If you'd like to send feedback (bad or good) please email Nick Cuthbert at  github@ncthbrt.com or join the [Discord](https://nact.io/en_uk/community).
+We would love to hear how you're using Nact. If you'd like to send feedback (bad or good) please email Natalie Cuthbert at github@ncthbrt.com or join the [Discord](https://nact.io/en_uk/community).
 
 ## License
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fncthbrt%2Fnact.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fncthbrt%2Fnact?ref=badge_large)

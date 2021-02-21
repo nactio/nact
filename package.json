@@ -2,19 +2,6 @@
   "name": "nact",
   "version": "7.6.0",
   "description": "nact ⇒ node.js + actors = your services have never been so µ",
-  "main": "lib/index.js",
-  "scripts": {
-    "test": "yarn run lint-fix && mocha ./test/*.js",
-    "test-watch": "yarn run lint && nyc mocha --watch ./test/*.js",
-    "interactive-cover": "nyc --reporter=html mocha ./test/*.js && open ./coverage/index.html",
-    "lint": "semistandard",
-    "coverage": "nyc report --reporter=text-lcov | coveralls",
-    "prepush": "yarn run test",
-    "test-only": "mocha ./test/*.js",
-    "test-only-watch": "nyc mocha --watch ./test/*.js",
-    "lint-fix": "semistandard --fix",
-    "typecheck": "tsc --noEmit"
-  },
   "homepage": "https://nact.io",
   "repository": {
     "type": "git",
@@ -31,25 +18,14 @@
     "event sourcing",
     "distributed-systems"
   ],
-  "author": "Nick Cuthbert (https://github.com/ncthbrt)",
+  "author": "Natalie Cuthbert (https://github.com/ncthbrt)",
   "license": "Apache-2.0",
   "bugs": {
     "url": "http://github.com/ncthbrt/nact/issues"
   },
-  "dependencies": {
-    "denque": "^1.2.3"
-  },
-  "devDependencies": {
-    "chai": "^4.1.1",
-    "chai-as-promised": "^7.1.1",
-    "coveralls": "^3.0.0",
-    "eslint": "^4.8.0",
-    "husky": "^0.14.3",
-    "mocha": "^4.0.0",
-    "nyc": "^11.2.1",
-    "semistandard": "^11.0.0",
-    "sinon": "^4.1.4",
-    "sinon-chai": "^2.14.0",
-    "typescript": "^4.1.5"
-  }
+  "workspaces": [
+    "@nact/core",
+    "nact",
+    "test"
+  ]
 }

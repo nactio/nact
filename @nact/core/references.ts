@@ -29,7 +29,7 @@ export class TemporaryRef<Msg> extends Ref<Msg> {
   }
 }
 
-export class ActorRef<Msg, ParentRef extends ActorRef<any> | ActorSystemRef = any> extends Ref<Msg> {
+export class ActorRef<Msg, ParentRef extends ActorRef<any, any> | ActorSystemRef> extends Ref<Msg> {
   name: ActorName;
   parent: ParentRef;
   type: 'actor';

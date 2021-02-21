@@ -7,7 +7,6 @@
       "ES2017"
     ],
     "skipLibCheck": true,
-    "jsx": "react",
     "sourceMap": true,
     "strict": true,
     "noUnusedParameters": true,

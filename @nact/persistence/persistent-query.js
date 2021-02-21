@@ -1,11 +1,11 @@
 const { PersistedSnapshot } = require('./persistence-engine');
-const { applyOrThrowIfStopped } = require('../system-map');
+const { applyOrThrowIfStopped } = require('../core/system-map');
 const id = x => x;
 const unit = x => { };
 const unitPromise = x => Promise.resolve();
 
 class PersistentQuery {
-  constructor (system, f, key, persistenceEngine, { snapshotKey, snapshotEvery, cacheDuration, snapshotEncoder = id, snapshotDecoder = id, encoder = id, decoder = id, initialState } = {}) {
+  constructor(system, f, key, persistenceEngine, { snapshotKey, snapshotEvery, cacheDuration, snapshotEncoder = id, snapshotDecoder = id, encoder = id, decoder = id, initialState } = {}) {
     if (!key) {
       throw new Error('Persistence key required');
     }
@@ -60,7 +60,7 @@ class PersistentQuery {
     }
   }
 
-  clearCache () {
+  clearCache() {
     this.state = this.initialState;
     this.sequenceNumber = 0;
     this.messagesToNextSnapshot = undefined;
@@ -68,26 +68,26 @@ class PersistentQuery {
     this.promise = undefined;
   }
 
-  static getSafeTimeout (timeoutDuration) {
+  static getSafeTimeout(timeoutDuration) {
     timeoutDuration = timeoutDuration | 0;
     const MAX_TIMEOUT = 2147483647;
     return Math.min(MAX_TIMEOUT, timeoutDuration);
   }
 
-  setTimeout () {
+  setTimeout() {
     this.timeout = setTimeout(() => this.clearCache(), this.cacheDuration);
   }
 
-  clearTimeout () {
+  clearTimeout() {
     clearTimeout(this.timeout);
   }
 
-  resetTimeout () {
+  resetTimeout() {
     this.clearTimeout();
     this.setTimeout();
   }
 
-  async takeSnapshot () {
+  async takeSnapshot() {
     if (this.messagesToNextSnapshot <= 0) {
       const snapshotState = this.snapshotEncoder(this.state);
       const sequenceNumber = this.sequenceNumber;
@@ -102,7 +102,7 @@ class PersistentQuery {
     }
   }
 
-  async latestSnapshot () {
+  async latestSnapshot() {
     if (!this.snapshotRestored) {
       const snapshot = await this.persistenceEngine.latestSnapshot(this.snapshotKey);
       if (snapshot) {
@@ -114,7 +114,7 @@ class PersistentQuery {
     }
   }
 
-  async query () {
+  async query() {
     try {
       this.clearTimeout();
       await this.latestSnapshot();

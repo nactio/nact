@@ -1,6 +1,6 @@
-const { spawnStateless } = require('../actor');
+const { spawnStateless } = require('../core/actor');
 const { LogLevel, logLevelToString } = require('./monitoring');
-const { ActorPath } = require('../paths');
+const { ActorPath } = require('../core/paths');
 
 const logToConsole = ({ consoleProxy, formatter, name } = {}) => {
   const proxy = consoleProxy || console;

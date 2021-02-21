@@ -1,15 +1,12 @@
-import { ActorSystemRef } from './references';
+import { ActorRef, ActorSystemRef, Ref } from './references';
 import { ActorPath } from './paths';
 import assert from './assert'
 import { stop } from './functions';
-import { add as addToSystemMap } from './system-map';
+import { add as addToSystemMap, remove as removeFromSystemMap } from './system-map';
 import { ICanFind, ICanStop, IHaveName } from './interfaces';
-import { ActorName } from './actor';
-
 
 function toBase36(x: number) { return Number(x).toString(36) }
 function generateSystemId() { return [...crypto.getRandomValues(new Uint32Array(4))].map(toBase36).join('-') };
-
 
 export class ActorSystem implements IHaveName, ICanFind, ICanStop {
   children: Map<any, any>;
@@ -69,7 +66,7 @@ export class ActorSystem implements IHaveName, ICanFind, ICanStop {
     }
   }
 
-  handleFault(msg, sender, error, child) {
+  handleFault(_msg: unknown, _error: unknown, child: ActorRef<any, any> | ActorSystemRef) {
     console.log('Stopping top level actor,', child.name, 'due to a fault');
     stop(child);
   }
@@ -87,7 +84,8 @@ export class ActorSystem implements IHaveName, ICanFind, ICanStop {
   stop() {
     [...this.children.values()].forEach(stop);
     this.stopped = true;
-    systemMap.remove(this.name);
+    removeFromSystemMap(this.name);
+    return Promise.resolve();
   }
 
   assertNotStopped() { assert(!this.stopped); return true; }

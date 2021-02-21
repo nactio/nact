@@ -1,0 +1,20 @@
+{
+  "name": "@nact/core",
+  "version": "1.0.0",
+  "description": "",
+  "module": "index.js",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "typecheck": "tsc --noEmit"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "denque": "^1.5.0",
+    "macrotask": "^3.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^4.1.5"
+  }
+}
