@@ -1,5 +1,5 @@
-const { PersistedSnapshot } = require('./persistence-engine');
-const { applyOrThrowIfStopped } = require('../core/system-map');
+import { PersistedSnapshot } from './persistence-engine';
+import { applyOrThrowIfStopped } from '@nact/core';
 const id = x => x;
 const unit = x => { };
 const unitPromise = x => Promise.resolve();
