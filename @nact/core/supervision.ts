@@ -1,3 +1,6 @@
+import { SupervisionContext } from "./actor";
+import { ActorRef, ActorSystemRef } from "./references";
+
 export const SupervisionActions = {
   // Stop Self
   stop: Symbol('stop'),
@@ -21,7 +24,7 @@ export const SupervisionActions = {
   resetAllChildren: Symbol('resetAllChildren')
 };
 
-export function defaultSupervisionPolicy(msg, err, ctx, child = undefined) {
+export function defaultSupervisionPolicy(msg: any, err: any, ctx: SupervisionContext<any, any>, child: ActorRef<any, any> | ActorSystemRef | undefined = undefined) {
   let path = ctx.path.toString();
   if (child) {
     console.log(`${path}: The following error was escalated when raised by child '${child.name}' processing message %O:\n%O\nTerminating faulted actor`, msg, err);

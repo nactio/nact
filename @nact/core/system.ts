@@ -1,48 +1,50 @@
-import { ActorRef, ActorSystemRef, Ref } from './references';
+import { ActorRef, ActorSystemRef, TemporaryRef } from './references';
 import { ActorPath } from './paths';
 import assert from './assert'
 import { stop } from './functions';
 import { add as addToSystemMap, remove as removeFromSystemMap } from './system-map';
 import { ICanFind, ICanStop, IHaveName } from './interfaces';
+import { Actor } from './actor';
+import { Deferral } from './deferral';
 
 function toBase36(x: number) { return Number(x).toString(36) }
 function generateSystemId() { return [...crypto.getRandomValues(new Uint32Array(4))].map(toBase36).join('-') };
 
+
+export type ActorSystemSettings = { name?: ActorSystemName, plugins?: Plugin[] };
 export class ActorSystem implements IHaveName, ICanFind, ICanStop {
-  children: Map<any, any>;
+  children: Map<any, Actor<any, any, ActorSystemRef>>;
   createLogger: () => undefined;
   name: ActorSystemName;
   path: ActorPath;
   reference: ActorSystemRef;
-  childReferences: Map<any, any>;
-  tempReferences: Map<any, any>;
+  childReferences: Map<any, ActorRef<any, ActorSystemRef>>;
+  tempReferences: Map<number, Deferral<any>>;
   stopped: boolean;
   system: this;
-  private constructor(extensions) {
-    let [hd, ...tail] = extensions;
+  private constructor(settings: ActorSystemSettings) {
     this.children = new Map();
     this.createLogger = () => undefined;
-    this.name = (typeof (hd) === 'object' && hd.name) || generateSystemId();
+    this.name = settings.name || generateSystemId();
     this.path = ActorPath.root(this.name);
     this.reference = new ActorSystemRef(this.name, this.path);
     this.childReferences = new Map();
     this.tempReferences = new Map();
     this.stopped = false;
     this.system = this;
-    assert(extensions instanceof Array);
     addToSystemMap(this);
-    ([...(typeof (hd) === 'function') ? [hd] : [], ...tail]).forEach(extension => extension(this));
+    (settings.plugins ?? []).forEach(extension => extension(this));
   }
 
-  addTempReference(reference, deferral) {
+  addTempReference(reference: TemporaryRef<any>, deferral: Deferral<any>) {
     this.tempReferences.set(reference.id, deferral);
   }
 
-  removeTempReference(reference) {
+  removeTempReference(reference: TemporaryRef<any>) {
     this.tempReferences.delete(reference.id);
   }
 
-  find(actorRef) {
+  find(actorRef: ActorSystemRef | ActorRef<any, any> | TemporaryRef<any>): any | undefined {
     switch (actorRef && actorRef.type) {
       case 'actor': {
         let parts =
@@ -50,15 +52,15 @@ export class ActorSystem implements IHaveName, ICanFind, ICanStop {
           actorRef.path &&
           actorRef.path.parts;
 
-        return parts && parts.reduce((parent, current) =>
+        return parts && parts.reduce((parent: ActorSystem | Actor<any, any, any> | undefined, current: string) =>
           parent &&
           parent.children.get(current),
           this
         );
       }
       case 'temp': {
-        const actor = this.tempReferences.get(actorRef.id);
-        return actor && actor.resolve && { dispatch: (...args) => actor.resolve(...args) };
+        const actor = this.tempReferences.get((actorRef as TemporaryRef<any>).id);
+        return actor;
       }
       case 'system':
         return this;
@@ -71,12 +73,12 @@ export class ActorSystem implements IHaveName, ICanFind, ICanStop {
     stop(child);
   }
 
-  childStopped(child) {
+  childStopped(child: Actor<any, any, any>) {
     this.children.delete(child.name);
     this.childReferences.delete(child.name);
   }
 
-  childSpawned(child) {
+  childSpawned(child: Actor<any, any, any>) {
     this.childReferences.set(child.name, child.reference);
     this.children.set(child.name, child);
   }
@@ -90,8 +92,8 @@ export class ActorSystem implements IHaveName, ICanFind, ICanStop {
 
   assertNotStopped() { assert(!this.stopped); return true; }
 
-  static start(fst?: Plugin | ActorSystemName, ...args: Plugin[]): ActorSystemRef {
-    return new ActorSystem([...arguments]).reference;
+  static start(settings?: ActorSystemSettings): ActorSystemRef {
+    return new ActorSystem(settings ?? {}).reference;
   }
 }
 

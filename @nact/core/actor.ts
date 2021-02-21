@@ -1,7 +1,7 @@
 import { ActorSystemRef, Ref } from "./references";
 import { Deferral } from './deferral';
 import { applyOrThrowIfStopped } from './system-map';
-import { ActorRef, TemporaryRef, Nobody } from './references';
+import { ActorRef, TemporaryRef } from './references';
 import Queue from 'denque';
 import assert from './assert';
 import { stop } from './functions';
@@ -15,10 +15,10 @@ function unit(): void { };
 
 export type ActorName = string;
 
-type InferMsgFromRef<R extends Ref<any>> = R extends Ref<infer Msg> ? Msg : never;
-
-class Actor<State, Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> {
-  parent: Actor<any, InferMsgFromRef<ParentRef>, any> | ActorSystem;
+// type InferMsgFromRef<R extends Ref<any>> = R extends Ref<infer Msg> ? Msg : never;
+type ParentTypeFromRefType<P extends ActorSystemRef | ActorRef<any, any>> = P extends ActorSystemRef ? ActorSystem : (P extends ActorRef<infer Msg, infer ParentRef> ? Actor<any, Msg, ParentRef> : never);
+export class Actor<State, Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> {
+  parent: ParentTypeFromRefType<ParentRef>
   name: ActorName;
   path: ActorPath;
   system: ActorSystem;
@@ -31,7 +31,7 @@ class Actor<State, Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> {
   busy: boolean;
   mailbox: Queue<{ message: Msg }>;
   immediate: number | undefined;
-  onCrash: SupervisionActorFunc<Msg, ParentRef, Ref<any>> | ((msg: any, err: any, ctx: any, child?: undefined) => any);
+  onCrash: SupervisionActorFunc<Msg, ParentRef, Ref<any>> | ((msg: any, err: any, ctx: any, child?: undefined | ActorRef<Msg, ParentRef>) => any);
   initialState: State | undefined;
   initialStateFunc: ((ctx: ActorContext<Msg, ParentRef>) => State) | undefined;
   shutdownPeriod?: Milliseconds;
@@ -39,7 +39,7 @@ class Actor<State, Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> {
   timeout?: Milliseconds;
   setTimeout: () => void;
 
-  constructor(parent: (Actor<any, InferMsgFromRef<ParentRef>, any>) | ActorSystem, name: string | undefined, system: any, f: ActorFunc<State, Msg, ParentRef>, { shutdownAfter, onCrash, initialState, initialStateFunc, afterStop }: ActorProps<State, Msg, ParentRef> = {}) {
+  constructor(parent: ParentTypeFromRefType<ParentRef>, name: string | undefined, system: any, f: ActorFunc<State, Msg, ParentRef>, { shutdownAfter, onCrash, initialState, initialStateFunc, afterStop }: ActorProps<State, Msg, ParentRef> = {}) {
     this.parent = parent;
     if (!name) {
       name = `anonymous-${Math.abs(Math.random() * Number.MAX_SAFE_INTEGER) | 0}`;
@@ -51,7 +51,7 @@ class Actor<State, Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> {
     this.path = parent.path.createChildPath(this.name);
     this.system = system;
     this.afterStop = afterStop || (() => { });
-    this.reference = new ActorRef(this.system.name, this.parent.reference, this.path, this.name);
+    this.reference = new ActorRef<Msg, ParentRef>(this.system.name, this.parent.reference as ParentRef, this.path, this.name);
     this.f = f;
     this.stopped = false;
     this.children = new Map();
@@ -105,7 +105,7 @@ class Actor<State, Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> {
     clearMacrotask(this.immediate);
   }
 
-  static getSafeTimeout(timeoutDuration) {
+  static getSafeTimeout(timeoutDuration: any) {
     timeoutDuration = timeoutDuration | 0;
     const MAX_TIMEOUT = 2147483647;
     return Math.min(MAX_TIMEOUT, timeoutDuration);
@@ -114,7 +114,7 @@ class Actor<State, Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> {
   assertNotStopped() { assert(!this.stopped); return true; }
   afterMessage() { }
 
-  dispatch(message) {
+  dispatch(message: Msg) {
     this.assertNotStopped();
     this.clearTimeout();
     if (!this.busy) {
@@ -124,7 +124,7 @@ class Actor<State, Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> {
     }
   }
 
-  query(message, timeout) {
+  query(message: Msg, timeout: number) {
     this.assertNotStopped();
     assert(timeout !== undefined && timeout !== null);
     const deferred = new Deferral();
@@ -147,12 +147,12 @@ class Actor<State, Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> {
     return deferred.promise;
   }
 
-  childStopped(child) {
+  childStopped(child: Actor<unknown, unknown, any>) {
     this.children.delete(child.name);
     this.childReferences.delete(child.name);
   }
 
-  childSpawned(child) {
+  childSpawned(child: Actor<any, any, any>) {
     this.children.set(child.name, child);
     this.childReferences.set(child.name, child.reference);
   }
@@ -162,8 +162,8 @@ class Actor<State, Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> {
 
     this.clearImmediate();
     this.clearTimeout();
-    this.parent && this.parent.childStopped(this);
-    delete this.parent;
+    this.parent.childStopped(this);
+    delete (this as any).parent;
     [...this.children.values()].forEach(stop);
     this.stopped = true;
 
@@ -183,7 +183,7 @@ class Actor<State, Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> {
     }
   }
 
-  async handleFault(msg, error, child = undefined) {
+  async handleFault(msg: undefined | Msg, error: Error | undefined, child: undefined | ActorRef<any, any> = undefined) {
     const ctx = this.createSupervisionContext();
     const decision = await Promise.resolve(this.onCrash(msg, error, ctx, child));
     switch (decision) {
@@ -197,7 +197,8 @@ class Actor<State, Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> {
         break;
       // Stop Child
       case SupervisionActions.stopChild:
-        this.children.get(child.name).stop();
+        assert(child, 'Expected child');
+        this.children.get(child.name)?.stop();
         break;
       // Stop All Children
       case SupervisionActions.stopAllChildren:
@@ -217,7 +218,8 @@ class Actor<State, Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> {
         break;
       // Reset Child
       case SupervisionActions.resetChild:
-        this.children.get(child.name).reset();
+        assert(child, 'Expected child');
+        this.children.get(child.name)?.reset();
         break;
       // Reset all Children
       case SupervisionActions.resetAllChildren:
@@ -247,7 +249,7 @@ class Actor<State, Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> {
 
   createContext(): ActorContext<Msg, ParentRef> {
     return {
-      parent: this.parent.reference,
+      parent: this.parent.reference as ParentRef,
       path: this.path,
       self: this.reference,
       name: this.name,
@@ -255,7 +257,7 @@ class Actor<State, Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> {
     };
   }
 
-  handleMessage(message) {
+  handleMessage(message: Msg) {
     this.busy = true;
     this.immediate = addMacrotask(async () => {
       try {
@@ -284,7 +286,9 @@ export type ActorContext<Msg, ParentRef extends Ref<any>> = {
 // export type PersistentActorContext<Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> =
 //   ActorContext<MSGesture, ParentRef> & { persist: (msg: Msg) => Promise<void> };
 
-export type ActorContextWithMailbox<Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> = ActorContext<Msg, ParentRef> & { mailbox: Msg[] };
+
+export type Mailbox<Msg> = { message: Msg }[];
+export type ActorContextWithMailbox<Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> = ActorContext<Msg, ParentRef> & { mailbox: Mailbox<Msg> };
 
 export type SupervisionContext<Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> = ActorContextWithMailbox<Msg, ParentRef> & {
   stop: Symbol,
@@ -336,7 +340,7 @@ export function spawn<ParentRef extends ActorSystemRef | ActorRef<any, any>, Fun
   name?: string,
   properties?: ActorProps<InferStateFromFunc<Func>, InferMsgFromFunc<Func>, ParentRef>
 ): Ref<InferMsgFromFunc<Func>> {
-  return applyOrThrowIfStopped(parent, (p: (Actor<any, InferMsgFromRef<ParentRef>, ParentRef>) | ActorSystem) => p.assertNotStopped() && new Actor(p, name, p.system, f, properties).reference);
+  return applyOrThrowIfStopped(parent, (p: ParentTypeFromRefType<ParentRef>) => p.assertNotStopped() && new Actor(p, name, p.system, f, properties).reference);
 }
 
 export function spawnStateless<ParentRef extends ActorSystemRef | ActorRef<any, any>, Func extends StatelessActorFunc<any, ParentRef>>(

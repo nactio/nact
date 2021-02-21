@@ -15,6 +15,7 @@
     "macrotask": "^3.0.0"
   },
   "devDependencies": {
+    "@types/macrotask": "^3.0.0",
     "typescript": "^4.1.5"
   }
 }

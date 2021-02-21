@@ -2,7 +2,7 @@ import { ActorName } from "./actor";
 import { ActorPath } from "./paths";
 import { ActorSystemName } from "./system";
 
-export abstract class Ref<T> {
+export abstract class Ref<_T> {
   system: { name: ActorSystemName | undefined };
   path?: ActorPath
   constructor(systemName: ActorSystemName | undefined, path: ActorPath) {
@@ -42,7 +42,7 @@ export class ActorRef<Msg, ParentRef extends ActorRef<any, any> | ActorSystemRef
 }
 
 export class ActorSystemRef extends Ref<never> {
-  path: any;
+  path: ActorPath;
   name: string;
   type: string;
   constructor(systemName: ActorSystemName, path: ActorPath) {

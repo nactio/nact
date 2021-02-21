@@ -25,3 +25,4 @@ export interface ICanFind {
 export type IHaveName = {
   name: string
 }
+
