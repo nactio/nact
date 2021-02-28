@@ -8,7 +8,7 @@ import { Actor } from './actor';
 import { Deferral } from './deferral';
 
 function toBase36(x: number) { return Number(x).toString(36) }
-function generateSystemId() { return [...crypto.getRandomValues(new Uint32Array(4))].map(toBase36).join('-') };
+function generateSystemId() { return [...new Uint32Array(4)].map(_ => (Math.random() * Number.MAX_SAFE_INTEGER) | 0).map(toBase36).join('-') };
 
 
 export type ActorSystemSettings = { name?: ActorSystemName, plugins?: Plugin[] };

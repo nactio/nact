@@ -11,7 +11,7 @@
     "lint": "semistandard",
     "coverage": "nyc report --reporter=text-lcov | coveralls",
     "prepush": "yarn run test",
-    "test-only": "mocha ./test/*.js",
+    "test-only": "jest",
     "test-only-watch": "nyc mocha --watch ./test/*.js",
     "lint-fix": "semistandard --fix",
     "typecheck": "tsc --noEmit"
