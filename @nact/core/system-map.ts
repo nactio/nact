@@ -9,12 +9,12 @@ export function add(system: ICanFind & IHaveName) {
   return systemMap.set(system.name, system);
 };
 
-export function find<T>(systemName: ActorSystemName | undefined, reference: Ref<any>): T | undefined {
-  if (systemName === undefined) {
+export function find<T>(reference: Ref<any> | undefined): T | undefined {
+  if (!reference) {
     return undefined;
   }
-  const system = systemMap.get(systemName);
-  if (reference === undefined || system === undefined) {
+  const system = reference.system.name ? systemMap.get(reference.system.name) : undefined;
+  if (system === undefined) {
     return undefined;
   }
   return system.find(reference);
@@ -29,7 +29,7 @@ export type ApplyF<ActorOrSystem, Res> = (actor: undefined | ActorOrSystem) => R
 export type InferReturnValueFromFunc<T extends ApplyF<any, any>> = T extends ApplyF<any, infer Res> ? Res : never;
 
 export function applyOrThrowIfStopped<F extends ApplyF<any, any>>(reference: Ref<any>, f: (actorOrSystem: any) => any): InferReturnValueFromFunc<F> {
-  let concrete = find(reference.system.name, reference);
+  let concrete = find(reference);
   if (concrete) {
     return f(concrete);
   } else {

@@ -31,7 +31,7 @@ export class Actor<State, Msg, ParentRef extends ActorSystemRef | ActorRef<any, 
   busy: boolean;
   mailbox: Queue<{ message: Msg }>;
   immediate: number | undefined;
-  onCrash: SupervisionActorFunc<Msg, ParentRef, Ref<any>> | ((msg: any, err: any, ctx: any, child?: undefined | ActorRef<Msg, ParentRef>) => any);
+  onCrash: SupervisionActorFunc<Msg, ParentRef> | ((msg: any, err: any, ctx: any, child?: undefined | ActorRef<Msg, ParentRef>) => any);
   initialState: State | undefined;
   initialStateFunc: ((ctx: ActorContext<Msg, ParentRef>) => State) | undefined;
   shutdownPeriod?: Milliseconds;
@@ -69,7 +69,7 @@ export class Actor<State, Msg, ParentRef extends ActorSystemRef | ActorRef<any, 
       }
       this.shutdownPeriod = Actor.getSafeTimeout(shutdownAfter);
       this.setTimeout = () => {
-        this.timeout = setTimeout(() => this.stop(), this.shutdownPeriod);
+        this.timeout = setTimeout(() => this.stop(), this.shutdownPeriod) as unknown as number;
       };
     } else {
       this.setTimeout = unit;
@@ -275,10 +275,10 @@ export class Actor<State, Msg, ParentRef extends ActorSystemRef | ActorRef<any, 
 
 
 // Contexts
-export type ActorContext<Msg, ParentRef extends Ref<any>> = {
+export type ActorContext<Msg, ParentRef extends ActorRef<any, any> | ActorSystemRef> = {
   parent: ParentRef,
   path: ActorPath,
-  self: Ref<Msg>,
+  self: ActorRef<Msg, ParentRef>,
   name: ActorName,
   children: Map<ActorName, Ref<unknown>>,
 };
@@ -305,13 +305,13 @@ export type SupervisionContext<Msg, ParentRef extends ActorSystemRef | ActorRef<
 };
 
 // Functions
-export type ActorFunc<State, Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> = (state: State, msg: Msg, ctx: ActorContext<Msg, ParentRef>) =>
+export type ActorFunc<State, Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> = (this: ActorContext<Msg, ParentRef>, state: State, msg: Msg, ctx: ActorContext<Msg, ParentRef>) =>
   State | Promise<State>;
 
-export type StatelessActorFunc<Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> = (msg: Msg, ctx: ActorContext<Msg, ParentRef>) => any;
+export type StatelessActorFunc<Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> = (this: ActorContext<Msg, ParentRef>, msg: Msg, ctx: ActorContext<Msg, ParentRef>) => any;
 
 
-export type SupervisionActorFunc<Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>, ChildRef extends Ref<any>> = (msg: Msg | undefined, err: Error | undefined, ctx: SupervisionContext<Msg, ParentRef>, child: ChildRef | undefined) => Symbol | Promise<Symbol>;
+export type SupervisionActorFunc<Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> = (msg: Msg | undefined, err: Error | undefined, ctx: SupervisionContext<Msg, ParentRef>, child: ActorRef<unknown, ActorRef<Msg, ParentRef>> | undefined) => Symbol | Promise<Symbol>;
 
 // Inference helpers
 type InferMsgFromFunc<T extends ActorFunc<any, any, any>> = T extends ActorFunc<any, infer Msg, any> ? Msg : never;
@@ -325,7 +325,7 @@ export type Json = unknown;
 
 export type ActorProps<State, Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> = {
   shutdownAfter?: Milliseconds,
-  onCrash?: SupervisionActorFunc<Msg, ParentRef, Ref<any>>,
+  onCrash?: SupervisionActorFunc<Msg, ParentRef>,
   initialState?: State,
   initialStateFunc?: (ctx: ActorContext<Msg, ParentRef>) => State,
   afterStop?: (state: State, ctx: ActorContextWithMailbox<Msg, ParentRef>) => void | Promise<void>
@@ -339,7 +339,7 @@ export function spawn<ParentRef extends ActorSystemRef | ActorRef<any, any>, Fun
   f: Func,
   name?: string,
   properties?: ActorProps<InferStateFromFunc<Func>, InferMsgFromFunc<Func>, ParentRef>
-): Ref<InferMsgFromFunc<Func>> {
+): ActorRef<InferMsgFromFunc<Func>, ParentRef> {
   return applyOrThrowIfStopped(parent, (p: ParentTypeFromRefType<ParentRef>) => p.assertNotStopped() && new Actor(p, name, p.system, f, properties).reference);
 }
 
@@ -348,7 +348,7 @@ export function spawnStateless<ParentRef extends ActorSystemRef | ActorRef<any, 
   f: Func,
   name?: any,
   properties?: StatelessActorProps<InferMsgFromStatelessFunc<Func>, ParentRef>
-): Ref<InferMsgFromStatelessFunc<Func>> {
+): ActorRef<InferMsgFromStatelessFunc<Func>, ParentRef> {
   return spawn(
     parent,
     (_state: undefined, msg: InferMsgFromStatelessFunc<Func>, ctx: ActorContext<InferMsgFromStatelessFunc<Func>, ParentRef>): undefined => {

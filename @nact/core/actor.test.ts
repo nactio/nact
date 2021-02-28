@@ -1,22 +1,25 @@
-/* eslint-env mocha */
+/* eslint-env jest */
 /* eslint-disable no-unused-expressions */
-const chai = require('chai');
-const chaiAsPromised = require('chai-as-promised');
+import chai from 'chai';
+import chaiAsPromised from 'chai-as-promised';
+import { ActorContextWithMailbox, SupervisionContext } from './actor';
+import { start, spawn, spawnStateless, dispatch, stop, query, milliseconds } from './index';
+import { ActorPath } from './paths';
+import { ActorRef, ActorSystemRef, Nobody, Ref } from './references';
+import { applyOrThrowIfStopped } from './system-map';
+
 chai.use(chaiAsPromised);
 chai.should();
-const { start, spawn, spawnStateless, dispatch, stop, query, milliseconds } = require('../lib');
-const delay = (duration) => new Promise((resolve, reject) => setTimeout(() => resolve(), duration));
-const { ActorPath } = require('../lib/paths');
-const { applyOrThrowIfStopped } = require('../lib/system-map');
+const delay = (duration: number) => new Promise<void>((resolve) => setTimeout(resolve, duration));
 
-const spawnChildrenEchoer = (parent, name) =>
+const spawnChildrenEchoer = (parent: ActorSystemRef | ActorRef<any, any>, name: string) =>
   spawnStateless(
     parent,
-    function (msg) { dispatch(this.sender, [...this.children.keys()], this.self); },
+    function (msg, ctx) { dispatch(msg.sender, [...ctx.children.keys()]); },
     name
   );
 
-const isStopped = (reference) => {
+const isStopped = (reference: Ref<any>) => {
   try {
     return applyOrThrowIfStopped(reference, (ref) => ref.stopped);
   } catch (e) {
@@ -24,7 +27,7 @@ const isStopped = (reference) => {
   }
 };
 
-const children = (reference) => {
+const children = (reference: Ref<any>) => {
   try {
     return applyOrThrowIfStopped(reference, ref => new Map(ref.childReferences));
   } catch (e) {
@@ -34,7 +37,7 @@ const children = (reference) => {
 
 const ignore = () => { };
 
-const retry = async (assertion, remainingAttempts, retryInterval = 0) => {
+const retry = async (assertion: () => void, remainingAttempts: number, retryInterval = 0) => {
   if (remainingAttempts <= 1) {
     return assertion();
   } else {
@@ -48,7 +51,7 @@ const retry = async (assertion, remainingAttempts, retryInterval = 0) => {
 };
 
 describe('ActorRef', function () {
-  let system;
+  let system: ActorSystemRef;
   beforeEach(() => { system = start(); });
   afterEach(() => stop(system));
 
@@ -59,18 +62,18 @@ describe('ActorRef', function () {
     child.parent.should.equal(system);
     grandchild.parent.should.equal(child);
     child.name.should.be.a('string');
-    child.path.should.be.instanceOf(ActorPath);
+    child.path!.should.be.instanceOf(ActorPath);
   });
 });
 
 describe('Actor', function () {
   describe('actor-function', function () {
-    let system;
+    let system: ActorSystemRef;
     beforeEach(() => { system = start(); });
     afterEach(() => {
       stop(system);
       // reset console
-      delete console.error;
+      delete (console as any).error;
     });
 
     it('allows promises to resolve inside actor', async function () {
@@ -79,12 +82,12 @@ describe('Actor', function () {
         system,
         async function (state = {}, msg) {
           let result = await getMockValue();
-          dispatch(this.sender, result, this.self);
+          dispatch(msg.sender, result);
           return state;
         }
       );
 
-      let result = await query(child, {}, 30);
+      let result = await query(child, x => ({ sender: x }), 30);
       result.should.equal(2);
     });
 
@@ -93,7 +96,7 @@ describe('Actor', function () {
         system,
         function (state = '', msg) {
           if (msg.type === 'query') {
-            dispatch(this.sender, state, this.self);
+            dispatch(msg.sender, state);
             return state;
           } else if (msg.type === 'append') {
             return state + msg.payload;
@@ -104,7 +107,7 @@ describe('Actor', function () {
       dispatch(actor, { payload: 'Hello ', type: 'append' });
       dispatch(actor, { payload: 'World. ', type: 'append' });
       dispatch(actor, { payload: 'The time has come!!', type: 'append' });
-      let result = await query(actor, { type: 'query' }, 30);
+      let result = await query(actor, x => ({ type: 'query', sender: x }), 30);
       result.should.equal('Hello World. The time has come!!');
     });
 
@@ -113,7 +116,7 @@ describe('Actor', function () {
         system,
         function (state, msg) {
           if (msg.type === 'query') {
-            dispatch(this.sender, state, this.self);
+            dispatch(msg.sender, state);
             return state;
           } else if (msg.type === 'append') {
             return state + msg.payload;
@@ -126,16 +129,16 @@ describe('Actor', function () {
       dispatch(actor, { payload: 'Hello ', type: 'append' });
       dispatch(actor, { payload: 'World. ', type: 'append' });
       dispatch(actor, { payload: 'The time has come!!', type: 'append' });
-      let result = await query(actor, { type: 'query' }, 30);
+      let result = await query(actor, x => ({ type: 'query', sender: x }), 30);
       result.should.equal('A joyous Hello World. The time has come!!');
     });
 
     it('allows an initial state function to be specified', async function () {
       let actor = spawn(
         system,
-        function (state, msg, ctx) {
+        function (state, msg) {
           if (msg.type === 'query') {
-            dispatch(ctx.sender, state, ctx.self);
+            dispatch(msg.sender, state);
             return state;
           } else if (msg.type === 'append') {
             return state + msg.payload;
@@ -146,7 +149,7 @@ describe('Actor', function () {
       );
 
       dispatch(actor, { payload: ' It is indeed', type: 'append' });
-      let result = await query(actor, { type: 'query' }, 30);
+      let result = await query(actor, x => ({ type: 'query', sender: x }), 30);
       result.should.equal('Hello Nact! Is today not a joyous occasion? It is indeed');
     });
 
@@ -154,16 +157,16 @@ describe('Actor', function () {
       let handled = false;
       let actor = spawn(
         system,
-        function (state, msg, ctx) {
+        function (state, msg) {
           if (msg.type === 'query') {
-            dispatch(ctx.sender, state, ctx.self);
+            dispatch(msg.sender, state);
             return state;
           } else if (msg.type === 'append') {
             return state + msg.payload;
           }
         },
         'Nact',
-        { initialStateFunc: (ctx) => { throw new Error('A bad moon is on the rise'); }, onCrash: (_, __, ctx) => { handled = true; return ctx.stop; } }
+        { initialStateFunc: () => { throw new Error('A bad moon is on the rise'); }, onCrash: (_, __, ctx) => { handled = true; return ctx.stop; } }
       );
       await retry(() => isStopped(actor).should.be.true, 12, 10);
       handled.should.be.true;
@@ -188,7 +191,7 @@ describe('Actor', function () {
           if (msg.number) {
             return [...state, msg.number];
           } else {
-            dispatch(this.sender, state);
+            dispatch(msg.sender, state);
           }
           return state;
         },
@@ -198,52 +201,52 @@ describe('Actor', function () {
       dispatch(child, { listener, number: 1 });
       dispatch(child, { listener, number: 2 });
       dispatch(child, { listener, number: 3 });
-      await retry(async () => (await query(listener, {}, 30)).should.deep.equal([1, 2, 3]), 5, 10);
+      await retry(async () => (await query(listener, x => ({ sender: x }), 30)).should.deep.equal([1, 2, 3]), 5, 10);
     });
 
     it('should not automatically stop if error is thrown and actor is stateless', async function () {
       console.error = ignore;
-      let child = spawnStateless(system, (msg) => { throw new Error('testError'); });
-      dispatch(child);
+      let child = spawnStateless(system, () => { throw new Error('testError'); });
+      dispatch(child, 'hello');
       await delay(50);
       isStopped(child).should.not.be.true;
     });
 
     it('should automatically stop if error is thrown', async function () {
       console.error = ignore;
-      let child = spawn(system, (msg) => { throw new Error('testError'); });
-      dispatch(child);
+      let child = spawn(system, () => { throw new Error('testError'); });
+      dispatch(child, 'hello');
       await retry(() => isStopped(child).should.be.true, 12, 10);
     });
 
     it('should automatically stop if error is thrown and no supervision policy is specified on the parent', async function () {
       console.error = ignore;
-      const parent = spawn(system, (state = true, msg) => { return state; });
-      let child = spawn(parent, (msg) => { throw new Error('testError'); });
-      dispatch(child);
+      const parent = spawn(system, (state = true) => { return state; });
+      let child = spawn(parent, () => { throw new Error('testError'); });
+      dispatch(child, 'hello');
       await retry(() => isStopped(child).should.be.true, 12, 10);
     });
 
     it('should automatically stop if rejected promise is thrown', async function () {
       console.error = ignore;
-      let child = spawn(system, (state = {}, msg) => Promise.reject(new Error('testError')));
+      let child = spawn(system, () => Promise.reject(new Error('testError')));
       dispatch(child, {});
       await retry(() => isStopped(child).should.be.true, 12, 10);
     });
   });
 
   describe('shutdownAfter', function () {
-    let system;
+    let system: ActorSystemRef;
     beforeEach(() => { system = start(); });
     afterEach(() => {
       stop(system);
       // reset console
-      delete console.error;
+      delete (console as any).error;
     });
 
     it('should automatically stop after timeout if timeout is specified', async function () {
       console.error = ignore;
-      let child = spawnStateless(system, (msg) => { }, 'test', { shutdownAfter: 100 * milliseconds });
+      let child = spawnStateless(system, () => { }, 'test', { shutdownAfter: 100 * milliseconds });
       await delay(110);
       isStopped(child).should.be.true;
     });
@@ -257,17 +260,17 @@ describe('Actor', function () {
     });
 
     it('should throw if timeout is not a number', async function () {
-      (() => spawnStateless(system, ignore, 'test1', { shutdownAfter: {} })).should.throw(Error);
+      (() => spawnStateless(system, ignore, 'test1', { shutdownAfter: {} as any })).should.throw(Error);
     });
   });
 
   describe('#stop()', function () {
-    let system;
+    let system: ActorSystemRef;
     beforeEach(() => { system = start(); });
     afterEach(() => {
       stop(system);
       // reset console
-      delete console.error;
+      delete (console as any).error;
     });
 
     it('should prevent children from being spawned after being called', function () {
@@ -278,23 +281,23 @@ describe('Actor', function () {
     });
 
     it('should not process any more messages after being stopped', async function () {
-      let child = spawn(system, async (state = {}, msg, ctx) => {
-        if (msg === 1) {
+      let child = spawn(system, async (state = {}, msg) => {
+        if (msg.value === 1) {
           await delay(20);
         } else {
-          dispatch(ctx.sender, msg);
+          dispatch(msg.sender, msg.value);
         }
         return state;
       });
       dispatch(child, 1);
-      let resultPromise = query(child, 2, 100);
+      let resultPromise = query(child, x => ({ value: 2, sender: x }), 100);
       await delay(20);
       stop(child);
       return resultPromise.should.be.rejectedWith(Error);
     });
 
     it('stops children when parent is stopped', async function () {
-      let actor = spawnChildrenEchoer(system);
+      let actor = spawnChildrenEchoer(system, 'parent');
       let child1 = spawnChildrenEchoer(actor, 'child1');
       let child2 = spawnChildrenEchoer(actor, 'child2');
       let grandchild1 = spawnStateless(child1, ignore, 'grandchild1');
@@ -328,12 +331,12 @@ describe('Actor', function () {
   });
 
   describe('#spawn()', function () {
-    let system;
+    let system: ActorSystemRef;
     beforeEach(() => { system = start(); });
     afterEach(() => {
       stop(system);
       // reset console
-      delete console.error;
+      delete (console as any).error;
     });
 
     it('automatically names an actor if a name is not provided', async function () {
@@ -351,74 +354,74 @@ describe('Actor', function () {
     it('correctly registers children upon startup', async function () {
       let child = spawnChildrenEchoer(system, 'testChildActor');
       children(system).should.have.keys('testChildActor');
-      let childReferences = await query(child, {}, 30);
+      let childReferences = await query(child, x => ({ sender: x }), 30);
       childReferences.should.be.empty;
 
       spawnStateless(child, ignore, 'testGrandchildActor');
       children(child).should.have.keys('testGrandchildActor');
-      childReferences = await query(child, {}, 30);
+      childReferences = await query(child, x => ({ sender: x }), 30);
       childReferences.should.have.members(['testGrandchildActor']);
 
       spawnStateless(child, ignore, 'testGrandchildActor2');
-      childReferences = await query(child, {}, 30);
+      childReferences = await query(child, x => ({ sender: x }), 30);
       children(child).should.have.keys('testGrandchildActor2', 'testGrandchildActor');
       childReferences.should.have.members(['testGrandchildActor2', 'testGrandchildActor']);
     });
 
     it('can be invoked from within actor', async function () {
       let actor = spawnStateless(system, function (msg) {
-        if (msg === 'spawn') {
+        if (msg.value === 'spawn') {
           spawnStateless(this.self, ignore, 'child1');
           spawn(this.self, ignore, 'child2');
         } else {
-          dispatch(this.sender, [...this.children.keys()], this.self);
+          dispatch(msg.sender, [...this.children.keys()]);
         }
       }, 'test');
       dispatch(actor, 'spawn');
-      let childrenMap = await query(actor, 'query', 30);
+      let childrenMap = await query(actor, x => ({ value: 'query', sender: x }), 30);
       childrenMap.should.have.members(['child1', 'child2']);
       children(actor).should.have.keys('child1', 'child2');
     });
   });
 
   describe('#query()', function () {
-    let system;
+    let system: ActorSystemRef;
     beforeEach(() => { system = start(); });
     afterEach(() => stop(system));
 
     it(`should throw if a timeout is not provided`, async function () {
       let actor = spawnStateless(system, ignore);
-      (() => query(actor, {})).should.throw(Error, 'A timeout is required to be specified');
+      (() => (query as any)(actor, (x: any) => ({ sender: x }))).should.throw(Error, 'A timeout is required to be specified');
     });
 
     it(`should reject a promise if actor has already stopped`, async function () {
       let actor = spawnStateless(system, ignore);
       stop(actor);
-      await delay(5).then(() => query(actor, {}, 30)).should.be.rejectedWith(Error, 'Actor stopped or never existed. Query can never resolve');
+      await delay(5).then(() => query(actor, x => ({ sender: x }), 30)).should.be.rejectedWith(Error, 'Actor stopped or never existed. Query can never resolve');
     });
 
     it(`should reject a promise if the actor hasn't responded with the given timespan`, async function () {
       let actor = spawnStateless(
         system,
-        async (msg, ctx) => { await delay(10); dispatch(ctx.sender, 'done', ctx.self); },
+        async (msg) => { await delay(10); dispatch(msg.sender, 'done'); },
         'test'
       );
-      (await (query(actor, 'test', 1).catch(x => x))).should.be.instanceOf(Error);
+      (await (query(actor, x => ({ sender: x, value: 'test' }), 1).catch(x => x))).should.be.instanceOf(Error);
     });
 
     it(`should resolve the promise if the actor has responded with the given timespan, clearing the timeout`, async function () {
       let actor = spawnStateless(
         system,
-        async (msg, ctx) => { await delay(10); dispatch(ctx.sender, 'done', ctx.self); },
+        async (msg) => { await delay(10); dispatch(msg.sender, 'done'); },
         'test'
       );
-      (await query(actor, 'test', 50)).should.equal('done');
+      (await query(actor, x => ({ sender: x, value: 'test' }), 50)).should.equal('done');
     });
 
     it(`should accept a message function which takes in the temporary actor reference`, async function () {
       let actor = spawnStateless(
         system,
-        async (msg, ctx) => { dispatch(msg, 'done', ctx.self); },
+        async (msg) => { dispatch(msg, 'done'); },
         'test'
       );
       (await query(actor, (sender) => sender, 50)).should.equal('done');
@@ -426,232 +429,243 @@ describe('Actor', function () {
   });
 
   describe('#onCrash', function () {
-    let system;
+    let system: ActorSystemRef;
     beforeEach(() => { system = start(); });
     afterEach(() => stop(system));
 
-    const createSupervisor = (parent, name, properties = {}) => spawn(parent, (state = true, msg, ctx) => state, name, properties);
+    const createSupervisor = (parent: ActorRef<any, any> | ActorSystemRef, name: string, properties = {}) =>
+      spawn(parent, (state = true) => state, name, properties);
 
     it('should be able to continue processing messages without loss of state', async function () {
-      const resume = (msg, err, ctx) => ctx.resume;
+      const resume = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => ctx.resume;
       const parent = createSupervisor(system, 'test1');
-      const child = spawn(parent, (state = 0, msg, ctx) => {
-        if (state + 1 === 3 && msg !== 'msg3') {
+      const child = spawn(parent, (state = 0, msg) => {
+        if (state + 1 === 3 && msg.value !== 'msg3') {
           throw new Error('Very bad thing');
         }
-        dispatch(ctx.sender, state + 1);
+        dispatch(msg.sender, state + 1);
         return state + 1;
       }, 'test', { onCrash: resume });
       dispatch(child, 'msg0');
       dispatch(child, 'msg1');
       dispatch(child, 'msg2');
-      let result = await query(child, 'msg3', 300);
+      let result = await query(child, x => ({ value: 'msg3', sender: x }), 300);
       result.should.equal(3);
     });
 
     it('should be able to be reset', async function () {
-      const reset = (msg, err, ctx) => ctx.reset;
+      const reset = (_msg: unknown, _err: unknown, ctx: SupervisionContext<any, any>) => ctx.reset;
       const parent = createSupervisor(system, 'test1');
-      const child = spawn(parent, (state = 0, msg, ctx) => {
-        if (state + 1 === 3 && msg !== 'msg3') {
+      const child = spawn(parent, (state = 0, msg) => {
+        if (state + 1 === 3 && msg.value !== 'msg3') {
           throw new Error('Very bad thing');
         }
-        dispatch(ctx.sender, state + 1);
+        dispatch(msg.sender, state + 1);
         return state + 1;
       }, 'test', { onCrash: reset });
 
-      const grandchild = spawn(child, (state = 0, msg, ctx) => {
-        dispatch(ctx.sender, state + 1);
+      const grandchild = spawn(child, (state = 0, msg) => {
+        dispatch(msg.sender, state + 1);
         return state + 1;
       });
 
-      dispatch(grandchild, 'msg0');
-      dispatch(child, 'msg0');
-      dispatch(grandchild, 'msg1');
-      dispatch(child, 'msg1');
-      dispatch(grandchild, 'msg2');
-      dispatch(child, 'msg2');
-      let result = await query(child, 'msg3', 300);
+      const nobody = new Nobody();
+      dispatch(grandchild, { sender: nobody, value: 'msg0' });
+      dispatch(child, { sender: nobody, value: 'msg0' });
+      dispatch(grandchild, { sender: nobody, value: 'msg1' });
+      dispatch(child, { sender: nobody, value: 'msg1' });
+      dispatch(grandchild, { sender: nobody, value: 'msg2' });
+      dispatch(child, { sender: nobody, value: 'msg2' });
+      let result = await query(child, x => ({ sender: x, value: 'msg3' }), 300);
       result.should.equal(1);
       isStopped(grandchild).should.be.true;
     });
 
     it('should be able to be reset and use initial state', async function () {
-      const reset = (msg, err, ctx) => ctx.reset;
+      const reset = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => ctx.reset;
       const parent = createSupervisor(system, 'test1');
-      const child = spawn(parent, (state, msg, ctx) => {
-        if (state + 1 === 3 && msg !== 'msg3') {
+      const child = spawn(parent, (state, msg) => {
+        if (state + 1 === 3 && msg.value !== 'msg3') {
           throw new Error('Very bad thing');
         }
-        dispatch(ctx.sender, state + 1);
+        dispatch(msg.sender, state + 1);
         return state + 1;
       }, 'test', { onCrash: reset, initialState: 1 });
 
-      const grandchild = spawn(child, (state = 0, msg, ctx) => {
-        dispatch(ctx.sender, state + 1);
+      const grandchild = spawn(child, (state = 0, msg) => {
+        dispatch(msg.sender, state + 1);
         return state + 1;
       });
 
-      dispatch(grandchild, 'msg0');
-      dispatch(child, 'msg0');
-      dispatch(grandchild, 'msg1');
-      dispatch(child, 'msg1');
-      dispatch(grandchild, 'msg2');
-      dispatch(child, 'msg2');
-      let result = await query(child, 'msg3', 300);
+      const nobody = new Nobody();
+      dispatch(grandchild, { sender: nobody, value: 'msg0' });
+      dispatch(child, { sender: nobody, value: 'msg0' });
+      dispatch(grandchild, { sender: nobody, value: 'msg1' });
+      dispatch(child, { sender: nobody, value: 'msg1' });
+      dispatch(grandchild, { sender: nobody, value: 'msg2' });
+      dispatch(child, { sender: nobody, value: 'msg2' });
+      let result = await query(child, x => ({ sender: x, value: 'msg0' }), 300);
       result.should.equal(3);
       isStopped(grandchild).should.be.true;
     });
 
     it('should be able to stop', async function () {
-      const stop = (msg, err, ctx) => ctx.stop;
+      const stop = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => ctx.stop;
       const parent = createSupervisor(system, 'test1');
-      const child = spawn(parent, (state = 0, msg, ctx) => {
-        if (state + 1 === 3 && msg !== 'msg3') {
+      const child = spawn(parent, (state = 0, msg) => {
+        if (state + 1 === 3 && msg.value !== 'msg3') {
           throw new Error('Very bad thing');
         }
-        dispatch(ctx.sender, state + 1);
+        dispatch(msg.sender, state + 1);
         return state + 1;
       }, 'test', { onCrash: stop });
-      dispatch(child, 'msg0');
-      dispatch(child, 'msg1');
-      dispatch(child, 'msg2');
+
+      const nobody = new Nobody();
+      dispatch(child, { value: 'msg0', sender: nobody });
+      dispatch(child, { value: 'msg1', sender: nobody });
+      dispatch(child, { value: 'msg2', sender: nobody });
       await delay(100);
       isStopped(child).should.be.true;
     });
 
     it('should be able to escalate', async function () {
-      const escalate = (msg, err, ctx) => ctx.escalate;
+      const escalate = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => ctx.escalate;
       const parent = createSupervisor(system, 'test1');
-      const child = spawn(parent, (state = 0, msg, ctx) => {
-        if (state + 1 === 3 && msg !== 'msg3') {
+      const child = spawn(parent, (state = 0, msg) => {
+        if (state + 1 === 3 && msg.value !== 'msg3') {
           throw new Error('Very bad thing');
         }
-        dispatch(ctx.sender, state + 1);
+        dispatch(msg.sender, state + 1);
         return state + 1;
       }, 'test', { onCrash: escalate });
-      dispatch(child, 'msg0');
-      dispatch(child, 'msg1');
-      dispatch(child, 'msg2');
+
+      const nobody = new Nobody();
+      dispatch(child, { sender: nobody, value: 'msg0' });
+      dispatch(child, { sender: nobody, value: 'msg1' });
+      dispatch(child, { sender: nobody, value: 'msg2' });
       await delay(100);
       isStopped(child).should.be.true;
       isStopped(parent).should.be.true;
     });
 
     it('should be able to access other messages in the queue', async function () {
-      const onCrash = (msg, err, ctx) => {
+      const onCrash = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => {
         ctx.mailbox.length.should.equal(2);
         ctx.mailbox[0].message.should.equal('msg1');
         ctx.mailbox[1].message.should.equal('msg2');
         return ctx.escalate;
       };
       const parent = createSupervisor(system, 'test1');
-      const child = spawn(parent, async (state = 0, msg, ctx) => {
+      const child = spawn(parent, async (state = 0, msg) => {
         // Wait for messages to queue up, then fail on msg0
         if (state + 1 === 1) {
           await delay(50);
           throw new Error('Very bad thing');
         }
-        dispatch(ctx.sender, state + 1);
+        dispatch(msg.sender, state + 1);
         return state + 1;
       }, 'test', { onCrash });
-      dispatch(child, 'msg0');
-      dispatch(child, 'msg1');
-      dispatch(child, 'msg2');
+      const nobody = new Nobody();
+      dispatch(child, { sender: nobody, value: 'msg0' });
+      dispatch(child, { sender: nobody, value: 'msg1' });
+      dispatch(child, { sender: nobody, value: 'msg2' });
       await delay(100);
       isStopped(child).should.be.true;
       isStopped(parent).should.be.true;
     });
 
     it('should be able to escalate to system (which stops child by default)', async function () {
-      const escalate = (msg, err, ctx) => ctx.escalate;
-      const child = spawn(system, (state = 0, msg, ctx) => {
-        if (state + 1 === 3 && msg !== 'msg3') {
+      const escalate = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => ctx.escalate;
+      const child = spawn(system, (state = 0, msg) => {
+        if (state + 1 === 3 && msg.value !== 'msg3') {
           throw new Error('Very bad thing');
         }
-        dispatch(ctx.sender, state + 1);
+        dispatch(msg.sender, state + 1);
         return state + 1;
       }, 'test', { onCrash: escalate });
-      dispatch(child, 'msg0');
-      dispatch(child, 'msg1');
-      dispatch(child, 'msg2');
+
+      const nobody = new Nobody();
+      dispatch(child, { sender: nobody, value: 'msg0' });
+      dispatch(child, { sender: nobody, value: 'msg1' });
+      dispatch(child, { sender: nobody, value: 'msg2' });
       await delay(100);
       isStopped(child).should.be.true;
     });
 
     it('should be able to escalate to parent (which escalates to system)', async function () {
-      const escalate = (msg, err, ctx, _child) => ctx.escalate;
-      const parent = spawn(system, (state = 0, msg, ctx) => {
+      const escalate = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => ctx.escalate;
+      const parent = spawn(system, () => {
         throw new Error('Very bad thing');
       }, 'parent-of-test', {});
-      const child = spawn(parent, (state = 0, msg, ctx) => {
-        if (state + 1 === 3 && msg !== 'msg3') {
+      const child = spawn(parent, (state = 0, msg) => {
+        if (state + 1 === 3 && msg.value !== 'msg3') {
           throw new Error('Very bad thing');
         }
-        dispatch(ctx.sender, state + 1);
+        dispatch(msg.sender, state + 1);
         return state + 1;
       }, 'test', { onCrash: escalate });
-      dispatch(child, 'msg0');
-      dispatch(child, 'msg1');
-      dispatch(child, 'msg2');
+
+      dispatch(child, { value: 'msg0' });
+      dispatch(child, { value: 'msg1' });
+      dispatch(child, { value: 'msg2' });
       await delay(100);
       isStopped(child).should.be.true;
       isStopped(parent).should.be.true;
     });
 
     it('should be able to escalate to parent (which stops child and resumes or escalates)', async function () {
-      const stopChildAndResumeOrEscalate = (msg, err, ctx, _child) => {
-        if (_child) {
-          stop(_child);
+      const stopChildAndResumeOrEscalate = (_msg: any, _err: any, ctx: SupervisionContext<any, any>, child: undefined | ActorRef<any, any>) => {
+        if (child) {
+          stop(child);
           return ctx.resume;
         } else {
           return ctx.escalate;
         }
       };
-      const escalate = (msg, err, ctx) => ctx.escalate;
-      const parent = spawn(system, (state = 0, msg, ctx) => {
+      const escalate = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => ctx.escalate;
+      const parent = spawn(system, () => {
         throw new Error('Very bad thing');
       }, 'parent-of-test', { onCrash: stopChildAndResumeOrEscalate });
-      const child = spawn(parent, (state = 0, msg, ctx) => {
-        if (state + 1 === 3 && msg !== 'msg3') {
+      const child = spawn(parent, (state = 0, msg) => {
+        if (state + 1 === 3 && msg.value !== 'msg3') {
           throw new Error('Very bad thing');
         }
-        dispatch(ctx.sender, state + 1);
+        dispatch(msg.sender, state + 1);
         return state + 1;
       }, 'test', { onCrash: escalate });
-      const sibling = spawn(parent, (state = 0, msg, ctx) => {
+      const sibling = spawn(parent, () => {
         throw new Error('Very bad thing');
       }, 'sibling-of-test', { onCrash: escalate });
-      dispatch(child, 'msg0');
-      dispatch(child, 'msg1');
-      dispatch(child, 'msg2');
+      dispatch(child, { value: 'msg0' });
+      dispatch(child, { value: 'msg1' });
+      dispatch(child, { value: 'msg2' });
       await delay(100);
       isStopped(child).should.be.true;
       isStopped(parent).should.be.false;
       isStopped(sibling).should.be.false;
-      dispatch(parent, 'parent-msg0');
+      dispatch(parent, { value: 'parent-msg0' });
       await delay(100);
       isStopped(parent).should.be.true;
       isStopped(sibling).should.be.true;
     });
 
     it('should be able to escalate to parent (which resumes child and resumes)', async function () {
-      const resumeChildAndResumeOrEscalate = (msg, err, ctx, _child) => {
-        if (_child) {
+      const resumeChildAndResumeOrEscalate = (_msg: any, _err: any, ctx: SupervisionContext<any, any>, child: undefined | ActorRef<any, any>) => {
+        if (child) {
           return ctx.resume;
         } else {
           return ctx.escalate;
         }
       };
-      const escalate = (msg, err, ctx) => ctx.escalate;
-      const parent = spawn(system, (state = 0, msg, ctx) => {
+      const escalate = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => ctx.escalate;
+      const parent = spawn(system, () => {
         throw new Error('Very bad thing');
       }, 'parent-of-test', { onCrash: resumeChildAndResumeOrEscalate });
-      const child = spawn(parent, (state = 0, msg, ctx) => {
-        if (state + 1 === 3 && msg !== 'msg3') {
+      const child = spawn(parent, (state = 0, msg) => {
+        if (state + 1 === 3 && msg.value !== 'msg3') {
           throw new Error('Very bad thing');
         }
-        dispatch(ctx.sender, state + 1);
+        dispatch(msg.sender, state + 1);
         return state + 1;
       }, 'test', { onCrash: escalate });
       dispatch(child, 'msg0');
@@ -664,30 +678,30 @@ describe('Actor', function () {
     });
 
     it('should be able to stop self, all peers, and children', async function () {
-      const stopAll = (msg, err, ctx) => ctx.stopAll;
+      const stopAll = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => ctx.stopAll;
       const parent = createSupervisor(system, 'test1');
-      const child1 = spawn(parent, (state = 0, msg, ctx) => {
-        if (state + 1 === 3 && msg !== 'msg3') {
+      const child1 = spawn(parent, (state = 0, msg) => {
+        if (state + 1 === 3 && msg.value !== 'msg3') {
           throw new Error('Very bad thing');
         }
-        dispatch(ctx.sender, state + 1);
+        dispatch(msg.sender, state + 1);
         return state + 1;
       }, 'test', { onCrash: stopAll });
-      const childOfChild1 = spawn(child1, (state = 0, msg, ctx) => {
-        dispatch(ctx.sender, state + 1);
+      const childOfChild1 = spawn(child1, (state = 0, msg) => {
+        dispatch(msg.sender, state + 1);
         return state + 1;
       });
-      const child2 = spawn(parent, (state = 0, msg, ctx) => {
-        dispatch(ctx.sender, state + 1);
+      const child2 = spawn(parent, (state = 0, msg) => {
+        dispatch(msg.sender, state + 1);
         return state + 1;
       });
-      const childOfChild2 = spawn(child2, (state = 0, msg, ctx) => {
-        dispatch(ctx.sender, state + 1);
+      const childOfChild2 = spawn(child2, (state = 0, msg) => {
+        dispatch(msg.sender, state + 1);
         return state + 1;
       });
-      dispatch(child1, 'msg0');
-      dispatch(child1, 'msg1');
-      dispatch(child1, 'msg2');
+      dispatch(child1, { value: 'msg0' });
+      dispatch(child1, { value: 'msg1' });
+      dispatch(child1, { value: 'msg2' });
       await delay(100);
       isStopped(child1).should.be.true;
       isStopped(childOfChild1).should.be.true;
@@ -697,24 +711,24 @@ describe('Actor', function () {
     });
 
     it('should be able to stop all children', async function () {
-      const stopAllChildren = (msg, err, ctx, child) => ctx.stopAllChildren;
-      const escalate = (msg, err, ctx) => ctx.escalate;
+      const stopAllChildren = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => ctx.stopAllChildren;
+      const escalate = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => ctx.escalate;
 
       const parent = createSupervisor(system, 'test1', { onCrash: stopAllChildren });
-      const child1 = spawn(parent, (state = 0, msg, ctx) => {
-        if (state + 1 === 3 && msg !== 'msg3') {
+      const child1 = spawn(parent, (state = 0, msg) => {
+        if (state + 1 === 3 && msg.value !== 'msg3') {
           throw new Error('Very bad thing');
         }
-        dispatch(ctx.sender, state + 1);
+        dispatch(msg.sender, state + 1);
         return state + 1;
       }, 'test', { onCrash: escalate });
-      const child2 = spawn(parent, (state = 0, msg, ctx) => {
-        dispatch(ctx.sender, state + 1);
+      const child2 = spawn(parent, (state = 0, msg) => {
+        dispatch(msg.sender, state + 1);
         return state + 1;
       }, 'test2');
-      dispatch(child1, 'msg0');
-      dispatch(child1, 'msg1');
-      dispatch(child1, 'msg2');
+      dispatch(child1, { value: 'msg0' });
+      dispatch(child1, { value: 'msg1' });
+      dispatch(child1, { value: 'msg2' });
       await delay(100);
       isStopped(child1).should.be.true;
       isStopped(child2).should.be.true;
@@ -722,24 +736,24 @@ describe('Actor', function () {
     });
 
     it('should be able to stop faulted child', async function () {
-      const stopChild = (msg, err, ctx, child) => ctx.stopChild;
-      const escalate = (msg, err, ctx) => ctx.escalate;
+      const stopChild = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => ctx.stopChild;
+      const escalate = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => ctx.escalate;
 
       const parent = createSupervisor(system, 'test1', { onCrash: stopChild });
-      const child1 = spawn(parent, (state = 0, msg, ctx) => {
-        if (state + 1 === 3 && msg !== 'msg3') {
+      const child1 = spawn(parent, (state = 0, msg) => {
+        if (state + 1 === 3 && msg.value !== 'msg3') {
           throw new Error('Very bad thing');
         }
-        dispatch(ctx.sender, state + 1);
+        dispatch(msg.sender, state + 1);
         return state + 1;
       }, 'test', { onCrash: escalate });
-      const child2 = spawn(parent, (state = 0, msg, ctx) => {
-        dispatch(ctx.sender, state + 1);
+      const child2 = spawn(parent, (state = 0, msg) => {
+        dispatch(msg.sender, state + 1);
         return state + 1;
       }, 'test2');
-      dispatch(child1, 'msg0');
-      dispatch(child1, 'msg1');
-      dispatch(child1, 'msg2');
+      dispatch(child1, { value: 'msg0' });
+      dispatch(child1, { value: 'msg1' });
+      dispatch(child1, { value: 'msg2' });
       await delay(100);
       isStopped(child1).should.be.true;
       isStopped(child2).should.be.false;
@@ -747,42 +761,42 @@ describe('Actor', function () {
     });
 
     it('should be able to reset all peers and stop children', async function () {
-      const resetAll = (msg, err, ctx) => ctx.resetAll;
+      const resetAll = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => ctx.resetAll;
       const parent = createSupervisor(system, 'test1');
-      const child1 = spawn(parent, (state = 0, msg, ctx) => {
-        if (state + 1 === 3 && msg !== 'msg3') {
+      const child1 = spawn(parent, (state = 0, msg) => {
+        if (state + 1 === 3 && msg.value !== 'msg3') {
           throw new Error('Very bad thing');
         }
-        dispatch(ctx.sender, state + 1);
+        dispatch(msg.sender, state + 1);
         return state + 1;
       }, 'test', { onCrash: resetAll });
-      const childOfChild1 = spawn(child1, (state = 0, msg, ctx) => {
-        dispatch(ctx.sender, state + 1);
+      const childOfChild1 = spawn(child1, (state = 0, msg) => {
+        dispatch(msg.sender, state + 1);
         return state + 1;
       });
-      const child2 = spawn(parent, (state = 0, msg, ctx) => {
-        dispatch(ctx.sender, state + 1);
+      const child2 = spawn(parent, (state = 0, msg) => {
+        dispatch(msg.sender, state + 1);
         return state + 1;
       });
-      const childOfChild2 = spawn(child2, (state = 0, msg, ctx) => {
-        dispatch(ctx.sender, state + 1);
+      const childOfChild2 = spawn(child2, (state = 0, msg) => {
+        dispatch(msg.sender, state + 1);
         return state + 1;
       });
-      dispatch(child2, 'msg0');
-      dispatch(childOfChild2, 'msg0');
-      dispatch(child1, 'msg0');
-      dispatch(childOfChild1, 'msg0');
-      dispatch(child2, 'msg1');
-      dispatch(childOfChild2, 'msg1');
-      dispatch(child1, 'msg1');
-      dispatch(childOfChild1, 'msg1');
-      dispatch(child2, 'msg2');
-      dispatch(childOfChild2, 'msg2');
-      dispatch(child1, 'msg2');
-      dispatch(childOfChild1, 'msg2');
+      dispatch(child2, { value: 'msg0' });
+      dispatch(childOfChild2, { value: 'msg0' });
+      dispatch(child1, { value: 'msg0' });
+      dispatch(childOfChild1, { value: 'msg0' });
+      dispatch(child2, { value: 'msg1' });
+      dispatch(childOfChild2, { value: 'msg1' });
+      dispatch(child1, { value: 'msg1' });
+      dispatch(childOfChild1, { value: 'msg0' });
+      dispatch(child2, { value: 'msg2' });
+      dispatch(childOfChild2, { value: 'msg2' });
+      dispatch(child1, { value: 'msg2' });
+      dispatch(childOfChild1, { value: 'msg2' });
       await delay(100);
-      let result = await query(child1, 'msg3', 300);
-      let result2 = await query(child2, 'msg3', 300);
+      let result = await query(child1, x => ({ value: 'msg3', sender: x }), 300);
+      let result2 = await query(child2, x => ({ value: 'msg3', sender: x }), 300);
 
       result.should.equal(1);
       result2.should.equal(1);
@@ -791,73 +805,73 @@ describe('Actor', function () {
     });
 
     it('should be able to reset all children', async function () {
-      const resetAllChildren = (msg, err, ctx) => ctx.resetAllChildren;
-      const escalate = (msg, err, ctx) => ctx.escalate;
+      const resetAllChildren = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => ctx.resetAllChildren;
+      const escalate = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => ctx.escalate;
       const parent = createSupervisor(system, 'test1', { onCrash: resetAllChildren });
-      const child1 = spawn(parent, (state = 0, msg, ctx) => {
-        if (state + 1 === 3 && msg !== 'msg3') {
+      const child1 = spawn(parent, (state = 0, msg,) => {
+        if (state + 1 === 3 && msg.value !== 'msg3') {
           throw new Error('Very bad thing');
         }
-        dispatch(ctx.sender, state + 1);
+        dispatch(msg.sender, state + 1);
         return state + 1;
       }, 'test', { onCrash: escalate });
-      const child2 = spawn(parent, (state = 0, msg, ctx) => {
-        dispatch(ctx.sender, state + 1);
+      const child2 = spawn(parent, (state = 0, msg) => {
+        dispatch(msg.sender, state + 1);
         return state + 1;
       });
-      dispatch(child2, 'msg0');
-      dispatch(child1, 'msg0');
-      dispatch(child2, 'msg1');
-      dispatch(child1, 'msg1');
-      dispatch(child2, 'msg2');
-      dispatch(child1, 'msg2');
+      dispatch(child2, { value: 'msg0' });
+      dispatch(child1, { value: 'msg0' });
+      dispatch(child2, { value: 'msg1' });
+      dispatch(child1, { value: 'msg1' });
+      dispatch(child2, { value: 'msg2' });
+      dispatch(child1, { value: 'msg2' });
       await delay(100);
-      let result = await query(child1, 'msg3', 300);
-      let result2 = await query(child2, 'msg3', 300);
+      let result = await query(child1, x => ({ value: 'msg3', sender: x }), 300);
+      let result2 = await query(child2, x => ({ value: 'msg3', sender: x }), 300);
       result.should.equal(1);
       result2.should.equal(1);
     });
 
     it('should be able to reset child', async function () {
-      const resetChild = (msg, err, ctx, child) => ctx.resetChild;
-      const escalate = (msg, err, ctx) => ctx.escalate;
+      const resetChild = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => ctx.resetChild;
+      const escalate = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => ctx.escalate;
       const parent = createSupervisor(system, 'test1', { onCrash: resetChild });
-      const child1 = spawn(parent, (state = 0, msg, ctx) => {
-        if (state + 1 === 3 && msg !== 'msg3') {
+      const child1 = spawn(parent, (state = 0, msg) => {
+        if (state + 1 === 3 && msg.value !== 'msg3') {
           throw new Error('Very bad thing');
         }
-        dispatch(ctx.sender, state + 1);
+        dispatch(msg.sender, state + 1);
         return state + 1;
       }, 'test', { onCrash: escalate });
-      const child2 = spawn(parent, (state = 0, msg, ctx) => {
-        dispatch(ctx.sender, state + 1);
+      const child2 = spawn(parent, (state = 0, msg) => {
+        dispatch(msg.sender, state + 1);
         return state + 1;
       });
-      dispatch(child2, 'msg0');
-      dispatch(child1, 'msg0');
-      dispatch(child2, 'msg1');
-      dispatch(child1, 'msg1');
-      dispatch(child2, 'msg2');
-      dispatch(child1, 'msg2');
+      dispatch(child2, { value: 'msg0' });
+      dispatch(child1, { value: 'msg0' });
+      dispatch(child2, { value: 'msg1' });
+      dispatch(child1, { value: 'msg1' });
+      dispatch(child2, { value: 'msg2' });
+      dispatch(child1, { value: 'msg2' });
       await delay(100);
-      let result = await query(child1, 'msg3', 300);
-      let result2 = await query(child2, 'msg3', 300);
+      let result = await query(child1, x => ({ sender: x, value: 'msg3' }), 300);
+      let result2 = await query(child2, x => ({ sender: x, value: 'msg3' }), 300);
       result.should.equal(1);
       result2.should.equal(4);
     });
   });
 
   describe('#afterStop', function () {
-    let system;
+    let system: ActorSystemRef;
     beforeEach(() => { system = start(); });
     afterEach(() => {
       stop(system);
       // reset console
-      delete console.error;
+      delete (console as any).error;
     });
 
     it('should be able to act on context after stop', function (done) {
-      const afterStop = (state, ctx) => {
+      const afterStop = (_state: any, ctx: ActorContextWithMailbox<any, any>) => {
         ctx.mailbox.length.should.equal(1);
         ctx.mailbox[0].message.should.equal(2);
 

@@ -4,7 +4,7 @@ import { find } from './system-map';
 import { ICanDispatch, ICanQuery, ICanStop } from "./interfaces";
 
 export function stop(actor: Ref<any>) {
-  let concreteActor = find<ICanStop>(actor.system.name, actor);
+  let concreteActor = find<ICanStop>(actor);
   concreteActor &&
     concreteActor.stop &&
     concreteActor.stop();
@@ -18,7 +18,7 @@ export function query<Msg, MsgCreator extends QueryMsgFactory<Msg, any>>(actor: 
     throw new Error('A timeout is required to be specified');
   }
 
-  const concreteActor = find<ICanQuery<Msg>>(actor.system.name, actor);
+  const concreteActor = find<ICanQuery<Msg>>(actor);
 
   return (concreteActor && concreteActor.query)
     ? concreteActor.query(queryFactory, timeout)
@@ -26,7 +26,7 @@ export function query<Msg, MsgCreator extends QueryMsgFactory<Msg, any>>(actor: 
 };
 
 export function dispatch<T>(actor: Ref<T>, msg: T): void {
-  let concreteActor = find<ICanDispatch<T>>(actor.system.name, actor);
+  let concreteActor = find<ICanDispatch<T>>(actor);
   concreteActor &&
     concreteActor.dispatch &&
     concreteActor.dispatch(msg);

@@ -1,7 +1,8 @@
-/* eslint-env mocha */
+/* eslint-env jest */
 /* eslint-disable no-unused-expressions */
-require('chai').should();
-const { ActorPath } = require('../lib/paths');
+import chai from 'chai';
+import { ActorPath } from './paths';
+chai.should();
 
 describe('Path', function () {
   describe('#isValidName()', function () {
@@ -31,12 +32,12 @@ describe('Path', function () {
     });
 
     it('should disallow names which are not strings', function () {
-      ActorPath.isValidName({}).should.be.false;
+      ActorPath.isValidName({} as any).should.be.false;
     });
 
     it('should disallow undefined or null names', function () {
-      ActorPath.isValidName(null).should.be.false;
-      ActorPath.isValidName(undefined).should.be.false;
+      ActorPath.isValidName(null as any).should.be.false;
+      ActorPath.isValidName(undefined as any).should.be.false;
     });
 
     it('should disallow whitespace', function () {
@@ -59,7 +60,7 @@ describe('Path', function () {
 
   describe('#createChildPath()', function () {
     it('should append name to end of parts array if name is valid', function () {
-      let path1 = ActorPath.root().createChildPath('a');
+      let path1 = ActorPath.root('root').createChildPath('a');
       path1.parts.should.deep.equal(['a']);
 
       let path2 = path1.createChildPath('b');
@@ -70,13 +71,13 @@ describe('Path', function () {
     });
 
     it('should throw an exception if the child name is invalid', function () {
-      (() => ActorPath.root().createChildPath('?')).should.throw(Error);
-      (() => ActorPath.root().createChildPath('a').createChildPath(' ')).should.throw(Error);
-      (() => ActorPath.root().createChildPath('a').createChildPath('')).should.throw(Error);
-      (() => ActorPath.root().createChildPath(undefined)).should.throw(Error);
-      (() => ActorPath.root().createChildPath(null)).should.throw(Error);
-      (() => ActorPath.root().createChildPath(123)).should.throw(Error);
-      (() => ActorPath.root().createChildPath('&')).should.throw(Error);
+      (() => ActorPath.root('root').createChildPath('?')).should.throw(Error);
+      (() => ActorPath.root('root').createChildPath('a').createChildPath(' ')).should.throw(Error);
+      (() => ActorPath.root('root').createChildPath('a').createChildPath('')).should.throw(Error);
+      (() => ActorPath.root('root').createChildPath(undefined as any)).should.throw(Error);
+      (() => ActorPath.root('root').createChildPath(null as any)).should.throw(Error);
+      (() => ActorPath.root('root').createChildPath(123 as any)).should.throw(Error);
+      (() => ActorPath.root('root').createChildPath('&')).should.throw(Error);
     });
   });
 });

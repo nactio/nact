@@ -5,7 +5,15 @@
   "module": "index.js",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "yarn run lint-fix && jest ./test/*.js",
+    "test-watch": "jest --watch",
+    "interactive-cover": "nyc --reporter=html mocha ./test/*.js && open ./coverage/index.html",
+    "lint": "semistandard",
+    "coverage": "nyc report --reporter=text-lcov | coveralls",
+    "prepush": "yarn run test",
+    "test-only": "mocha ./test/*.js",
+    "test-only-watch": "nyc mocha --watch ./test/*.js",
+    "lint-fix": "semistandard --fix",
     "typecheck": "tsc --noEmit"
   },
   "author": "",
@@ -15,7 +23,13 @@
     "macrotask": "^3.0.0"
   },
   "devDependencies": {
+    "@types/jest": "^26.0.20",
     "@types/macrotask": "^3.0.0",
+    "chai": "^4.3.0",
+    "chai-as-promised": "^7.1.1",
+    "jest": "^26.6.3",
+    "semistandard": "^16.0.0",
+    "ts-jest": "^26.5.2",
     "typescript": "^4.1.5"
   }
 }

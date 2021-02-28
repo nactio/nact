@@ -13,9 +13,10 @@
     "noUnusedLocals": true,
     "moduleResolution": "node",
     "outDir": "dist",
-    "typeRoots": [
-      "node_modules/@types"
-    ],
+    // "typeRoots": [
+    //   "node_modules/@types"
+    // ],
+    "allowJs": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
