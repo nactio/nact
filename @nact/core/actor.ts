@@ -2,7 +2,7 @@ import { ActorSystemRef, Ref } from "./references";
 import { Deferral } from './deferral';
 import { applyOrThrowIfStopped } from './system-map';
 import { ActorRef, TemporaryRef } from './references';
-import Queue from 'denque';
+import Queue from './vendored/denqueue';
 import assert from './assert';
 import { stop } from './functions';
 import { defaultSupervisionPolicy, SupervisionActions } from './supervision';
