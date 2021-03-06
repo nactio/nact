@@ -5,7 +5,7 @@
   "module": "index.js",
   "main": "index.js",
   "scripts": {
-    "test": "yarn run lint-fix && jest ./test/*.js",
+    "test": "npm run lint-fix && jest",
     "test-watch": "jest --watch",
     "interactive-cover": "nyc --reporter=html mocha ./test/*.js && open ./coverage/index.html",
     "lint": "semistandard",

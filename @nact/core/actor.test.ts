@@ -289,7 +289,7 @@ describe('Actor', function () {
         }
         return state;
       });
-      dispatch(child, 1);
+      dispatch(child, { value: 1 });
       let resultPromise = query(child, x => ({ value: 2, sender: x }), 100);
       await delay(20);
       stop(child);
@@ -377,7 +377,7 @@ describe('Actor', function () {
           dispatch(msg.sender, [...this.children.keys()]);
         }
       }, 'test');
-      dispatch(actor, 'spawn');
+      dispatch(actor, { value: 'spawn' });
       let childrenMap = await query(actor, x => ({ value: 'query', sender: x }), 30);
       childrenMap.should.have.members(['child1', 'child2']);
       children(actor).should.have.keys('child1', 'child2');
@@ -504,7 +504,7 @@ describe('Actor', function () {
       dispatch(child, { sender: nobody, value: 'msg1' });
       dispatch(grandchild, { sender: nobody, value: 'msg2' });
       dispatch(child, { sender: nobody, value: 'msg2' });
-      let result = await query(child, x => ({ sender: x, value: 'msg0' }), 300);
+      let result = await query(child, x => ({ sender: x, value: 'msg3' }), 300);
       result.should.equal(3);
       isStopped(grandchild).should.be.true;
     });
@@ -551,8 +551,8 @@ describe('Actor', function () {
     it('should be able to access other messages in the queue', async function () {
       const onCrash = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => {
         ctx.mailbox.length.should.equal(2);
-        ctx.mailbox[0].message.should.equal('msg1');
-        ctx.mailbox[1].message.should.equal('msg2');
+        ctx.mailbox[0].message.value.should.equal('msg1');
+        ctx.mailbox[1].message.value.should.equal('msg2');
         return ctx.escalate;
       };
       const parent = createSupervisor(system, 'test1');

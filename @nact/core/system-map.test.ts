@@ -1,9 +1,10 @@
 /* eslint-env jest */
 /* eslint-disable no-unused-expressions */
 import chai from 'chai';
+import { spawnStateless } from './actor';
 import { ActorPath } from './paths';
 import { ActorRef, ActorSystemRef } from './references';
-import { ActorSystem } from './system';
+import { ActorSystem, start } from './system';
 import { add, find, remove, applyOrThrowIfStopped } from './system-map';
 const expect = chai.expect;
 chai.should();
@@ -57,22 +58,15 @@ describe('#remove()', function () {
 
 describe('#applyOrThrowIfStopped()', function () {
   it('be able to apply the system to the function if the system can be found', function () {
-    const actor = {};
     const systemName = 'hello2'
-    let system = { name: systemName, find: (ref: ActorRef<any, any>) => ref.name === 'actor' && actor };
-    add(system);
-    const actorSystemRef = new ActorSystemRef(systemName, ActorPath.root(systemName));
-    applyOrThrowIfStopped(actorSystemRef, s => s).should.equal(true);
+    let systemRef = start({ name: systemName });
+    applyOrThrowIfStopped(systemRef, s => !!s).should.equal(true);
   });
 
   it('be able to apply the actor to the function if the actor can be found', function () {
-    const actor = {};
     const systemName = 'hello1'
-    let system = { name: systemName, find: (ref: ActorRef<any, any>) => ref.name === 'actor' && actor };
-    add(system);
-    const actorSystemRef = new ActorSystemRef(systemName, ActorPath.root(systemName));
-    const actorRef = new ActorRef<any, any>(systemName, actorSystemRef, actorSystemRef.path.createChildPath('actor'), 'actor');
-
-    applyOrThrowIfStopped(actorRef, s => s).should.equal(true);
+    let systemRef = start({ name: systemName });
+    const actorRef = spawnStateless(systemRef, () => true, 'actor');
+    applyOrThrowIfStopped(actorRef, s => !!s).should.equal(true);
   });
 });

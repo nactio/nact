@@ -69,7 +69,7 @@ export class Actor<State, Msg, ParentRef extends ActorSystemRef | ActorRef<any, 
       }
       this.shutdownPeriod = Actor.getSafeTimeout(shutdownAfter);
       this.setTimeout = () => {
-        this.timeout = setTimeout(() => this.stop(), this.shutdownPeriod) as unknown as number;
+        this.timeout = globalThis.setTimeout(() => this.stop(), this.shutdownPeriod) as unknown as number;
       };
     } else {
       this.setTimeout = unit;
@@ -98,7 +98,7 @@ export class Actor<State, Msg, ParentRef extends ActorSystemRef | ActorRef<any, 
   }
 
   clearTimeout() {
-    clearTimeout(this.timeout);
+    globalThis.clearTimeout(this.timeout);
   }
 
   clearImmediate() {
@@ -130,11 +130,11 @@ export class Actor<State, Msg, ParentRef extends ActorSystemRef | ActorRef<any, 
     const deferred = new Deferral();
 
     timeout = Actor.getSafeTimeout(timeout);
-    const timeoutHandle = setTimeout(() => { deferred.reject(new Error('Query Timeout')); }, timeout);
+    const timeoutHandle = globalThis.setTimeout(() => { deferred.reject(new Error('Query Timeout')); }, timeout);
     const tempReference = new TemporaryRef(this.system.name);
     this.system.addTempReference(tempReference, deferred);
     deferred.promise.then(() => {
-      clearTimeout(timeoutHandle);
+      globalThis.clearTimeout(timeoutHandle);
       this.system.removeTempReference(tempReference);
     }).catch(() => {
       this.system.removeTempReference(tempReference);
