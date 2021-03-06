@@ -1,4 +1,7 @@
 module.exports = {
   preset: 'ts-jest',
-  testEnvironment: 'node'
+  testEnvironment: 'jsdom',
+  transformIgnorePatterns: [
+    '<rootDir>/vendored/macrotask/*.js'
+  ]
 };

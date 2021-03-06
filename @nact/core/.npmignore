@@ -71,3 +71,5 @@ root-logo.svg
 jest.config.js
 *.test.ts
 *.test.js
+**/*.test.js
+**/*.test.ts

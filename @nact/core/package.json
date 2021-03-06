@@ -18,10 +18,6 @@
   },
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    "denque": "^1.5.0",
-    "macrotask": "^3.0.0"
-  },
   "devDependencies": {
     "@types/jest": "^26.0.20",
     "@types/macrotask": "^3.0.0",
