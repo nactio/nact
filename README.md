@@ -30,7 +30,16 @@ Nact is no silver bullet, but it is evolving to tackle ever more demanding use c
 
 To get started, head to https://nact.io
 
-> Note: Nact currently only able to work on Node 8 and above.
+> Note: Nact is currently only able to work on Node 8 and above.
+
+### The Next Branch
+You might have noticed that the default branch has been changed to next. That is because Nact is undergoing a signficant rearchitecture. 
+
+The aim is to make modularity and extensibility a first class citizen of Nact, while still going to great pains as always to ensure a seamless upgrade path. This work will enable Nact to run in more contexts, such as the browser, deno and of course nact's original platform node. It will also allow for some exciting work in enabling location transparency and being able to more easily design and operate distributed architectures, especially in k8s and cloud contexts.
+
+Of course due to the churn, and because the Nact API surface is expanding, it also seemed prudent to port the codebase over to typescript. 
+
+The changes will also require a rewrite of the documentation. 
 
 ### A note on regularity of commits
 Nact sees daily usage by the project maintainer. The project is extremely stable and has been around for a few years. As the project made the deliberate choice to minimise dependencies, particularly runtime dependencies, there is not a huge need for updates to the project, besides for the occasional introduction of new features. This means that it can be a few months since the last commit. This does not mean the project is dead, but rather that it is working as designed.  
