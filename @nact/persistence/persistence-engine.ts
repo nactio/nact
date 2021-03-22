@@ -1,6 +1,6 @@
-import { assert } from ('@nact/core');
+import { assert } from '@nact/core';
 
-class AbstractPersistenceEngine {
+export class AbstractPersistenceEngine {
   events(persistenceKey, offset, limit, tags) {
     throw new Error('#events() is yet implemented');
   }
@@ -18,7 +18,7 @@ class AbstractPersistenceEngine {
   }
 }
 
-class PersistedSnapshot {
+export class PersistedSnapshot {
   constructor(data, sequenceNumber, key, createdAt = new Date().getTime()) {
     // Sequence number should be a number.
     // This is an internal error if this is not the case as this is defined by the engine and hence shouldn't
@@ -32,7 +32,7 @@ class PersistedSnapshot {
   }
 }
 
-class PersistedEvent {
+export class PersistedEvent {
   constructor(data, sequenceNumber, key, tags = [], createdAt = new Date().getTime(), isDeleted = false) {
     // Tags should be an array of strings
     if (!tags || !(tags instanceof Array) || !(tags.reduce((isStrArray, tag) => isStrArray && typeof (tag) === 'string', true))) {
@@ -53,4 +53,3 @@ class PersistedEvent {
   }
 }
 
-module.exports = { PersistedEvent, PersistedSnapshot, AbstractPersistenceEngine };

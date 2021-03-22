@@ -1,10 +1,11 @@
 import { PersistedEvent, PersistedSnapshot } from './persistence-engine';
 import { Actor, applyOrThrowIfStopped, SupervisionActions } from '@nact/core';
+import { ActorRef, ActorSystemRef } from '@nact/core/references';
 
 const id = x => x;
 const unit = x => { };
 
-class PersistentActor extends Actor {
+export class PersistentActor<State, Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> extends Actor<State, Msg, ParentRef> {
   constructor(parent, name, system, f, key, persistenceEngine, { snapshotEvery, snapshotEncoder = id, snapshotDecoder = id, encoder = id, decoder = id, ...properties } = {}) {
     super(parent, name, system, f, properties);
     if (!key) {

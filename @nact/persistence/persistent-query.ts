@@ -4,7 +4,7 @@ const id = x => x;
 const unit = x => { };
 const unitPromise = x => Promise.resolve();
 
-class PersistentQuery {
+export class PersistentQuery {
   constructor(system, f, key, persistenceEngine, { snapshotKey, snapshotEvery, cacheDuration, snapshotEncoder = id, snapshotDecoder = id, encoder = id, decoder = id, initialState } = {}) {
     if (!key) {
       throw new Error('Persistence key required');
@@ -146,10 +146,10 @@ class PersistentQuery {
   }
 }
 
-const persistentQuery = (parent, f, key, properties) =>
+export const persistentQuery = (parent, f, key, properties) =>
   applyOrThrowIfStopped(
     parent,
     parent => new PersistentQuery(parent.system, f, key, parent.system.persistenceEngine, properties).proxy
   );
 
-module.exports.persistentQuery = persistentQuery;
+
