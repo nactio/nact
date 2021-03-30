@@ -27,12 +27,17 @@ export function nobody() {
   return { p } as (Stoppable & Dispatchable<any> & Local);
 }
 
-export function temporaryRef<T>(systemName: ActorSystemName) {
+export type TemporaryRef<Msg> = Dispatchable<Msg, 'temp'>;
+export type LocalTemporaryRef<Msg> = TemporaryRef<Msg> & Local;
+
+export function temporaryRef<Msg>(systemName: ActorSystemName) {
   const id = String((Math.random() * Number.MAX_SAFE_INTEGER) | 0);
   const p = new ActorPath<'temp'>([id], systemName, 'temp');
-  return { p } as Dispatchable<T, 'temp'> & Local;
+  return { p } as TemporaryRef<Msg>;
 }
-
+export function localTemporaryRef<Msg>(systemName: ActorSystemName) {
+  return temporaryRef(systemName) as LocalTemporaryRef<Msg>;
+}
 
 export type ActorRef<Msg> = Ref & Dispatchable<Msg> & Stoppable;
 export function actorRef<Msg>(path: ActorPath) {
@@ -43,4 +48,19 @@ export type LocalActorRef<Msg> = ActorRef<Msg> & Local;
 export function localActorRef<Msg>(path: ActorPath) {
   return { p: path } as LocalActorRef<Msg>;
 }
-export type ActorSystemRef = Ref & Stoppable;
+
+
+enum SystemMarker {
+  _ = ""
+}
+
+export type ActorSystemRef = Ref & Stoppable & { __system__: SystemMarker };
+
+export function actorSystemRef(path: ActorPath) {
+  return { p: path } as ActorSystemRef;
+}
+export type LocalActorSystemRef = ActorSystemRef & Local;
+
+export function localActorSystemRef(path: ActorPath) {
+  return { p: path } as LocalActorSystemRef;
+}

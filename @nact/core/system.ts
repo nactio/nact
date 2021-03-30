@@ -1,9 +1,9 @@
-import { ActorRef, ActorSystemRef, temporaryRef } from './references';
+import { ActorRef, ActorSystemRef, LocalActorRef, localActorRef, localActorSystemRef, LocalActorSystemRef, LocalTemporaryRef, temporaryRef } from './references';
 import { ActorPath } from './paths';
 import assert from './assert'
 import { stop } from './functions';
 import { add as addToSystemMap, remove as removeFromSystemMap } from './system-map';
-import { ICanFind, ICanStop, IHaveName } from './interfaces';
+import { ICanDispatch, ICanFind, ICanStop, IHaveName } from './interfaces';
 import { Actor } from './actor';
 import { Deferral } from './deferral';
 
@@ -13,21 +13,22 @@ function generateSystemId() { return [...new Uint32Array(4)].map(_ => (Math.rand
 
 export type ActorSystemSettings = { name?: ActorSystemName, plugins?: Plugin[] };
 export class ActorSystem implements IHaveName, ICanFind, ICanStop {
-  children: Map<any, Actor<any, any, ActorSystemRef>>;
+  children: Map<any, ICanStop & ICanDispatch<unknown> & ICanFind>;
   createLogger: () => undefined;
   name: ActorSystemName;
   path: ActorPath;
-  reference: ActorSystemRef;
-  childReferences: Map<any, ActorRef<any, ActorSystemRef>>;
-  tempReferences: Map<number, Deferral<any>>;
+  reference: LocalActorSystemRef;
+  childReferences: Map<any, ActorRef<any>>;
+  tempReferences: Map<string, Deferral<any>>;
   stopped: boolean;
   system: this;
+
   private constructor(settings: ActorSystemSettings) {
     this.children = new Map();
     this.createLogger = () => undefined;
     this.name = settings.name || generateSystemId();
     this.path = ActorPath.root(this.name);
-    this.reference = new ActorSystemRef(this.name, this.path);
+    this.reference = localActorSystemRef(this.path);
     this.childReferences = new Map();
     this.tempReferences = new Map();
     this.stopped = false;
@@ -36,16 +37,24 @@ export class ActorSystem implements IHaveName, ICanFind, ICanStop {
     (settings.plugins ?? []).forEach(extension => extension(this));
   }
 
-  addTempReference(reference: TemporaryRef<any>, deferral: Deferral<any>) {
-    this.tempReferences.set(reference.id, deferral);
+  addTempReference(reference: LocalTemporaryRef<any>, deferral: Deferral<any>) {
+    this.tempReferences.set(reference.p!.parts[0], deferral);
   }
 
-  removeTempReference(reference: TemporaryRef<any>) {
-    this.tempReferences.delete(reference.id);
+  removeTempReference(reference: LocalTemporaryRef<any>) {
+    this.tempReferences.delete(reference.p!.parts[0]);
   }
 
-  find(actorRef: ActorSystemRef | ActorRef<any, any> | TemporaryRef<any>): any | undefined {
-    switch (actorRef && actorRef.type) {
+  find(actorRef?: LocalActorSystemRef | LocalActorRef<any> | LocalTemporaryRef<any>): any | undefined {
+    if (!actorRef || !actorRef.p) {
+      return undefined;
+    }
+
+    switch (actorRef.p.type) {
+      case 'temp': {
+        const actor = this.tempReferences.get(ActorPath.toString(actorRef.p));
+        return actor;
+      };
       case 'actor': {
         let parts =
           actorRef &&
@@ -58,18 +67,14 @@ export class ActorSystem implements IHaveName, ICanFind, ICanStop {
           this
         );
       }
-      case 'temp': {
-        const actor = this.tempReferences.get((actorRef as TemporaryRef<any>).id);
-        return actor;
-      }
       case 'system':
         return this;
       default: return undefined;
     }
   }
 
-  handleFault(_msg: unknown, _error: unknown, child: ActorRef<any, any> | ActorSystemRef) {
-    console.log('Stopping top level actor,', child.name, 'due to a fault');
+  handleFault(_msg: unknown, _error: unknown, child: LocalActorRef<any> | LocalActorSystemRef) {
+    console.log('Stopping top level actor,', ActorPath.toString(child.p), 'due to a fault');
     stop(child);
   }
 

@@ -1,7 +1,7 @@
 import { ActorName } from "./actor";
 import { ActorSystemName } from "./system";
 
-export class ActorPath<Type extends string | undefined = undefined> {
+export class ActorPath<Type extends string | undefined = any> {
   parts: string[];
   system: ActorSystemName | undefined;
   type: Type | undefined;
@@ -14,17 +14,6 @@ export class ActorPath<Type extends string | undefined = undefined> {
     this.type = type
   }
 
-  createChildPath(name: ActorName) {
-    if (!ActorPath.isValidName(name)) {
-      throw new Error('Invalid argument: path may only contain URI encoded characters, RFC1738 alpha, digit, safe, extra');
-    }
-
-    if (this.system === undefined) {
-      throw new Error('Cannot create child path of an undefined system');
-    }
-
-    return new ActorPath([...this.parts, name], this.system!);
-  }
 
   static isValidName(name: ActorName) {
     const actorNameRegex = /^[a-z0-9-$_.+!*'(),]+$/i;
@@ -35,7 +24,25 @@ export class ActorPath<Type extends string | undefined = undefined> {
     return new ActorPath([], system);
   }
 
-  toString() {
-    return `${this.system}://${this.parts.join('/')}`;
+
+  static createChildPath<Type extends string | undefined = any>(path: ActorPath<Type>, name: ActorName) {
+    if (!ActorPath.isValidName(name)) {
+      throw new Error('Invalid argument: path may only contain URI encoded characters, RFC1738 alpha, digit, safe, extra');
+    }
+
+    if (path.system === undefined) {
+      throw new Error('Cannot create child path of an undefined system');
+    }
+
+    return new ActorPath([...path.parts, name], path.system!);
+  }
+
+  static toString<Type extends string | undefined = any>(path?: ActorPath<Type>) {
+    if (!path) {
+      return '';
+    }
+    return `${path.system}://${path.parts.join('/')}`;
   }
 }
+
+
