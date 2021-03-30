@@ -1,11 +1,11 @@
 import { Milliseconds } from ".";
-import { Ref } from "./references";
+import { Dispatchable, Ref } from "./references";
 
 export interface ICanDispatch<Msg, DispatchResult = void> {
   dispatch(msg: Msg): Promise<DispatchResult>
 }
 
-type QueryMsgFactory<Req, Res> = (tempRef: Ref<Res>) => Req;
+type QueryMsgFactory<Req, Res> = (tempRef: Dispatchable<Res>) => Req;
 type InferResponseFromMsgFactory<T extends QueryMsgFactory<any, any>> = T extends QueryMsgFactory<any, infer Res> ? Res : never;
 
 export interface ICanQuery<Msg> {

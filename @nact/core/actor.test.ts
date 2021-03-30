@@ -5,7 +5,7 @@ import chaiAsPromised from 'chai-as-promised';
 import { ActorContextWithMailbox, SupervisionContext } from './actor';
 import { start, spawn, spawnStateless, dispatch, stop, query, milliseconds } from './index';
 import { ActorPath } from './paths';
-import { ActorRef, ActorSystemRef, Nobody, Ref } from './references';
+import { ActorRef, ActorSystemRef, nobody, Ref } from './references';
 import { applyOrThrowIfStopped } from './system-map';
 
 chai.use(chaiAsPromised);
@@ -469,7 +469,7 @@ describe('Actor', function () {
         return state + 1;
       });
 
-      const nobody = new Nobody();
+      const nobody = new nobody();
       dispatch(grandchild, { sender: nobody, value: 'msg0' });
       dispatch(child, { sender: nobody, value: 'msg0' });
       dispatch(grandchild, { sender: nobody, value: 'msg1' });
@@ -497,7 +497,7 @@ describe('Actor', function () {
         return state + 1;
       });
 
-      const nobody = new Nobody();
+      const nobody = new nobody();
       dispatch(grandchild, { sender: nobody, value: 'msg0' });
       dispatch(child, { sender: nobody, value: 'msg0' });
       dispatch(grandchild, { sender: nobody, value: 'msg1' });
@@ -520,7 +520,7 @@ describe('Actor', function () {
         return state + 1;
       }, 'test', { onCrash: stop });
 
-      const nobody = new Nobody();
+      const nobody = new nobody();
       dispatch(child, { value: 'msg0', sender: nobody });
       dispatch(child, { value: 'msg1', sender: nobody });
       dispatch(child, { value: 'msg2', sender: nobody });
@@ -539,7 +539,7 @@ describe('Actor', function () {
         return state + 1;
       }, 'test', { onCrash: escalate });
 
-      const nobody = new Nobody();
+      const nobody = new nobody();
       dispatch(child, { sender: nobody, value: 'msg0' });
       dispatch(child, { sender: nobody, value: 'msg1' });
       dispatch(child, { sender: nobody, value: 'msg2' });
@@ -565,7 +565,7 @@ describe('Actor', function () {
         dispatch(msg.sender, state + 1);
         return state + 1;
       }, 'test', { onCrash });
-      const nobody = new Nobody();
+      const nobody = new nobody();
       dispatch(child, { sender: nobody, value: 'msg0' });
       dispatch(child, { sender: nobody, value: 'msg1' });
       dispatch(child, { sender: nobody, value: 'msg2' });
@@ -584,7 +584,7 @@ describe('Actor', function () {
         return state + 1;
       }, 'test', { onCrash: escalate });
 
-      const nobody = new Nobody();
+      const nobody = new nobody();
       dispatch(child, { sender: nobody, value: 'msg0' });
       dispatch(child, { sender: nobody, value: 'msg1' });
       dispatch(child, { sender: nobody, value: 'msg2' });

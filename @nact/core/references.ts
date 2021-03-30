@@ -1,54 +1,46 @@
-import { ActorName } from "./actor";
 import { ActorPath } from "./paths";
 import { ActorSystemName } from "./system";
 
-export abstract class Ref<_T> {
-  system: { name: ActorSystemName | undefined };
-  path?: ActorPath
-  constructor(systemName: ActorSystemName | undefined, path: ActorPath) {
-    this.system = { name: systemName };
-    this.path = path;
-  }
+
+export type Ref<PathType extends string | undefined = undefined> = { p?: ActorPath<PathType> };
+
+enum DispatchableMarker {
+  _ = ""
 }
 
-export class Nobody extends Ref<any> {
-  type: 'nobody';
-  constructor() {
-    super(undefined, new ActorPath([], undefined));
-    this.type = 'nobody';
-  }
+export type Dispatchable<Msg, PathType extends string | undefined = undefined> = { __dispatch__: DispatchableMarker, protocol: Msg } & Ref<PathType>;
+
+enum StoppableMarker {
+  _ = ""
 }
 
-export class TemporaryRef<Msg> extends Ref<Msg> {
-  id: number;
-  type: 'temp';
-  constructor(systemName: ActorSystemName) {
-    super(systemName, new ActorPath([], systemName));
-    this.id = (Math.random() * Number.MAX_SAFE_INTEGER) | 0;
-    this.type = 'temp';
-  }
+export type Stoppable = { __stop__: StoppableMarker } & Ref;
+
+enum LocalMarker {
+  _ = ""
 }
 
-export class ActorRef<Msg, ParentRef extends ActorRef<any, any> | ActorSystemRef> extends Ref<Msg> {
-  name: ActorName;
-  parent: ParentRef;
-  type: 'actor';
-  constructor(systemName: ActorSystemName, parent: ParentRef, path: ActorPath, name: ActorName) {
-    super(systemName, path);
-    this.name = name;
-    this.parent = parent;
-    this.type = 'actor';
-  }
+export type Local = { __local__: LocalMarker } & Ref;
+
+export function nobody() {
+  let p = new ActorPath([], undefined);
+  return { p } as (Stoppable & Dispatchable<any> & Local);
 }
 
-export class ActorSystemRef extends Ref<never> {
-  path: ActorPath;
-  name: string;
-  type: string;
-  constructor(systemName: ActorSystemName, path: ActorPath) {
-    super(systemName, path)
-    this.path = path;
-    this.name = systemName;
-    this.type = 'system';
-  }
+export function temporaryRef<T>(systemName: ActorSystemName) {
+  const id = String((Math.random() * Number.MAX_SAFE_INTEGER) | 0);
+  const p = new ActorPath<'temp'>([id], systemName, 'temp');
+  return { p } as Dispatchable<T, 'temp'> & Local;
 }
+
+
+export type ActorRef<Msg> = Ref & Dispatchable<Msg> & Stoppable;
+export function actorRef<Msg>(path: ActorPath) {
+  return { p: path } as Dispatchable<Msg> & Stoppable;
+}
+
+export type LocalActorRef<Msg> = ActorRef<Msg> & Local;
+export function localActorRef<Msg>(path: ActorPath) {
+  return { p: path } as LocalActorRef<Msg>;
+}
+export type ActorSystemRef = Ref & Stoppable;

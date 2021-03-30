@@ -1,4 +1,4 @@
-import { ActorRef, ActorSystemRef, TemporaryRef } from './references';
+import { ActorRef, ActorSystemRef, temporaryRef } from './references';
 import { ActorPath } from './paths';
 import assert from './assert'
 import { stop } from './functions';

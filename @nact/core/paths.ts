@@ -1,15 +1,17 @@
 import { ActorName } from "./actor";
 import { ActorSystemName } from "./system";
 
-export class ActorPath {
+export class ActorPath<Type extends string | undefined = undefined> {
   parts: string[];
   system: ActorSystemName | undefined;
-
+  type: Type | undefined;
   constructor(parts: [], system: undefined)
   constructor(parts: string[], system: ActorSystemName)
-  constructor(parts: string[], system: ActorSystemName | undefined) {
+  constructor(parts: string[], system: ActorSystemName, type: Type)
+  constructor(parts: string[], system: ActorSystemName | undefined, type?: Type) {
     this.system = system;
     this.parts = parts;
+    this.type = type
   }
 
   createChildPath(name: ActorName) {
