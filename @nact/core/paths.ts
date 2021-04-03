@@ -1,31 +1,27 @@
 import { ActorName } from "./actor";
 import { ActorSystemName } from "./system";
 
-export class ActorPath<Type extends string | undefined = any> {
-  parts: string[];
-  system: ActorSystemName | undefined;
-  type: Type | undefined;
-  constructor(parts: [], system: undefined)
-  constructor(parts: string[], system: ActorSystemName)
-  constructor(parts: string[], system: ActorSystemName, type: Type)
-  constructor(parts: string[], system: ActorSystemName | undefined, type?: Type) {
-    this.system = system;
-    this.parts = parts;
-    this.type = type
-  }
+export type ActorPath = {
+  parts: string[],
+  system: ActorSystemName | undefined,
+  isTemporary?: boolean
+}
 
-
-  static isValidName(name: ActorName) {
+export namespace ActorPath {
+  export function isValidName(name: ActorName) {
     const actorNameRegex = /^[a-z0-9-$_.+!*'(),]+$/i;
     return !!name && typeof (name) === 'string' && !!name.match(actorNameRegex);
   }
 
-  static root(system: ActorSystemName) {
-    return new ActorPath([], system);
+  export function toString(path: ActorPath) {
+    return `${path.system}://${path.parts.join('/')}`;
   }
 
+  export function root(system: ActorSystemName): ActorPath {
+    return { parts: [], system };
+  }
 
-  static createChildPath<Type extends string | undefined = any>(path: ActorPath<Type>, name: ActorName) {
+  export function createChildPath(path: ActorPath, name: ActorName): ActorPath {
     if (!ActorPath.isValidName(name)) {
       throw new Error('Invalid argument: path may only contain URI encoded characters, RFC1738 alpha, digit, safe, extra');
     }
@@ -34,14 +30,11 @@ export class ActorPath<Type extends string | undefined = any> {
       throw new Error('Cannot create child path of an undefined system');
     }
 
-    return new ActorPath([...path.parts, name], path.system!);
+    return { parts: [...path.parts, name], system: path.system };
   }
 
-  static toString<Type extends string | undefined = any>(path?: ActorPath<Type>) {
-    if (!path) {
-      return '';
-    }
-    return `${path.system}://${path.parts.join('/')}`;
+  export function validatePath(path: ActorPath) {
+    return path.parts.every(isValidName);
   }
 }
 

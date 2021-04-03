@@ -1,15 +1,15 @@
-import { actorRef, ActorSystemRef, localActorRef, LocalActorRef, Ref } from "./references";
+import { ActorSystemRef, localActorRef, LocalActorRef } from "./references";
 import { Deferral } from './deferral';
 import { applyOrThrowIfStopped } from './system-map';
 import { ActorRef, temporaryRef } from './references';
 import Queue from './vendored/denque';
 import assert from './assert';
-import { stop } from './functions';
 import { defaultSupervisionPolicy, SupervisionActions } from './supervision';
 import { ActorPath } from "./paths";
 import { Milliseconds } from ".";
 import { ActorSystem } from "./system";
 import { addMacrotask, clearMacrotask } from './macrotask'
+import { ICanDispatch, ICanQuery, ICanStop, IHaveChildren, IHaveName, InferResponseFromMsgFactory, QueryMsgFactory } from "./interfaces";
 
 function unit(): void { };
 
@@ -18,7 +18,7 @@ export type ActorName = string;
 // type InferMsgFromRef<R extends Ref<any>> = R extends Ref<infer Msg> ? Msg : never;
 type ParentTypeFromRefType<P extends ActorSystemRef | LocalActorRef<any>> = P extends ActorSystemRef ? ActorSystem : (P extends LocalActorRef<infer Msg> ? Actor<any, Msg, any> : never);
 
-export class Actor<State, Msg, ParentRef extends ActorSystemRef | LocalActorRef<any>> {
+export class Actor<State, Msg, ParentRef extends ActorSystemRef | LocalActorRef<any>> implements ICanDispatch<Msg>, ICanStop, ICanQuery<Msg>, IHaveName, IHaveChildren {
   // TODO: Swap concreate parent class for interfaces 
   parent: ParentTypeFromRefType<ParentRef>
 
@@ -31,7 +31,7 @@ export class Actor<State, Msg, ParentRef extends ActorSystemRef | LocalActorRef<
   stopped: boolean;
 
   // TODO: Swap concreate child classes for interfaces
-  children: Map<any, Actor<unknown, unknown, LocalActorRef<Msg>>>;
+  children: Map<any, ICanStop & IHaveChildren>;
   childReferences: Map<any, ActorRef<unknown>>;
   busy: boolean;
   mailbox: Queue<{ message: Msg }>;
@@ -53,7 +53,7 @@ export class Actor<State, Msg, ParentRef extends ActorSystemRef | LocalActorRef<
       throw new Error(`child actor of name ${name} already exists`);
     }
     this.name = name;
-    this.path = parent.path.createChildPath(this.name);
+    this.path = ActorPath.createChildPath(parent.path, this.name);
     this.system = system;
     this.afterStop = afterStop || (() => { });
     this.reference = localActorRef(this.path);
@@ -127,9 +127,11 @@ export class Actor<State, Msg, ParentRef extends ActorSystemRef | LocalActorRef<
     } else {
       this.mailbox.push({ message });
     }
+
+    return Promise.resolve();
   }
 
-  query(message: Msg, timeout: number) {
+  query<MsgCreator extends QueryMsgFactory<Msg, any>>(queryFactory: MsgCreator, timeout: Milliseconds): Promise<InferResponseFromMsgFactory<MsgCreator>> {
     this.assertNotStopped();
     assert(timeout !== undefined && timeout !== null);
     const deferred = new Deferral();
@@ -145,9 +147,8 @@ export class Actor<State, Msg, ParentRef extends ActorSystemRef | LocalActorRef<
       this.system.removeTempReference(tempReference);
     });
 
-    if (typeof (message) === 'function') {
-      message = message(tempReference);
-    }
+
+    const message = queryFactory(tempReference);
     this.dispatch(message);
     return deferred.promise;
   }
@@ -169,7 +170,7 @@ export class Actor<State, Msg, ParentRef extends ActorSystemRef | LocalActorRef<
     this.clearTimeout();
     this.parent.childStopped(this);
     delete (this as any).parent;
-    [...this.children.values()].forEach(stop);
+    [...this.children.values()].forEach(x => x.stop());
     this.stopped = true;
 
     addMacrotask(() => this.afterStop(this.state, context));
