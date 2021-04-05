@@ -18,26 +18,26 @@ type ParentTypeFromRefType<P extends LocalActorSystemRef | LocalActorRef<any>> =
   P extends ActorSystemRef
   ? RequiredActorSystemCapabilities
   : (P extends LocalActorRef<infer Msg>
-    ? (RequiredChildCapabilities & ICanDispatch<Msg> & ICanHandleFault<RequiredChildCapabilities> & IHaveChildren)
+    ? (RequiredChildCapabilities & ICanDispatch<Msg> & ICanHandleFault<RequiredChildCapabilities> & IHaveChildren<RequiredChildCapabilities, RequiredActorSystemCapabilities>)
     : never);
 
 type RequiredChildCapabilities =
   ICanReset
   & ICanStop
-  & IHaveChildren
+  & IHaveChildren<RequiredChildCapabilities, RequiredActorSystemCapabilities>
   & IHaveName
   & ICanAssertNotStopped;
 
 type RequiredActorSystemCapabilities =
   ICanReset
   & ICanStop
-  & IHaveChildren
+  & IHaveChildren<RequiredChildCapabilities, RequiredActorSystemCapabilities>
   & IHaveName
   & ICanHandleFault<RequiredChildCapabilities>
   & ICanAssertNotStopped
   & ICanManageTempReferences;
 
-export class Actor<State, Msg, ParentRef extends LocalActorSystemRef | LocalActorRef<any>, Child extends RequiredChildCapabilities = RequiredChildCapabilities> implements ICanDispatch<Msg>, ICanStop, ICanQuery<Msg>, IHaveName, IHaveChildren, ICanReset, ICanHandleFault<Child>, ICanAssertNotStopped {
+export class Actor<State, Msg, ParentRef extends LocalActorSystemRef | LocalActorRef<any>, Child extends RequiredChildCapabilities = RequiredChildCapabilities> implements ICanDispatch<Msg>, ICanStop, ICanQuery<Msg>, IHaveName, IHaveChildren<Child, RequiredActorSystemCapabilities>, ICanReset, ICanHandleFault<Child>, ICanAssertNotStopped {
   // TODO: Swap concreate parent class for interfaces 
   parent: ParentTypeFromRefType<ParentRef>
 

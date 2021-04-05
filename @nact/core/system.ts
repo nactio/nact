@@ -8,14 +8,14 @@ import { Deferral } from './deferral';
 function toBase36(x: number) { return Number(x).toString(36) }
 function generateSystemId() { return [...new Uint32Array(4)].map(_ => (Math.random() * Number.MAX_SAFE_INTEGER) | 0).map(toBase36).join('-') };
 
-type ActorSystemChild = ICanStop & IHaveName & Partial<IHaveChildren> & ICanReset;
+type ActorSystemChild = ICanStop & IHaveName & Partial<IHaveChildren<ActorSystemChild, ActorSystem>> & ICanReset;
 
 export type ActorSystemSettings = { name?: ActorSystemName, plugins?: Plugin[] };
 export class ActorSystem implements
   IHaveName,
   ICanFind,
   ICanStop,
-  IHaveChildren<ActorSystemChild>,
+  IHaveChildren<ActorSystemChild, ActorSystem>,
   ICanHandleFault<ActorSystemChild>,
   ICanManageTempReferences,
   ICanAssertNotStopped {
@@ -68,10 +68,10 @@ export class ActorSystem implements
         actorRef.path &&
         actorRef.path.parts;
 
-      return parts && (parts.reduce((parent: IHaveChildren | undefined, current: string) =>
+      return parts && (parts.reduce((parent: IHaveChildren<any, ActorSystem> | undefined, current: string) =>
         parent &&
         parent.children.get(current),
-        this as IHaveChildren
+        this as IHaveChildren<any, ActorSystem>
       ) as unknown as T);
     }
   }

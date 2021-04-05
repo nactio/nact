@@ -33,10 +33,10 @@ export interface ICanFind {
   find(path: Ref): any | undefined
 }
 
-type Maybe<T> = Partial<T>;
 
-export interface IHaveChildren<Child extends ICanReset & IHaveName & ICanStop & Maybe<IHaveChildren> = ICanReset & IHaveName & ICanStop & IHaveChildren<any>> {
+export interface IHaveChildren<Child, System> {
   children: Map<string, Child>;
+  system: System;
   childStopped(child: Child): void;
   childSpawned(child: Child): void;
 }
