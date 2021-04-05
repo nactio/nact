@@ -1,24 +1,30 @@
-import { ActorRef, ActorSystemRef, LocalActorRef, localActorSystemRef, LocalActorSystemRef, LocalTemporaryRef, temporaryRef } from './references';
+import { LocalActorRef, localActorSystemRef, LocalActorSystemRef, LocalTemporaryRef, Ref } from './references';
 import { ActorPath } from './paths';
 import assert from './assert'
-import { stop } from './functions';
 import { add as addToSystemMap, remove as removeFromSystemMap } from './system-map';
-import { ICanFind, ICanStop, IHaveChildren, IHaveName } from './interfaces';
-import { Actor } from './actor';
+import { ICanAssertNotStopped, ICanFind, ICanHandleFault, ICanManageTempReferences, ICanReset, ICanStop, IHaveChildren, IHaveName } from './interfaces';
 import { Deferral } from './deferral';
 
 function toBase36(x: number) { return Number(x).toString(36) }
 function generateSystemId() { return [...new Uint32Array(4)].map(_ => (Math.random() * Number.MAX_SAFE_INTEGER) | 0).map(toBase36).join('-') };
 
+type ActorSystemChild = ICanStop & IHaveName & Partial<IHaveChildren> & ICanReset;
 
 export type ActorSystemSettings = { name?: ActorSystemName, plugins?: Plugin[] };
-export class ActorSystem implements IHaveName, ICanFind, ICanStop, IHaveChildren<ICanStop> {
-  children: Map<string, ICanStop & Partial<IHaveChildren>>;
+export class ActorSystem implements
+  IHaveName,
+  ICanFind,
+  ICanStop,
+  IHaveChildren<ActorSystemChild>,
+  ICanHandleFault<ActorSystemChild>,
+  ICanManageTempReferences,
+  ICanAssertNotStopped {
+  children: Map<string, ActorSystemChild>;
   createLogger: () => undefined;
   name: ActorSystemName;
   path: ActorPath;
   reference: LocalActorSystemRef;
-  childReferences: Map<any, ActorRef<any>>;
+  childReferences: Map<any, LocalActorRef<unknown>>;
   tempReferences: Map<string, Deferral<any>>;
   stopped: boolean;
   system: this;
@@ -45,48 +51,43 @@ export class ActorSystem implements IHaveName, ICanFind, ICanStop, IHaveChildren
     this.tempReferences.delete(reference.path!.parts[0]);
   }
 
-  find(actorRef?: LocalActorSystemRef | LocalActorRef<any> | LocalTemporaryRef<any>): any | undefined {
+  find<T>(actorRef?: Ref): T | undefined {
     if (!actorRef || !actorRef.path) {
       return undefined;
     }
 
-    switch (actorRef.path.type) {
-      case 'temp': {
-        const actor = this.tempReferences.get(ActorPath.toString(actorRef.path));
-        return actor;
-      };
-      case undefined: {
-        if (actorRef.path.parts.length === 0) {
-          return this;
-        }
-        let parts =
-          actorRef &&
-          actorRef.path &&
-          actorRef.path.parts;
+    if (actorRef.path.isTemporary) {
+      const actor = this.tempReferences.get(ActorPath.toString(actorRef.path));
+      return actor as unknown as T;
+    } else if (actorRef.path.parts.length === 0) {
+      return this as unknown as T;
+    } else {
 
+      let parts =
+        actorRef &&
+        actorRef.path &&
+        actorRef.path.parts;
 
-        return parts && parts.reduce((parent: IHaveChildren | undefined, current: string) =>
-          parent &&
-          parent.children.get(current),
-          this as IHaveChildren
-        );
-      }
-      default: return undefined;
+      return parts && (parts.reduce((parent: IHaveChildren | undefined, current: string) =>
+        parent &&
+        parent.children.get(current),
+        this as IHaveChildren
+      ) as unknown as T);
     }
   }
 
-  handleFault(_msg: unknown, _error: unknown, child: LocalActorRef<any> | LocalActorSystemRef) {
-    console.log('Stopping top level actor,', ActorPath.toString(child.path), 'due to a fault');
-    stop(child);
+  handleFault(_msg: unknown, _error: Error | undefined, child?: ActorSystemChild) {
+    console.log('Stopping top level actor,', ActorPath.toString(child!.reference.path), 'due to a fault');
+    child!.stop();
   }
 
-  childStopped(child: Actor<any, any, any>) {
+  childStopped(child: IHaveName) {
     this.children.delete(child.name);
     this.childReferences.delete(child.name);
   }
 
-  childSpawned(child: Actor<any, any, any>) {
-    this.childReferences.set(child.name, child.reference);
+  childSpawned(child: ActorSystemChild) {
+    this.childReferences.set(child.name, child.reference as LocalActorRef<unknown>);
     this.children.set(child.name, child);
   }
 
@@ -99,7 +100,7 @@ export class ActorSystem implements IHaveName, ICanFind, ICanStop, IHaveChildren
 
   assertNotStopped() { assert(!this.stopped); return true; }
 
-  static start(settings?: ActorSystemSettings): ActorSystemRef {
+  static start(settings?: ActorSystemSettings): LocalActorSystemRef {
     return new ActorSystem(settings ?? {}).reference;
   }
 }

@@ -1,5 +1,5 @@
 import { SupervisionContext } from "./actor";
-import { ActorRef, ActorSystemRef, Ref } from "./references";
+import { Ref } from "./references";
 
 export const SupervisionActions = {
   // Stop Self

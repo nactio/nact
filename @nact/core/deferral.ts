@@ -1,5 +1,5 @@
 export class Deferral<T> {
-  promise: Promise<unknown>;
+  promise: Promise<T>;
   reject!: (reason?: any) => void;
   resolve!: (value: T) => void;
   dispatch!: (value: T) => void;

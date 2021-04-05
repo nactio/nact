@@ -8,7 +8,8 @@ enum DispatchableMarker {
   _ = ""
 }
 
-export type Dispatchable<Msg, PathType extends string | undefined = undefined> = { __dispatch__: DispatchableMarker, protocol: Msg } & Ref<PathType>;
+export type Dispatchable<Msg> =
+  { __dispatch__: DispatchableMarker, protocol: Msg } & Ref;
 
 enum StoppableMarker {
   _ = ""
@@ -27,7 +28,7 @@ export function nobody() {
   return { path } as (Stoppable & Dispatchable<any> & Local);
 }
 
-export type TemporaryRef<Msg> = Dispatchable<Msg, 'temp'>;
+export type TemporaryRef<Msg> = Dispatchable<Msg>;
 export type LocalTemporaryRef<Msg> = TemporaryRef<Msg> & Local;
 
 export function temporaryRef<Msg>(systemName: ActorSystemName) {
@@ -49,7 +50,6 @@ export type LocalActorRef<Msg> = ActorRef<Msg> & Local;
 export function localActorRef<Msg>(path: ActorPath) {
   return { path: path } as LocalActorRef<Msg>;
 }
-
 
 enum SystemMarker {
   _ = ""
