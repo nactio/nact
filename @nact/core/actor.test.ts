@@ -4,22 +4,21 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { ActorContextWithMailbox, SupervisionContext } from './actor';
 import { start, spawn, spawnStateless, dispatch, stop, query, milliseconds } from './index';
-import { ActorPath } from './paths';
-import { ActorRef, ActorSystemRef, nobody, Ref } from './references';
+import { LocalActorRef, LocalActorSystemRef, nobody } from './references';
 import { applyOrThrowIfStopped } from './system-map';
 
 chai.use(chaiAsPromised);
 chai.should();
 const delay = (duration: number) => new Promise<void>((resolve) => setTimeout(resolve, duration));
 
-const spawnChildrenEchoer = (parent: ActorSystemRef | ActorRef<any, any>, name: string) =>
+const spawnChildrenEchoer = (parent: LocalActorSystemRef | LocalActorRef<any>, name: string) =>
   spawnStateless(
     parent,
     function (msg, ctx) { dispatch(msg.sender, [...ctx.children.keys()]); },
     name
   );
 
-const isStopped = (reference: Ref<any>) => {
+const isStopped = (reference: LocalActorRef<any>) => {
   try {
     return applyOrThrowIfStopped(reference, (ref) => ref.stopped);
   } catch (e) {
@@ -27,7 +26,7 @@ const isStopped = (reference: Ref<any>) => {
   }
 };
 
-const children = (reference: Ref<any>) => {
+const children = (reference: LocalActorRef<any> | LocalActorSystemRef) => {
   try {
     return applyOrThrowIfStopped(reference, ref => new Map(ref.childReferences));
   } catch (e) {
@@ -50,25 +49,22 @@ const retry = async (assertion: () => void, remainingAttempts: number, retryInte
   }
 };
 
-describe('ActorRef', function () {
-  let system: ActorSystemRef;
+describe('LocalActorRef', function () {
+  let system: LocalActorSystemRef;
   beforeEach(() => { system = start(); });
   afterEach(() => stop(system));
 
-  it('should have name, path, parent, properties', function () {
+  it('should have path and system properties', function () {
     let child = spawnStateless(system, ignore);
     let grandchild = spawnStateless(child, ignore);
-    console.log(child.parent);
-    child.parent.should.equal(system);
-    grandchild.parent.should.equal(child);
-    child.name.should.be.a('string');
-    child.path!.should.be.instanceOf(ActorPath);
+    child.path.system!.should.equal(system.path.system);
+    grandchild.path.parts.slice(0, child.path.parts.length - 2).should.deep.equal(child.path.parts);
   });
 });
 
 describe('Actor', function () {
   describe('actor-function', function () {
-    let system: ActorSystemRef;
+    let system: LocalActorSystemRef;
     beforeEach(() => { system = start(); });
     afterEach(() => {
       stop(system);
@@ -122,8 +118,7 @@ describe('Actor', function () {
             return state + msg.payload;
           }
         },
-        'test',
-        { initialState: 'A joyous ' }
+        { name: 'test', initialState: 'A joyous ' }
       );
 
       dispatch(actor, { payload: 'Hello ', type: 'append' });
@@ -144,8 +139,7 @@ describe('Actor', function () {
             return state + msg.payload;
           }
         },
-        'Nact',
-        { initialStateFunc: (ctx) => `Hello ${ctx.name}! Is today not a joyous occasion?` }
+        { name: 'Nact', initialStateFunc: (ctx) => `Hello ${ctx.name}! Is today not a joyous occasion?` }
       );
 
       dispatch(actor, { payload: ' It is indeed', type: 'append' });
@@ -165,8 +159,7 @@ describe('Actor', function () {
             return state + msg.payload;
           }
         },
-        'Nact',
-        { initialStateFunc: () => { throw new Error('A bad moon is on the rise'); }, onCrash: (_, __, ctx) => { handled = true; return ctx.stop; } }
+        { name: 'Nact', initialStateFunc: () => { throw new Error('A bad moon is on the rise'); }, onCrash: (_, __, ctx) => { handled = true; return ctx.stop; } }
       );
       await retry(() => isStopped(actor).should.be.true, 12, 10);
       handled.should.be.true;
@@ -236,7 +229,7 @@ describe('Actor', function () {
   });
 
   describe('shutdownAfter', function () {
-    let system: ActorSystemRef;
+    let system: LocalActorSystemRef;
     beforeEach(() => { system = start(); });
     afterEach(() => {
       stop(system);
@@ -246,13 +239,13 @@ describe('Actor', function () {
 
     it('should automatically stop after timeout if timeout is specified', async function () {
       console.error = ignore;
-      let child = spawnStateless(system, () => { }, 'test', { shutdownAfter: 100 * milliseconds });
+      let child = spawnStateless(system, () => { }, { name: 'test', shutdownAfter: 100 * milliseconds });
       await delay(110);
       isStopped(child).should.be.true;
     });
 
     it('should automatically renew timeout after message', async function () {
-      let child = spawnStateless(system, ignore, 'test1', { shutdownAfter: 60 * milliseconds });
+      let child = spawnStateless(system, ignore, { name: 'test1', shutdownAfter: 60 * milliseconds });
       await delay(30);
       dispatch(child, {});
       await delay(40);
@@ -260,12 +253,12 @@ describe('Actor', function () {
     });
 
     it('should throw if timeout is not a number', async function () {
-      (() => spawnStateless(system, ignore, 'test1', { shutdownAfter: {} as any })).should.throw(Error);
+      (() => spawnStateless(system, ignore, { name: 'test1', shutdownAfter: {} as any })).should.throw(Error);
     });
   });
 
   describe('#stop()', function () {
-    let system: ActorSystemRef;
+    let system: LocalActorSystemRef;
     beforeEach(() => { system = start(); });
     afterEach(() => {
       stop(system);
@@ -326,12 +319,12 @@ describe('Actor', function () {
       let child = spawnStateless(system, () => { throw new Error('Should not be triggered'); });
       stop(child);
       await retry(() => isStopped(child).should.be.true, 12, 10);
-      dispatch(child, 'test');
+      dispatch(child, { name: 'test' });
     });
   });
 
   describe('#spawn()', function () {
-    let system: ActorSystemRef;
+    let system: LocalActorSystemRef;
     beforeEach(() => { system = start(); });
     afterEach(() => {
       stop(system);
@@ -342,7 +335,7 @@ describe('Actor', function () {
     it('automatically names an actor if a name is not provided', async function () {
       let child = spawnStateless(system, (msg) => msg);
       children(system).size.should.equal(1);
-      child.name.should.not.be.undefined;
+      child.path.parts[child.path.parts.length - 1].should.not.be.undefined;
     });
 
     it('should prevent a child with the same name from being spawned', function () {
@@ -376,7 +369,7 @@ describe('Actor', function () {
         } else {
           dispatch(msg.sender, [...this.children.keys()]);
         }
-      }, 'test');
+      }, { name: 'test' });
       dispatch(actor, { value: 'spawn' });
       let childrenMap = await query(actor, x => ({ value: 'query', sender: x }), 30);
       childrenMap.should.have.members(['child1', 'child2']);
@@ -385,7 +378,7 @@ describe('Actor', function () {
   });
 
   describe('#query()', function () {
-    let system: ActorSystemRef;
+    let system: LocalActorSystemRef;
     beforeEach(() => { system = start(); });
     afterEach(() => stop(system));
 
@@ -429,12 +422,12 @@ describe('Actor', function () {
   });
 
   describe('#onCrash', function () {
-    let system: ActorSystemRef;
+    let system: LocalActorSystemRef;
     beforeEach(() => { system = start(); });
     afterEach(() => stop(system));
 
-    const createSupervisor = (parent: ActorRef<any, any> | ActorSystemRef, name: string, properties = {}) =>
-      spawn(parent, (state = true) => state, name, properties);
+    const createSupervisor = (parent: LocalActorRef<any> | LocalActorSystemRef, properties = {}) =>
+      spawn(parent, (state = true) => state, properties);
 
     it('should be able to continue processing messages without loss of state', async function () {
       const resume = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => ctx.resume;
@@ -445,7 +438,7 @@ describe('Actor', function () {
         }
         dispatch(msg.sender, state + 1);
         return state + 1;
-      }, 'test', { onCrash: resume });
+      }, { name: 'test', onCrash: resume });
       dispatch(child, 'msg0');
       dispatch(child, 'msg1');
       dispatch(child, 'msg2');
@@ -462,20 +455,20 @@ describe('Actor', function () {
         }
         dispatch(msg.sender, state + 1);
         return state + 1;
-      }, 'test', { onCrash: reset });
+      }, { name: 'test', onCrash: reset });
 
       const grandchild = spawn(child, (state = 0, msg) => {
         dispatch(msg.sender, state + 1);
         return state + 1;
       });
 
-      const nobody = new nobody();
-      dispatch(grandchild, { sender: nobody, value: 'msg0' });
-      dispatch(child, { sender: nobody, value: 'msg0' });
-      dispatch(grandchild, { sender: nobody, value: 'msg1' });
-      dispatch(child, { sender: nobody, value: 'msg1' });
-      dispatch(grandchild, { sender: nobody, value: 'msg2' });
-      dispatch(child, { sender: nobody, value: 'msg2' });
+      const nobodyRef = nobody();
+      dispatch(grandchild, { sender: nobodyRef, value: 'msg0' });
+      dispatch(child, { sender: nobodyRef, value: 'msg0' });
+      dispatch(grandchild, { sender: nobodyRef, value: 'msg1' });
+      dispatch(child, { sender: nobodyRef, value: 'msg1' });
+      dispatch(grandchild, { sender: nobodyRef, value: 'msg2' });
+      dispatch(child, { sender: nobodyRef, value: 'msg2' });
       let result = await query(child, x => ({ sender: x, value: 'msg3' }), 300);
       result.should.equal(1);
       isStopped(grandchild).should.be.true;
@@ -490,20 +483,20 @@ describe('Actor', function () {
         }
         dispatch(msg.sender, state + 1);
         return state + 1;
-      }, 'test', { onCrash: reset, initialState: 1 });
+      }, { name: 'test', onCrash: reset, initialState: 1 });
 
       const grandchild = spawn(child, (state = 0, msg) => {
         dispatch(msg.sender, state + 1);
         return state + 1;
       });
 
-      const nobody = new nobody();
-      dispatch(grandchild, { sender: nobody, value: 'msg0' });
-      dispatch(child, { sender: nobody, value: 'msg0' });
-      dispatch(grandchild, { sender: nobody, value: 'msg1' });
-      dispatch(child, { sender: nobody, value: 'msg1' });
-      dispatch(grandchild, { sender: nobody, value: 'msg2' });
-      dispatch(child, { sender: nobody, value: 'msg2' });
+      const nobodyRef = nobody();
+      dispatch(grandchild, { sender: nobodyRef, value: 'msg0' });
+      dispatch(child, { sender: nobodyRef, value: 'msg0' });
+      dispatch(grandchild, { sender: nobodyRef, value: 'msg1' });
+      dispatch(child, { sender: nobodyRef, value: 'msg1' });
+      dispatch(grandchild, { sender: nobodyRef, value: 'msg2' });
+      dispatch(child, { sender: nobodyRef, value: 'msg2' });
       let result = await query(child, x => ({ sender: x, value: 'msg3' }), 300);
       result.should.equal(3);
       isStopped(grandchild).should.be.true;
@@ -518,12 +511,12 @@ describe('Actor', function () {
         }
         dispatch(msg.sender, state + 1);
         return state + 1;
-      }, 'test', { onCrash: stop });
+      }, { name: 'test', onCrash: stop });
 
-      const nobody = new nobody();
-      dispatch(child, { value: 'msg0', sender: nobody });
-      dispatch(child, { value: 'msg1', sender: nobody });
-      dispatch(child, { value: 'msg2', sender: nobody });
+      const nobodyRef = nobody();
+      dispatch(child, { value: 'msg0', sender: nobodyRef });
+      dispatch(child, { value: 'msg1', sender: nobodyRef });
+      dispatch(child, { value: 'msg2', sender: nobodyRef });
       await delay(100);
       isStopped(child).should.be.true;
     });
@@ -537,12 +530,12 @@ describe('Actor', function () {
         }
         dispatch(msg.sender, state + 1);
         return state + 1;
-      }, 'test', { onCrash: escalate });
+      }, { name: 'test', onCrash: escalate });
 
-      const nobody = new nobody();
-      dispatch(child, { sender: nobody, value: 'msg0' });
-      dispatch(child, { sender: nobody, value: 'msg1' });
-      dispatch(child, { sender: nobody, value: 'msg2' });
+      const nobodyRef = nobody();
+      dispatch(child, { sender: nobodyRef, value: 'msg0' });
+      dispatch(child, { sender: nobodyRef, value: 'msg1' });
+      dispatch(child, { sender: nobodyRef, value: 'msg2' });
       await delay(100);
       isStopped(child).should.be.true;
       isStopped(parent).should.be.true;
@@ -564,11 +557,11 @@ describe('Actor', function () {
         }
         dispatch(msg.sender, state + 1);
         return state + 1;
-      }, 'test', { onCrash });
-      const nobody = new nobody();
-      dispatch(child, { sender: nobody, value: 'msg0' });
-      dispatch(child, { sender: nobody, value: 'msg1' });
-      dispatch(child, { sender: nobody, value: 'msg2' });
+      }, { name: 'test', onCrash });
+      const nobodyRef = nobody();
+      dispatch(child, { sender: nobodyRef, value: 'msg0' });
+      dispatch(child, { sender: nobodyRef, value: 'msg1' });
+      dispatch(child, { sender: nobodyRef, value: 'msg2' });
       await delay(100);
       isStopped(child).should.be.true;
       isStopped(parent).should.be.true;
@@ -582,12 +575,12 @@ describe('Actor', function () {
         }
         dispatch(msg.sender, state + 1);
         return state + 1;
-      }, 'test', { onCrash: escalate });
+      }, { name: 'test', onCrash: escalate });
 
-      const nobody = new nobody();
-      dispatch(child, { sender: nobody, value: 'msg0' });
-      dispatch(child, { sender: nobody, value: 'msg1' });
-      dispatch(child, { sender: nobody, value: 'msg2' });
+      const nobodyRef = nobody();
+      dispatch(child, { sender: nobodyRef, value: 'msg0' });
+      dispatch(child, { sender: nobodyRef, value: 'msg1' });
+      dispatch(child, { sender: nobodyRef, value: 'msg2' });
       await delay(100);
       isStopped(child).should.be.true;
     });
@@ -596,14 +589,14 @@ describe('Actor', function () {
       const escalate = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => ctx.escalate;
       const parent = spawn(system, () => {
         throw new Error('Very bad thing');
-      }, 'parent-of-test', {});
+      }, { name: 'parent-of-test' });
       const child = spawn(parent, (state = 0, msg) => {
         if (state + 1 === 3 && msg.value !== 'msg3') {
           throw new Error('Very bad thing');
         }
         dispatch(msg.sender, state + 1);
         return state + 1;
-      }, 'test', { onCrash: escalate });
+      }, { name: 'test', onCrash: escalate });
 
       dispatch(child, { value: 'msg0' });
       dispatch(child, { value: 'msg1' });
@@ -614,7 +607,7 @@ describe('Actor', function () {
     });
 
     it('should be able to escalate to parent (which stops child and resumes or escalates)', async function () {
-      const stopChildAndResumeOrEscalate = (_msg: any, _err: any, ctx: SupervisionContext<any, any>, child: undefined | ActorRef<any, any>) => {
+      const stopChildAndResumeOrEscalate = (_msg: any, _err: any, ctx: SupervisionContext<any, any>, child: undefined | LocalActorRef<any>) => {
         if (child) {
           stop(child);
           return ctx.resume;
@@ -625,17 +618,17 @@ describe('Actor', function () {
       const escalate = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => ctx.escalate;
       const parent = spawn(system, () => {
         throw new Error('Very bad thing');
-      }, 'parent-of-test', { onCrash: stopChildAndResumeOrEscalate });
+      }, { name: 'parent-of-test', onCrash: stopChildAndResumeOrEscalate });
       const child = spawn(parent, (state = 0, msg) => {
         if (state + 1 === 3 && msg.value !== 'msg3') {
           throw new Error('Very bad thing');
         }
         dispatch(msg.sender, state + 1);
         return state + 1;
-      }, 'test', { onCrash: escalate });
+      }, { name: 'test', onCrash: escalate });
       const sibling = spawn(parent, () => {
         throw new Error('Very bad thing');
-      }, 'sibling-of-test', { onCrash: escalate });
+      }, { onCrash: escalate, name: 'sibling-of-test' });
       dispatch(child, { value: 'msg0' });
       dispatch(child, { value: 'msg1' });
       dispatch(child, { value: 'msg2' });
@@ -650,7 +643,7 @@ describe('Actor', function () {
     });
 
     it('should be able to escalate to parent (which resumes child and resumes)', async function () {
-      const resumeChildAndResumeOrEscalate = (_msg: any, _err: any, ctx: SupervisionContext<any, any>, child: undefined | ActorRef<any, any>) => {
+      const resumeChildAndResumeOrEscalate = (_msg: any, _err: any, ctx: SupervisionContext<any, any>, child: undefined | LocalActorRef<any>) => {
         if (child) {
           return ctx.resume;
         } else {
@@ -660,14 +653,14 @@ describe('Actor', function () {
       const escalate = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => ctx.escalate;
       const parent = spawn(system, () => {
         throw new Error('Very bad thing');
-      }, 'parent-of-test', { onCrash: resumeChildAndResumeOrEscalate });
+      }, { name: 'parent-of-test', onCrash: resumeChildAndResumeOrEscalate });
       const child = spawn(parent, (state = 0, msg) => {
         if (state + 1 === 3 && msg.value !== 'msg3') {
           throw new Error('Very bad thing');
         }
         dispatch(msg.sender, state + 1);
         return state + 1;
-      }, 'test', { onCrash: escalate });
+      }, { name: 'test', onCrash: escalate });
       dispatch(child, 'msg0');
       dispatch(child, 'msg1');
       dispatch(child, 'msg2');
@@ -686,7 +679,7 @@ describe('Actor', function () {
         }
         dispatch(msg.sender, state + 1);
         return state + 1;
-      }, 'test', { onCrash: stopAll });
+      }, { name: 'test', onCrash: stopAll });
       const childOfChild1 = spawn(child1, (state = 0, msg) => {
         dispatch(msg.sender, state + 1);
         return state + 1;
@@ -714,14 +707,14 @@ describe('Actor', function () {
       const stopAllChildren = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => ctx.stopAllChildren;
       const escalate = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => ctx.escalate;
 
-      const parent = createSupervisor(system, 'test1', { onCrash: stopAllChildren });
+      const parent = createSupervisor(system, { name: 'test1', onCrash: stopAllChildren });
       const child1 = spawn(parent, (state = 0, msg) => {
         if (state + 1 === 3 && msg.value !== 'msg3') {
           throw new Error('Very bad thing');
         }
         dispatch(msg.sender, state + 1);
         return state + 1;
-      }, 'test', { onCrash: escalate });
+      }, { name: 'test', onCrash: escalate });
       const child2 = spawn(parent, (state = 0, msg) => {
         dispatch(msg.sender, state + 1);
         return state + 1;
@@ -739,14 +732,14 @@ describe('Actor', function () {
       const stopChild = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => ctx.stopChild;
       const escalate = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => ctx.escalate;
 
-      const parent = createSupervisor(system, 'test1', { onCrash: stopChild });
+      const parent = createSupervisor(system, { name: 'test1', onCrash: stopChild });
       const child1 = spawn(parent, (state = 0, msg) => {
         if (state + 1 === 3 && msg.value !== 'msg3') {
           throw new Error('Very bad thing');
         }
         dispatch(msg.sender, state + 1);
         return state + 1;
-      }, 'test', { onCrash: escalate });
+      }, { name: 'test', onCrash: escalate });
       const child2 = spawn(parent, (state = 0, msg) => {
         dispatch(msg.sender, state + 1);
         return state + 1;
@@ -769,7 +762,7 @@ describe('Actor', function () {
         }
         dispatch(msg.sender, state + 1);
         return state + 1;
-      }, 'test', { onCrash: resetAll });
+      }, { name: 'test', onCrash: resetAll });
       const childOfChild1 = spawn(child1, (state = 0, msg) => {
         dispatch(msg.sender, state + 1);
         return state + 1;
@@ -807,14 +800,14 @@ describe('Actor', function () {
     it('should be able to reset all children', async function () {
       const resetAllChildren = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => ctx.resetAllChildren;
       const escalate = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => ctx.escalate;
-      const parent = createSupervisor(system, 'test1', { onCrash: resetAllChildren });
+      const parent = createSupervisor(system, { name: 'test1', onCrash: resetAllChildren });
       const child1 = spawn(parent, (state = 0, msg,) => {
         if (state + 1 === 3 && msg.value !== 'msg3') {
           throw new Error('Very bad thing');
         }
         dispatch(msg.sender, state + 1);
         return state + 1;
-      }, 'test', { onCrash: escalate });
+      }, { name: 'test', onCrash: escalate });
       const child2 = spawn(parent, (state = 0, msg) => {
         dispatch(msg.sender, state + 1);
         return state + 1;
@@ -835,14 +828,14 @@ describe('Actor', function () {
     it('should be able to reset child', async function () {
       const resetChild = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => ctx.resetChild;
       const escalate = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => ctx.escalate;
-      const parent = createSupervisor(system, 'test1', { onCrash: resetChild });
+      const parent = createSupervisor(system, { name: 'test1', onCrash: resetChild });
       const child1 = spawn(parent, (state = 0, msg) => {
         if (state + 1 === 3 && msg.value !== 'msg3') {
           throw new Error('Very bad thing');
         }
         dispatch(msg.sender, state + 1);
         return state + 1;
-      }, 'test', { onCrash: escalate });
+      }, { name: 'test', onCrash: escalate });
       const child2 = spawn(parent, (state = 0, msg) => {
         dispatch(msg.sender, state + 1);
         return state + 1;
@@ -862,7 +855,7 @@ describe('Actor', function () {
   });
 
   describe('#afterStop', function () {
-    let system: ActorSystemRef;
+    let system: LocalActorSystemRef;
     beforeEach(() => { system = start(); });
     afterEach(() => {
       stop(system);
@@ -882,7 +875,7 @@ describe('Actor', function () {
       const child = spawn(system, async (state = {}, _msg, _ctx) => {
         await delay(100);
         return state;
-      }, 'test', { afterStop });
+      }, { name: 'test', afterStop });
 
       dispatch(child, 1);
       dispatch(child, 2);

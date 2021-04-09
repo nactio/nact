@@ -3,10 +3,10 @@
 import { start, dispatch, query, spawnStateless, spawn, stop } from './index';
 import { applyOrThrowIfStopped } from './system-map';
 import chai from 'chai';
-import { ActorRef, ActorSystemRef } from './references';
+import { LocalActorRef, LocalActorSystemRef } from './references';
 chai.should();
 
-const isStopped = (reference: ActorSystemRef | ActorRef<any, any>) => {
+const isStopped = (reference: LocalActorSystemRef | LocalActorRef<any>) => {
   try {
     return applyOrThrowIfStopped(reference, a => a.stopped);
   } catch (e) {
@@ -31,11 +31,11 @@ describe('System', function () {
 
   it('should be able to have a custom name specified', async function () {
     const system = start({ name: 'henry' });
-    system.system.name!.should.equal('henry');
+    system.path.system!.should.equal('henry');
   });
 
   describe('#spawn()', function () {
-    let system: ActorSystemRef;
+    let system: LocalActorSystemRef;
     beforeEach(() => { system = start(); });
     afterEach(() => stop(system));
 
@@ -46,7 +46,7 @@ describe('System', function () {
   });
 
   describe('#stop()', function () {
-    let system: ActorSystemRef;
+    let system: LocalActorSystemRef;
     beforeEach(() => { system = start(); });
     afterEach(() => stop(system));
 

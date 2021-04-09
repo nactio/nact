@@ -368,15 +368,26 @@ export type StatelessActorProps<Msg, ParentRef extends ActorSystemRef | LocalAct
 export function spawn<ParentRef extends LocalActorSystemRef | LocalActorRef<any>, Func extends ActorFunc<any, any, ParentRef>>(
   parent: ParentRef,
   f: Func,
-  properties?: ActorProps<InferStateFromFunc<Func>, InferMsgFromFunc<Func>, ParentRef>
+  propertiesOrName?: (string | ActorProps<InferStateFromFunc<Func>, InferMsgFromFunc<Func>, ParentRef>)
 ): LocalActorRef<InferMsgFromFunc<Func>> {
-  return applyOrThrowIfStopped(parent, (p: ParentTypeFromRefType<ParentRef>) => p.assertNotStopped() && new Actor(p, p.system, f, properties).reference);
+  return applyOrThrowIfStopped(
+    parent,
+    (p: ParentTypeFromRefType<ParentRef>) =>
+      p.assertNotStopped() &&
+      new Actor(
+        p,
+        p.system,
+        f,
+        (typeof propertiesOrName === 'string' ? { name: propertiesOrName } : propertiesOrName
+        )
+      ).reference
+  );
 }
 
 export function spawnStateless<ParentRef extends LocalActorSystemRef | LocalActorRef<any>, Func extends StatelessActorFunc<any, ParentRef>>(
   parent: ParentRef,
   f: Func,
-  properties?: StatelessActorProps<InferMsgFromStatelessFunc<Func>, ParentRef>
+  propertiesOrName?: (string | StatelessActorProps<InferMsgFromStatelessFunc<Func>, ParentRef>)
 ): LocalActorRef<InferMsgFromStatelessFunc<Func>> {
   return spawn(
     parent,
@@ -384,7 +395,12 @@ export function spawnStateless<ParentRef extends LocalActorSystemRef | LocalActo
       f.call(ctx, msg, ctx);
       return undefined;
     },
-    { ...properties, onCrash: (_, __, ctx) => ctx.resume }
+    {
+      ...((typeof propertiesOrName === 'string'
+        ? { name: propertiesOrName } : propertiesOrName) ?? {}
+      ),
+      onCrash: (_, __, ctx) => ctx.resume
+    }
   );
 }
 

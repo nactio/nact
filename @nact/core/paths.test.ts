@@ -60,24 +60,24 @@ describe('Path', function () {
 
   describe('#createChildPath()', function () {
     it('should append name to end of parts array if name is valid', function () {
-      let path1 = ActorPath.root('root').createChildPath('a');
+      let path1 = ActorPath.createChildPath(ActorPath.root('root'), 'a');
       path1.parts.should.deep.equal(['a']);
 
-      let path2 = path1.createChildPath('b');
+      let path2 = ActorPath.createChildPath(path1, 'b');
       path2.parts.should.deep.equal(['a', 'b']);
 
-      let path3 = path2.createChildPath('c1234-d4');
+      let path3 = ActorPath.createChildPath(path2, 'c1234-d4');
       path3.parts.should.deep.equal(['a', 'b', 'c1234-d4']);
     });
 
     it('should throw an exception if the child name is invalid', function () {
-      (() => ActorPath.root('root').createChildPath('?')).should.throw(Error);
-      (() => ActorPath.root('root').createChildPath('a').createChildPath(' ')).should.throw(Error);
-      (() => ActorPath.root('root').createChildPath('a').createChildPath('')).should.throw(Error);
-      (() => ActorPath.root('root').createChildPath(undefined as any)).should.throw(Error);
-      (() => ActorPath.root('root').createChildPath(null as any)).should.throw(Error);
-      (() => ActorPath.root('root').createChildPath(123 as any)).should.throw(Error);
-      (() => ActorPath.root('root').createChildPath('&')).should.throw(Error);
+      (() => ActorPath.createChildPath(ActorPath.root('root'), '?')).should.throw(Error);
+      (() => ActorPath.createChildPath(ActorPath.createChildPath(ActorPath.root('root'), 'a'), ' ')).should.throw(Error);
+      (() => ActorPath.createChildPath(ActorPath.createChildPath(ActorPath.root('root'), 'a'), '')).should.throw(Error);
+      (() => ActorPath.createChildPath(ActorPath.root('root'), undefined as any)).should.throw(Error);
+      (() => ActorPath.createChildPath(ActorPath.root('root'), null as any)).should.throw(Error);
+      (() => ActorPath.createChildPath(ActorPath.root('root'), 123 as any)).should.throw(Error);
+      (() => ActorPath.createChildPath(ActorPath.root('root'), '&')).should.throw(Error);
     });
   });
 });
