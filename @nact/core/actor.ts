@@ -96,6 +96,8 @@ export class Actor<State, Msg, ParentRef extends LocalActorSystemRef | LocalActo
         throw new Error('Shutdown should be specified as a number in milliseconds');
       }
       this.shutdownPeriod = Actor.getSafeTimeout(shutdownAfter);
+      console.log(this.shutdownPeriod);
+      console.log('shutdownAfter', shutdownAfter);
       this.setTimeout = () => {
         this.timeout = globalThis.setTimeout(() => this.stop(), this.shutdownPeriod) as unknown as number;
       };
@@ -160,7 +162,10 @@ export class Actor<State, Msg, ParentRef extends LocalActorSystemRef | LocalActo
     const deferred = new Deferral<InferResponseFromMsgFactory<MsgCreator>>();
 
     timeout = Actor.getSafeTimeout(timeout);
-    const timeoutHandle = globalThis.setTimeout(() => { deferred.reject(new Error('Query Timeout')); }, timeout);
+    const timeoutHandle = globalThis.setTimeout(() => {
+      console.log('timeout', timeout);
+      deferred.reject(new Error('Query Timeout ' + timeout));
+    }, timeout);
     const tempReference = localTemporaryRef(this.system.name);
     this.system.addTempReference(tempReference, deferred);
     deferred.promise.then(() => {
@@ -169,7 +174,6 @@ export class Actor<State, Msg, ParentRef extends LocalActorSystemRef | LocalActo
     }).catch(() => {
       this.system.removeTempReference(tempReference);
     });
-
 
     const message = queryFactory(tempReference);
     this.dispatch(message);
@@ -384,6 +388,8 @@ export function spawn<ParentRef extends LocalActorSystemRef | LocalActorRef<any>
   );
 }
 
+const statelessSupervisionPolicy = (_: unknown, __: unknown, ctx: SupervisionContext<any, any>) => ctx.resume;
+
 export function spawnStateless<ParentRef extends LocalActorSystemRef | LocalActorRef<any>, Func extends StatelessActorFunc<any, ParentRef>>(
   parent: ParentRef,
   f: Func,
@@ -399,7 +405,7 @@ export function spawnStateless<ParentRef extends LocalActorSystemRef | LocalActo
       ...((typeof propertiesOrName === 'string'
         ? { name: propertiesOrName } : propertiesOrName) ?? {}
       ),
-      onCrash: (_, __, ctx) => ctx.resume
+      onCrash: statelessSupervisionPolicy
     }
   );
 }

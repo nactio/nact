@@ -44,10 +44,12 @@ export class ActorSystem implements
   }
 
   addTempReference(reference: LocalTemporaryRef<any>, deferral: Deferral<any>) {
+    assert(reference.path.isTemporary, 'Expected temporary ref');
     this.tempReferences.set(reference.path!.parts[0], deferral);
   }
 
   removeTempReference(reference: LocalTemporaryRef<any>) {
+    assert(reference.path.isTemporary, 'Expected temporary ref');
     this.tempReferences.delete(reference.path!.parts[0]);
   }
 
@@ -57,7 +59,7 @@ export class ActorSystem implements
     }
 
     if (actorRef.path.isTemporary) {
-      const actor = this.tempReferences.get(ActorPath.toString(actorRef.path));
+      const actor = this.tempReferences.get(actorRef.path.parts[0]);
       return actor as unknown as T;
     } else if (actorRef.path.parts.length === 0) {
       return this as unknown as T;

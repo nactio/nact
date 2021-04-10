@@ -802,6 +802,7 @@ describe('Actor', function () {
       const escalate = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => ctx.escalate;
       const parent = createSupervisor(system, { name: 'test1', onCrash: resetAllChildren });
       const child1 = spawn(parent, (state = 0, msg,) => {
+        console.log('handling message', msg);
         if (state + 1 === 3 && msg.value !== 'msg3') {
           throw new Error('Very bad thing');
         }
@@ -812,6 +813,7 @@ describe('Actor', function () {
         dispatch(msg.sender, state + 1);
         return state + 1;
       });
+      console.log('dispatching messages');
       dispatch(child2, { value: 'msg0' });
       dispatch(child1, { value: 'msg0' });
       dispatch(child2, { value: 'msg1' });
