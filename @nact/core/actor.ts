@@ -96,8 +96,6 @@ export class Actor<State, Msg, ParentRef extends LocalActorSystemRef | LocalActo
         throw new Error('Shutdown should be specified as a number in milliseconds');
       }
       this.shutdownPeriod = Actor.getSafeTimeout(shutdownAfter);
-      console.log(this.shutdownPeriod);
-      console.log('shutdownAfter', shutdownAfter);
       this.setTimeout = () => {
         this.timeout = globalThis.setTimeout(() => this.stop(), this.shutdownPeriod) as unknown as number;
       };
@@ -162,10 +160,7 @@ export class Actor<State, Msg, ParentRef extends LocalActorSystemRef | LocalActo
     const deferred = new Deferral<InferResponseFromMsgFactory<MsgCreator>>();
 
     timeout = Actor.getSafeTimeout(timeout);
-    const timeoutHandle = globalThis.setTimeout(() => {
-      console.log('timeout', timeout);
-      deferred.reject(new Error('Query Timeout ' + timeout));
-    }, timeout);
+    const timeoutHandle = globalThis.setTimeout(() => { deferred.reject(new Error('Query Timeout ' + timeout)); }, timeout);
     const tempReference = localTemporaryRef(this.system.name);
     this.system.addTempReference(tempReference, deferred);
     deferred.promise.then(() => {
