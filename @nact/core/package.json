@@ -1,12 +1,13 @@
 {
   "name": "@nact/core",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "",
   "module": "index.js",
   "main": "index.js",
   "scripts": {
     "test": "npm run lint-fix && jest",
     "test-watch": "jest --watch",
+    "build": "tsc",
     "interactive-cover": "nyc --reporter=html mocha ./test/*.js && open ./coverage/index.html",
     "lint": "semistandard",
     "coverage": "nyc report --reporter=text-lcov | coveralls",

@@ -12,11 +12,10 @@
     "noUnusedParameters": true,
     "noUnusedLocals": true,
     "moduleResolution": "node",
-    "outDir": "dist",
     // "typeRoots": [
     //   "node_modules/@types"
     // ],
-    "allowJs": true,
+    "allowJs": false,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
