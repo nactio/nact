@@ -1,4 +1,4 @@
-import { ActorSystem } from '@nact/core/system';
+import { ActorSystem } from '@nact/core';
 import { AbstractPersistenceEngine } from './persistence-engine';
 export * from './persistent-actor';
 export * from './persistent-query';

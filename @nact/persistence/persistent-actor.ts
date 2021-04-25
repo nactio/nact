@@ -1,11 +1,11 @@
 import { PersistedEvent, PersistedSnapshot } from './persistence-engine';
-import { Actor, applyOrThrowIfStopped, SupervisionActions } from '@nact/core';
-import { ActorRef, ActorSystemRef } from '@nact/core/references';
+import { Actor, applyOrThrowIfStopped, LocalActorRef, SupervisionActions } from '@nact/core';
+import type { LocalActorSystemRef } from '@nact/core';
 
 const id = x => x;
 const unit = x => { };
 
-export class PersistentActor<State, Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> extends Actor<State, Msg, ParentRef> {
+export class PersistentActor<State, Msg, ParentRef extends LocalActorSystemRef | LocalActorRef<any>> extends Actor<State, Msg, ParentRef> {
   constructor(parent, name, system, f, key, persistenceEngine, { snapshotEvery, snapshotEncoder = id, snapshotDecoder = id, encoder = id, decoder = id, ...properties } = {}) {
     super(parent, name, system, f, properties);
     if (!key) {
@@ -141,7 +141,7 @@ export class PersistentActor<State, Msg, ParentRef extends ActorSystemRef | Acto
   }
 }
 
-const spawnPersistent = (parent, f, key, name, properties) =>
+const spawnPersistent = (parent, f, key, properties) =>
   applyOrThrowIfStopped(
     parent,
     p => (new PersistentActor(p, name, p.system, f, key, p.system.persistenceEngine, properties)).reference
