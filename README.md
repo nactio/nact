@@ -11,7 +11,7 @@
 Any and all feedback, comments and suggestions are welcome. Please open an issue if you
 find anything unclear or misleading in the documentation. 
 
-This is the repository for the javascript implementation. To view/contribute to the ReasonML code, go to http://github.com/ncthbrt/reason-nact. To contribute to the documentation, https://github.com/ncthbrt/nact.io is the place to make PRs.
+This is the repository for the javascript implementation. To view/contribute to the ReasonML code, go to http://github.com/ncthbrt/reason-nact. To contribute to the documentation, https://github.com/ncthbrt/nact.xyz is the place to make PRs.
 
 ## Nact is redux but for the server
 
@@ -28,7 +28,7 @@ With out of the box support for event sourcing, and a considered implementation 
 
 Nact is no silver bullet, but it is evolving to tackle ever more demanding use cases. Perhaps one of them is yours?
 
-To get started, head to https://nact.io
+To get started, head to https://nact.xyz
 
 > Note: Nact is currently only able to work on Node 8 and above.
 
