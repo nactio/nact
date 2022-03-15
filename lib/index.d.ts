@@ -70,7 +70,7 @@ declare module 'nact' {
   };
 
   export type PersistentActorContext<Msg, ParentRef extends Ref<any>> =
-    ActorContext<MSGesture, ParentRef> & { persist: (msg: Msg) => Promise<void> };
+    ActorContext<Msg, ParentRef> & { persist: (msg: Msg) => Promise<void> };
 
   export type ActorContextWithMailbox<Msg, ParentRef extends Ref<any>> = ActorContext<Msg, ParentRef> & { mailbox: Msg[] };
 
