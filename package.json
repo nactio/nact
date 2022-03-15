@@ -1,6 +1,6 @@
 {
   "name": "nact",
-  "version": "7.6.1",
+  "version": "7.6.2",
   "description": "nact ⇒ node.js + actors = your services have never been so µ",
   "main": "lib/index.js",
   "scripts": {
@@ -14,7 +14,7 @@
     "test-only-watch": "nyc mocha --watch ./test/*.js",
     "lint-fix": "semistandard --fix"
   },
-  "homepage": "https://nact.io",
+  "homepage": "https://nact.xyz",
   "repository": {
     "type": "git",
     "url": "git://github.com/ncthbrt/nact"
@@ -30,7 +30,7 @@
     "event sourcing",
     "distributed-systems"
   ],
-  "author": "Nick Cuthbert (https://github.com/ncthbrt)",
+  "author": "Natalie Cuthbert (https://github.com/ncthbrt)",
   "license": "Apache-2.0",
   "bugs": {
     "url": "http://github.com/ncthbrt/nact/issues"

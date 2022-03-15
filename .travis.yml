@@ -1,10 +1,10 @@
 language: node_js
 node_js:
-- '8'
+  - "8"
 after_success: yarn run coverage
 deploy:
   provider: npm
-  email: nick@cuthbert.co.za
+  email: natalie@cuthbert.co.za
   api_key:
     secure: rzRCccJfVLDspjZwwyzzLZ0qNyU+qhwqGy+7cOF4dL8EBfPweiYFJCCcjYFw59VTFwcz8xE4rIecQP8aOE3aE8vY7H/Xhf3AJhrsHMKUT+yWxUHFlfp6DJOCFmDOkEY5gvL7U2cEzAaKGNz6hbH5MnHTH1n+uNS/RAgqYyXj2sbbXqoWUYReEIPEEUlT2HkWT4lv6MPN2GibuitZSHIGUynjj+NY1XKDlSZZB2CNCH/fwLSacgHIAmZfqAKNadwz2OFrRJsBNHsCslGgpZO9WeGDyEsrDkgMGrs/obXmFO52Ld0v2xXCb5UbP15PiQZYPCxOVkaLRLq2XWHXC36RGH0S8R9hM2E9698sitcQ37CvatTmbJjHTUPUsrQusZL45gAPnzmaO7nZ/1OGWHN1oztTjkniwNtNtOQmOOKe0T6vYqFGHHwmU0PNVB8psh4PmrR1YPtMTkZCiS8A16V3ISYghSjg9eIfRSPuhDFgAuCrKV1DMwxpX1PROd6J6NWd6EwtJ2jCS9kPb5zOufEBE71K3SK+OsOrn310gYjvSWziq/dTM6bdo4b+DyLUc9g34w90R47mwewa4Fz+VwVQWmehHE4xbg2YThSMk8hb0+cKogEFfOJ4NhisAW0Kgq/u3g9MvajPPooiqggGPSSRXJJVhjJuGijRQfXx9s//6gg=
   on:
