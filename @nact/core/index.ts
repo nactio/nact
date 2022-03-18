@@ -1,4 +1,5 @@
 export { spawn, spawnStateless, Actor } from './actor';
+export type { SupervisionContext, ActorContext } from './actor'
 export { stop, query, dispatch } from './functions';
 export * from './references';
 export { default as assert } from './assert';

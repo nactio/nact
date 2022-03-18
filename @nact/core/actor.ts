@@ -111,7 +111,7 @@ export class Actor<State, Msg, ParentRef extends LocalActorSystemRef | LocalActo
       try {
         this.state = this.initialStateFunc(this.createContext());
       } catch (e) {
-        this.handleFault(undefined, undefined, e);
+        this.handleFault(undefined, e as Error | undefined);
       }
     } else {
       this.state = this.initialState;
@@ -296,7 +296,7 @@ export class Actor<State, Msg, ParentRef extends LocalActorSystemRef | LocalActo
         this.afterMessage();
         this.processNext();
       } catch (e) {
-        this.handleFault(message, e);
+        this.handleFault(message, e as Error | undefined);
       }
     });
   }
@@ -311,9 +311,6 @@ export type ActorContext<Msg, ParentRef extends LocalActorRef<any> | ActorSystem
   name: ActorName,
   children: Map<ActorName, LocalActorRef<unknown>>,
 };
-
-// export type PersistentActorContext<Msg, ParentRef extends ActorSystemRef | ActorRef<any, any>> =
-//   ActorContext<MSGesture, ParentRef> & { persist: (msg: Msg) => Promise<void> };
 
 
 export type Mailbox<Msg> = { message: Msg }[];
