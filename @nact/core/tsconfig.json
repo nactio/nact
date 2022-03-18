@@ -1,4 +1,10 @@
 {
+  "include": [
+    "*"
+  ],
+  "exclude": [
+    "dist"
+  ],
   "compilerOptions": {
     "target": "es6",
     "module": "esnext",
@@ -21,8 +27,9 @@
     "resolveJsonModule": true,
     // Ensure that Babel can safely transpile files in the TypeScript project
     "isolatedModules": true,
-    // Ensure that .d.ts files are created by tsc, but not .js files
+    "outDir": "dist",
     "declaration": true,
-    "emitDeclarationOnly": false,
+    "declarationDir": "."
+    // Ensure that .d.ts files are created by tsc, but not .js files
   }
 }
