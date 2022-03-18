@@ -14,21 +14,21 @@ function unit(): void { };
 export type ActorName = string;
 
 // type InferMsgFromRef<R extends Ref<any>> = R extends Ref<infer Msg> ? Msg : never;
-type ParentTypeFromRefType<P extends LocalActorSystemRef | LocalActorRef<any>> =
+export type ParentTypeFromRefType<P extends LocalActorSystemRef | LocalActorRef<any>> =
   P extends ActorSystemRef
   ? RequiredActorSystemCapabilities
   : (P extends LocalActorRef<infer Msg>
     ? (RequiredChildCapabilities & ICanDispatch<Msg> & ICanHandleFault<RequiredChildCapabilities> & IHaveChildren<RequiredChildCapabilities, RequiredActorSystemCapabilities>)
     : never);
 
-type RequiredChildCapabilities =
+export type RequiredChildCapabilities =
   ICanReset
   & ICanStop
   & IHaveChildren<RequiredChildCapabilities, RequiredActorSystemCapabilities>
   & IHaveName
   & ICanAssertNotStopped;
 
-type RequiredActorSystemCapabilities =
+export type RequiredActorSystemCapabilities =
   ICanReset
   & ICanStop
   & IHaveChildren<RequiredChildCapabilities, RequiredActorSystemCapabilities>
@@ -340,10 +340,10 @@ export type StatelessActorFunc<Msg, ParentRef extends ActorSystemRef | LocalActo
 export type SupervisionActorFunc<Msg, ParentRef extends ActorSystemRef | LocalActorRef<any>> = (msg: unknown, err: Error | undefined, ctx: SupervisionContext<Msg, ParentRef>, child: LocalActorRef<unknown>) => Symbol | Promise<Symbol>;
 
 // Inference helpers
-type InferMsgFromFunc<T extends ActorFunc<any, any, any>> = T extends ActorFunc<any, infer Msg, any> ? Msg : never;
-type InferStateFromFunc<T extends ActorFunc<any, any, any>> = T extends ActorFunc<infer State, any, any> ? State : never;
+export type InferMsgFromFunc<T extends ActorFunc<any, any, any>> = T extends ActorFunc<any, infer Msg, any> ? Msg : never;
+export type InferStateFromFunc<T extends ActorFunc<any, any, any>> = T extends ActorFunc<infer State, any, any> ? State : never;
 
-type InferMsgFromStatelessFunc<T extends StatelessActorFunc<any, any>> = T extends StatelessActorFunc<infer Msg, any> ? Msg : never;
+export type InferMsgFromStatelessFunc<T extends StatelessActorFunc<any, any>> = T extends StatelessActorFunc<infer Msg, any> ? Msg : never;
 
 // Props
 export type NumberOfMessages = number;

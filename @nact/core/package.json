@@ -1,9 +1,10 @@
 {
   "name": "@nact/core",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "",
   "module": "index.js",
   "main": "index.js",
+  "sideEffects": false,
   "scripts": {
     "test": "npm run lint-fix && jest",
     "test-watch": "jest --watch",
