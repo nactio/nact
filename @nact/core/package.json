@@ -20,9 +20,10 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/chai": "^4.3.0",
     "@types/jest": "^26.0.20",
     "@types/macrotask": "^3.0.0",
-    "chai": "^4.3.0",
+    "chai": "^4.3.6",
     "chai-as-promised": "^7.1.1",
     "jest": "^26.6.3",
     "semistandard": "^16.0.0",
