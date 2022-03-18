@@ -21,6 +21,7 @@
   "license": "ISC",
   "devDependencies": {
     "@types/chai": "^4.3.0",
+    "@types/chai-as-promised": "^7.1.5",
     "@types/jest": "^26.0.20",
     "@types/macrotask": "^3.0.0",
     "chai": "^4.3.6",
