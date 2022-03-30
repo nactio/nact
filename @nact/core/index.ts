@@ -8,3 +8,4 @@ export { start, ActorSystem } from './system';
 export { SupervisionActions, defaultSupervisionPolicy } from './supervision';
 export { add as addSystem, remove as removeSystem, applyOrThrowIfStopped } from './system-map';
 export * from './assert';
+export { addMacrotask, clearMacrotask } from './macrotask';

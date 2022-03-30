@@ -1,0 +1,1 @@
+export { spawnPersistent } from './persistent-actor';

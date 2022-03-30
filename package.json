@@ -25,11 +25,6 @@
   },
   "workspaces": [
     "@nact/core",
-    "nact",
-    "test"
-  ],
-  "devDependencies": {
-    "@types/chai": "^4.2.15",
-    "@types/chai-as-promised": "^7.1.3"
-  }
+    "@nact/ports"
+  ]
 }
