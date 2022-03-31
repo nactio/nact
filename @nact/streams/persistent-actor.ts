@@ -35,7 +35,7 @@ function persistentActorRef<Msg, State>(path: ActorPath, persistenceKey: string)
   return { path, persistenceKey } as PersistentActorRef<Msg, State>;
 }
 
-type PersistentActorContext<State, Msg, ParentRef extends LocalActorSystemRef | LocalActorRef<any>> =
+export type PersistentActorContext<State, Msg, ParentRef extends LocalActorSystemRef | LocalActorRef<any>> =
   ActorContext<Msg, ParentRef> & { self: PersistentActorRef<State, Msg> };
 
 type Recovering = boolean;

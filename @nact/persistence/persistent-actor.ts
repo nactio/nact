@@ -1,18 +1,25 @@
 import { IPersistedEvent, IPersistedSnapshot, IPersistenceEngine } from './persistence-engine';
 import { SupervisionActions, Actor } from '@nact/core';
-import { applyOrThrowIfStopped, addMacrotask, clearMacrotask } from '@nact/core';
-import type { LocalActorSystemRef, LocalActorRef, ActorSystemRef } from '@nact/core';
-import type { RequiredChildCapabilities, ActorProps } from '@nact/core/actor';
+import { applyOrThrowIfStopped, addMacrotask } from '@nact/core';
+import type { LocalActorSystemRef, LocalActorRef } from '@nact/core';
+import type { RequiredChildCapabilities, ActorProps, ActorContext, ActorFunc, RequiredActorSystemCapabilities, ParentTypeFromRefType } from '@nact/core/actor';
 
 const id = (x: any) => x;
+type PersistentActorFunc<State, Msg, ParentRef extends LocalActorSystemRef | LocalActorRef<any>> =
+  (this: ActorContext<Msg, ParentRef>, state: State, msg: Msg, ctx: PersistentActorContext<Msg, ParentRef>) => State | Promise<State>;
 
-type PersistentActorProps<State, Msg, ParentRef extends LocalActorSystemRef | LocalActorRef<any>> = {
+export type PersistentActorProps<State, Msg, ParentRef extends LocalActorSystemRef | LocalActorRef<any>> = {
   snapshotEncoder?: (state: State) => any,
   snapshotDecoder?: (state: any) => State,
   decoder?: (msg: any) => Msg,
   encoder?: (msg: Msg) => any,
+  key: string,
   snapshotEvery?: number
 } & ActorProps<State, Msg, ParentRef>;
+
+type InferMsgFromFunc<T extends PersistentActorFunc<any, any, any>> = T extends PersistentActorFunc<any, infer Msg, any> ? Msg : never;
+type InferStateFromFunc<T extends PersistentActorFunc<any, any, any>> = T extends PersistentActorFunc<infer State, any, any> ? State : never;
+
 
 class PersistentActor<State, Msg, ParentRef extends LocalActorSystemRef | LocalActorRef<any>, Child extends RequiredChildCapabilities = RequiredChildCapabilities> extends Actor<State, Msg, ParentRef, Child> {
   persistenceEngine: IPersistenceEngine;
@@ -26,9 +33,8 @@ class PersistentActor<State, Msg, ParentRef extends LocalActorSystemRef | LocalA
   snapshotEvery: number | undefined;
   messagesToNextSnapshot: number;
 
-  constructor(parent, name, system, f, key, persistenceEngine, { snapshotEvery, snapshotEncoder = id, snapshotDecoder = id, encoder = id, decoder = id, ...properties }: PersistentActorProps<State, Msg, ParentRef> = {}) {
-    super(parent, system, f, properties);
-
+  constructor(parent: ParentTypeFromRefType<ParentRef>, system: RequiredActorSystemCapabilities, f: PersistentActorFunc<State, Msg, ParentRef>, persistenceEngine: IPersistenceEngine, { key, snapshotEvery, snapshotEncoder = id, snapshotDecoder = id, encoder = id, decoder = id, ...properties }: PersistentActorProps<State, Msg, ParentRef>) {
+    super(parent, system, f as ActorFunc<State, Msg, ParentRef>, properties);
     this.persistenceEngine = persistenceEngine;
     this.sequenceNumber = 0;
     this.busy = true;
@@ -61,7 +67,7 @@ class PersistentActor<State, Msg, ParentRef extends LocalActorSystemRef | LocalA
     }
   }
 
-  async handleFaultedRecovery(msg, error) {
+  async handleFaultedRecovery(msg: Msg, error: Error | undefined) {
     const ctx = this.createSupervisionContext();
     const decision = await Promise.resolve(this.onCrash(msg, error, ctx, this.reference));
     switch (decision) {
@@ -116,7 +122,7 @@ class PersistentActor<State, Msg, ParentRef extends LocalActorSystemRef | LocalA
             // Might not be an async function. Using promise.resolve to force it into that form
             this.state = await Promise.resolve(this.f.call(context, this.state, decodedMsg, context));
           } catch (e) {
-            let shouldContinue = await this.handleFaultedRecovery(decodedMsg, e);
+            let shouldContinue = await this.handleFaultedRecovery(decodedMsg, e as Error | undefined);
             if (shouldContinue) {
               continue;
             }
@@ -156,14 +162,17 @@ class PersistentActor<State, Msg, ParentRef extends LocalActorSystemRef | LocalA
     await (this.persistenceEngine.persist(persistedEvent));
   }
 
-  createContext() {
-    return { ...super.createContext.apply(this), persist: this.persist.bind(this) };
+  createContext(): PersistentActorContext<Msg, ParentRef> {
+    return { ...super.createContext.apply(this), persist: this.persist.bind(this), recovering: false };
   }
 }
 
-export const spawnPersistent = (engine: IPersistenceEngine, parent, f, key, properties) =>
-  applyOrThrowIfStopped(
-    parent,
-    p => (new PersistentActor(p, p.system, f, key, engine, properties)).reference
-  );
+export type PersistentActorContext<Msg, ParentRef extends LocalActorRef<any> | LocalActorSystemRef> =
+  ActorContext<Msg, ParentRef> & { persist: (msg: Msg) => Promise<void>, recovering: boolean };
 
+export function spawnPersistent<ParentRef extends LocalActorSystemRef | LocalActorRef<any>, Func extends PersistentActorFunc<any, any, ParentRef>>(engine: IPersistenceEngine, parent: ParentRef, f: Func, properties: PersistentActorProps<InferStateFromFunc<Func>, InferMsgFromFunc<Func>, ParentRef>) {
+  return applyOrThrowIfStopped(
+    parent,
+    p => (new PersistentActor(p, p.system, f, engine, properties)).reference
+  );
+}

@@ -1,0 +1,1 @@
+{"version":1,"registries":[{"schema":"/:module([a-zA-Z0-9-_]+)@:tag([a-zA-Z0-9-_\\.]+)","variables":[{"key":"module","url":"https://crux.land/api/completions"},{"key":"tag","url":"https://crux.land/api/completions/${module}/tags"}]}]}

@@ -2,16 +2,16 @@
 /* eslint-disable no-unused-expressions */
 import chai from 'chai';
 import { MockPersistenceEngine } from './mock-persistence-engine';
-import { MockPersistenceEngineProperties } from './mock-persistence-engine-properties';
 import { PartiallyBrokenPersistenceEngine } from './partially-broken-persistence-engine';
 import chaiAsPromised from 'chai-as-promised';
-import { dispatch, applyOrThrowIfStopped, stop } from '@nact/core';
+import { dispatch, applyOrThrowIfStopped, stop, query, start, ActorContext, Dispatchable } from '@nact/core';
 import type { ActorRef, LocalActorSystemRef } from '@nact/core';
-import { IPersistedEvent, IPersistedSnapshot, IPersistenceEngine } from './persistence-engine';
+import { PersistentActorContext, spawnPersistent } from './persistent-actor';
+import { ICanDispatch } from '@nact/core/interfaces';
 
 chai.should();
 chai.use(chaiAsPromised);
-const delay = (duration: number) => new Promise<void>((resolve, reject) => setTimeout(() => resolve(), duration));
+const delay = (duration: number) => new Promise<void>((resolve) => setTimeout(() => resolve(), duration));
 
 const isStopped = (reference: ActorRef<any>) => {
   try {
@@ -37,25 +37,18 @@ const retry = async (assertion: () => void, remainingAttempts: number, retryInte
   }
 };
 
-const concatenativeFunction = (initialState, additionalActions = ignore) =>
-  async function (state = initialState, msg, ctx) {
+function concatenativeFunction(initialState: string, additionalActions: (state: string, msg: string, ctx: PersistentActorContext<string, any>) => void | Promise<void> = ignore) {
+  return async function (state = initialState, [sender, msg]: [Dispatchable<string>, string], ctx: PersistentActorContext<string, any>) {
     if (!ctx.recovering) {
-      dispatch(ctx.sender, state + msg, ctx.self);
+      dispatch(sender, state + msg);
     }
     await Promise.resolve(additionalActions(state, msg, ctx));
     return state + msg;
   };
+}
 
 // End helpers
 
-describe('#configurePersistence', () => {
-  it('should require that the persistence engine be defined', function () {
-    (() => configurePersistence(0)({})).should.throw(Error);
-    (() => configurePersistence(undefined)({})).should.throw(Error);
-    (() => configurePersistence(null)({})).should.throw(Error);
-    (() => configurePersistence()({})).should.throw(Error);
-  });
-});
 
 describe('PersistentActor', () => {
   let system: LocalActorSystemRef;
@@ -70,6 +63,7 @@ describe('PersistentActor', () => {
     system = start(configurePersistence(persistenceEngine));
     const actor = spawnPersistent(
       system,
+      persistenceEngine,
       concatenativeFunction(''),
       'test'
     );
@@ -118,16 +112,6 @@ describe('PersistentActor', () => {
     (await query(actor, 'd', 100)).should.equal('abcd');
   });
 
-  it('must have a persistentKey of type string', async () => {
-    const persistenceEngine = new MockPersistenceEngine();
-    system = start(configurePersistence(persistenceEngine));
-    (() => spawnPersistent(system, ignore, undefined)).should.throw(Error);
-    (() => spawnPersistent(system, ignore, null)).should.throw(Error);
-    (() => spawnPersistent(system, ignore, 1)).should.throw(Error);
-    (() => spawnPersistent(system, ignore, [])).should.throw(Error);
-    (() => spawnPersistent(system, ignore, {})).should.throw(Error);
-    (() => spawnPersistent(system, ignore, Symbol('A'))).should.throw(Error);
-  });
 
   it('should be able to replay previously persisted events on startup', async () => {
     const expectedResult = '1234567890';
