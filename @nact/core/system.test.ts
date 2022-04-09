@@ -21,8 +21,8 @@ describe('System', function () {
     const system1 = start();
     const system2 = start();
 
-    const actor1 = spawnStateless(system1, (msg) => dispatch(msg.sender, msg.value * 2), 'child1');
-    const actor2 = spawnStateless(system2, (msg) => dispatch(msg.sender, msg.value), 'child1');
+    const actor1 = spawnStateless(system1, (msg) => dispatch(msg.sender, msg.value * 2), { name: 'child1' });
+    const actor2 = spawnStateless(system2, (msg) => dispatch(msg.sender, msg.value), { name: 'child1' });
     const result1 = await query(actor1, x => ({ value: 5, sender: x }), 30);
     const result2 = await query(actor2, x => ({ value: 5, sender: x }), 30);
     result1.should.equal(10);
@@ -40,8 +40,8 @@ describe('System', function () {
     afterEach(() => stop(system));
 
     it('should prevent a child with the same name from being spawned', function () {
-      spawnStateless(system, () => console.log('hello'), 'child1');
-      (() => spawnStateless(system, () => console.log('hello'), 'child1')).should.throw(Error);
+      spawnStateless(system, () => console.log('hello'), { name: 'child1' });
+      (() => spawnStateless(system, () => console.log('hello'), { name: 'child1' })).should.throw(Error);
     });
   });
 

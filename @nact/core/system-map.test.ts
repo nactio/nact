@@ -72,7 +72,7 @@ describe('#applyOrThrowIfStopped()', function () {
   it('be able to apply the actor to the function if the actor can be found', function () {
     const systemName = 'hello1'
     let systemRef = start({ name: systemName });
-    const actorRef = spawnStateless(systemRef, () => true, 'actor');
+    const actorRef = spawnStateless(systemRef, () => true, { name: 'actor' });
     applyOrThrowIfStopped(actorRef, s => !!s).should.equal(true);
   });
 });
