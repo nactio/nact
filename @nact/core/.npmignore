@@ -75,3 +75,5 @@ jest.config.js
 **/*.test.ts
 **/*.ts
 !**/*.d.ts
+
+*.test.d.ts
