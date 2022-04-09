@@ -380,7 +380,7 @@ const statelessSupervisionPolicy = (_: unknown, __: unknown, ctx: SupervisionCon
 export function spawnStateless<ParentRef extends LocalActorSystemRef | LocalActorRef<any>, Func extends StatelessActorFunc<any, ParentRef>>(
   parent: ParentRef,
   f: Func,
-  propertiesOrName?: (string | StatelessActorProps<InferMsgFromStatelessFunc<Func>, ParentRef>)
+  propertiesOrName?: StatelessActorProps<InferMsgFromStatelessFunc<Func>, ParentRef>
 ): LocalActorRef<InferMsgFromStatelessFunc<Func>> {
   return spawn(
     parent,
@@ -392,9 +392,7 @@ export function spawnStateless<ParentRef extends LocalActorSystemRef | LocalActo
       }
     },
     {
-      ...((typeof propertiesOrName === 'string'
-        ? { name: propertiesOrName } : propertiesOrName) ?? {}
-      ),
+      ...propertiesOrName,
       onCrash: statelessSupervisionPolicy
     }
   );

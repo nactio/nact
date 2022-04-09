@@ -14,7 +14,7 @@ const spawnChildrenEchoer = (parent: LocalActorSystemRef | LocalActorRef<any>, n
   spawnStateless(
     parent,
     function (msg, ctx) { dispatch(msg.sender, [...ctx.children.keys()]); },
-    name
+    { name }
   );
 
 const isStopped = (reference: LocalActorRef<any>) => {
@@ -292,8 +292,8 @@ describe('Actor', function () {
       let actor = spawnChildrenEchoer(system, 'parent');
       let child1 = spawnChildrenEchoer(actor, 'child1');
       let child2 = spawnChildrenEchoer(actor, 'child2');
-      let grandchild1 = spawnStateless(child1, ignore, 'grandchild1');
-      let grandchild2 = spawnStateless(child1, ignore, 'grandchild2');
+      let grandchild1 = spawnStateless(child1, ignore, { name: 'grandchild1' });
+      let grandchild2 = spawnStateless(child1, ignore, { name: 'grandchild2' });
 
       stop(child1);
       isStopped(child1).should.be.true;
@@ -339,8 +339,8 @@ describe('Actor', function () {
 
     it('should prevent a child with the same name from being spawned', function () {
       let child = spawnStateless(system, ignore);
-      spawnStateless(child, ignore, 'grandchild');
-      (() => spawnStateless(child, ignore, 'grandchild')).should.throw(Error);
+      spawnStateless(child, ignore, { name: 'grandchild' });
+      (() => spawnStateless(child, ignore, { name: 'grandchild' })).should.throw(Error);
     });
 
     it('correctly registers children upon startup', async function () {
@@ -349,12 +349,12 @@ describe('Actor', function () {
       let childReferences = await query(child, x => ({ sender: x }), 30);
       childReferences.should.be.empty;
 
-      spawnStateless(child, ignore, 'testGrandchildActor');
+      spawnStateless(child, ignore, { name: 'testGrandchildActor' });
       children(child).should.have.keys('testGrandchildActor');
       childReferences = await query(child, x => ({ sender: x }), 30);
       childReferences.should.have.members(['testGrandchildActor']);
 
-      spawnStateless(child, ignore, 'testGrandchildActor2');
+      spawnStateless(child, ignore, { name: 'testGrandchildActor2' });
       childReferences = await query(child, x => ({ sender: x }), 30);
       children(child).should.have.keys('testGrandchildActor2', 'testGrandchildActor');
       childReferences.should.have.members(['testGrandchildActor2', 'testGrandchildActor']);
@@ -363,7 +363,7 @@ describe('Actor', function () {
     it('can be invoked from within actor', async function () {
       let actor = spawnStateless(system, function (msg) {
         if (msg.value === 'spawn') {
-          spawnStateless(this.self, ignore, 'child1');
+          spawnStateless(this.self, ignore, { name: 'child1' });
           spawn(this.self, ignore, { name: 'child2' });
         } else {
           dispatch(msg.sender, [...this.children.keys()]);
@@ -396,7 +396,7 @@ describe('Actor', function () {
       let actor = spawnStateless(
         system,
         async (msg) => { await delay(10); dispatch(msg.sender, 'done'); },
-        'test'
+        { name: 'test' }
       );
       (await (query(actor, x => ({ sender: x, value: 'test' }), 1).catch(x => x))).should.be.instanceOf(Error);
     });
@@ -405,7 +405,7 @@ describe('Actor', function () {
       let actor = spawnStateless(
         system,
         async (msg) => { await delay(10); dispatch(msg.sender, 'done'); },
-        'test'
+        { name: 'test' }
       );
       (await query(actor, x => ({ sender: x, value: 'test' }), 50)).should.equal('done');
     });
@@ -414,7 +414,7 @@ describe('Actor', function () {
       let actor = spawnStateless(
         system,
         async (msg) => { dispatch(msg, 'done'); },
-        'test'
+        { name: 'test' }
       );
       (await query(actor, (sender) => sender, 50)).should.equal('done');
     });
