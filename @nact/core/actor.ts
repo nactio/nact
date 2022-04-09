@@ -44,14 +44,13 @@ export class Actor<State, Msg, ParentRef extends LocalActorSystemRef | LocalActo
   name: ActorName;
   path: ActorPath;
   system: RequiredActorSystemCapabilities;
-  afterStop: (state: State, ctx: ActorContextWithMailbox<Msg, ParentRef>) => void | Promise<void>;
+  afterStop: (state: State, ctx: ActorContext<Msg, ParentRef>) => void | Promise<void>;
   reference: LocalActorRef<Msg>;
   f: ActorFunc<State, Msg, ParentRef>;
   stopped: boolean;
 
-  // TODO: Swap concreate child classes for interfaces
-  children: Map<any, Child>;
-  childReferences: Map<any, LocalActorRef<unknown>>;
+  children: Map<string, Child>;
+  childReferences: Map<string, LocalActorRef<unknown>>;
   busy: boolean;
   mailbox: Queue<{ message: Msg }>;
   immediate: number | undefined;
@@ -88,7 +87,7 @@ export class Actor<State, Msg, ParentRef extends LocalActorSystemRef | LocalActo
     this.mailbox = new Queue();
     this.immediate = undefined;
     this.parent.childSpawned(this);
-    this.onCrash = onCrash || defaultSupervisionPolicy;
+    this.onCrash = onCrash ?? defaultSupervisionPolicy;
     this.initialState = initialState;
     this.initialStateFunc = initialStateFunc;
     if (shutdownAfter) {
@@ -186,7 +185,7 @@ export class Actor<State, Msg, ParentRef extends LocalActorSystemRef | LocalActo
   }
 
   stop() {
-    const context = this.createContextWithMailbox();
+    const context = this.createContext();
 
     this.clearImmediate();
     this.clearTimeout();
@@ -267,17 +266,15 @@ export class Actor<State, Msg, ParentRef extends LocalActorSystemRef | LocalActo
   }
 
   createSupervisionContext() {
-    const ctx = this.createContextWithMailbox();
+    const ctx = this.createContext();
     return { ...ctx, ...SupervisionActions };
   }
 
-  createContextWithMailbox() {
-    const ctx = this.createContext();
-    return { ...ctx, mailbox: this.mailbox.toArray() };
-  }
+
 
   createContext(): ActorContext<Msg, ParentRef> {
     return {
+      mailbox: this.mailbox,
       parent: this.parent.reference as ParentRef,
       path: this.path,
       self: this.reference,
@@ -310,13 +307,13 @@ export type ActorContext<Msg, ParentRef extends LocalActorRef<any> | ActorSystem
   self: LocalActorRef<Msg>,
   name: ActorName,
   children: Map<ActorName, LocalActorRef<unknown>>,
+  mailbox: Queue<{ message: Msg }>
 };
 
 
 export type Mailbox<Msg> = { message: Msg }[];
-export type ActorContextWithMailbox<Msg, ParentRef extends ActorSystemRef | LocalActorRef<any>> = ActorContext<Msg, ParentRef> & { mailbox: Mailbox<Msg> };
 
-export type SupervisionContext<Msg, ParentRef extends ActorSystemRef | LocalActorRef<any>> = ActorContextWithMailbox<Msg, ParentRef> & {
+export type SupervisionContext<Msg, ParentRef extends ActorSystemRef | LocalActorRef<any>> = ActorContext<Msg, ParentRef> & {
   stop: Symbol,
   stopAll: Symbol,
   stopChild: Symbol,
@@ -326,8 +323,7 @@ export type SupervisionContext<Msg, ParentRef extends ActorSystemRef | LocalActo
   reset: Symbol,
   resetAll: Symbol,
   resetChild: Symbol,
-  resetAllChildren: Symbol,
-  mailbox: { message: Msg }[]
+  resetAllChildren: Symbol
 };
 
 // Functions
@@ -355,7 +351,7 @@ export type ActorProps<State, Msg, ParentRef extends ActorSystemRef | LocalActor
   onCrash?: SupervisionActorFunc<Msg, ParentRef>,
   initialState?: State,
   initialStateFunc?: (ctx: ActorContext<Msg, ParentRef>) => State,
-  afterStop?: (state: State, ctx: ActorContextWithMailbox<Msg, ParentRef>) => void | Promise<void>
+  afterStop?: (state: State, ctx: ActorContext<Msg, ParentRef>) => void | Promise<void>
 };
 
 export type StatelessActorProps<Msg, ParentRef extends ActorSystemRef | LocalActorRef<any>> = Omit<ActorProps<any, Msg, ParentRef>, 'initialState' | 'initialStateFunc' | 'afterStop'>;
@@ -364,7 +360,7 @@ export type StatelessActorProps<Msg, ParentRef extends ActorSystemRef | LocalAct
 export function spawn<ParentRef extends LocalActorSystemRef | LocalActorRef<any>, Func extends ActorFunc<any, any, ParentRef>>(
   parent: ParentRef,
   f: Func,
-  propertiesOrName?: (string | ActorProps<InferStateFromFunc<Func>, InferMsgFromFunc<Func>, ParentRef>)
+  properties?: ActorProps<InferStateFromFunc<Func>, InferMsgFromFunc<Func>, ParentRef>
 ): LocalActorRef<InferMsgFromFunc<Func>> {
   return applyOrThrowIfStopped(
     parent,
@@ -374,10 +370,9 @@ export function spawn<ParentRef extends LocalActorSystemRef | LocalActorRef<any>
         p,
         p.system,
         f,
-        (typeof propertiesOrName === 'string' ? { name: propertiesOrName } : propertiesOrName
-        )
-      ).reference
-  );
+        properties ?? {}
+      )
+  ).reference;
 }
 
 const statelessSupervisionPolicy = (_: unknown, __: unknown, ctx: SupervisionContext<any, any>) => ctx.resume;
@@ -390,8 +385,11 @@ export function spawnStateless<ParentRef extends LocalActorSystemRef | LocalActo
   return spawn(
     parent,
     (_state: undefined, msg: InferMsgFromStatelessFunc<Func>, ctx: ActorContext<InferMsgFromStatelessFunc<Func>, ParentRef>): undefined => {
-      f.call(ctx, msg, ctx);
-      return undefined;
+      try {
+        f.call(ctx, msg, ctx);
+      } finally {
+        return undefined;
+      }
     },
     {
       ...((typeof propertiesOrName === 'string'

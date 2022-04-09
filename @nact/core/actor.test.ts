@@ -2,10 +2,9 @@
 /* eslint-disable no-unused-expressions */
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { ActorContextWithMailbox, SupervisionContext } from './actor';
-import { start, spawn, spawnStateless, dispatch, stop, query, milliseconds } from './index';
+import { SupervisionContext } from './actor';
+import { start, spawn, spawnStateless, dispatch, stop, query, milliseconds, ActorContext, applyOrThrowIfStopped } from './index';
 import { LocalActorRef, LocalActorSystemRef, nobody } from './references';
-import { applyOrThrowIfStopped } from './system-map';
 
 chai.use(chaiAsPromised);
 chai.should();
@@ -28,7 +27,7 @@ const isStopped = (reference: LocalActorRef<any>) => {
 
 const children = (reference: LocalActorRef<any> | LocalActorSystemRef) => {
   try {
-    return applyOrThrowIfStopped(reference, ref => new Map(ref.childReferences));
+    return applyOrThrowIfStopped(reference, ref => ref.childReferences);
   } catch (e) {
     return new Map();
   }
@@ -175,7 +174,7 @@ describe('Actor', function () {
           dispatch(msg.listener, { number: msg.number });
           return state;
         },
-        'testActor'
+        { name: 'testActor' }
       );
 
       let listener = spawn(
@@ -188,7 +187,7 @@ describe('Actor', function () {
           }
           return state;
         },
-        'listener'
+        { name: 'listener' }
       );
 
       dispatch(child, { listener, number: 1 });
@@ -365,7 +364,7 @@ describe('Actor', function () {
       let actor = spawnStateless(system, function (msg) {
         if (msg.value === 'spawn') {
           spawnStateless(this.self, ignore, 'child1');
-          spawn(this.self, ignore, 'child2');
+          spawn(this.self, ignore, { name: 'child2' });
         } else {
           dispatch(msg.sender, [...this.children.keys()]);
         }
@@ -427,7 +426,7 @@ describe('Actor', function () {
     afterEach(() => stop(system));
 
     const createSupervisor = (parent: LocalActorRef<any> | LocalActorSystemRef, properties = {}) =>
-      spawn(parent, (state = true) => state, properties);
+      spawn(parent, (state) => state, { initialState: true, ...properties });
 
     it('should be able to continue processing messages without loss of state', async function () {
       const resume = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => ctx.resume;
@@ -544,8 +543,8 @@ describe('Actor', function () {
     it('should be able to access other messages in the queue', async function () {
       const onCrash = (_msg: any, _err: any, ctx: SupervisionContext<any, any>) => {
         ctx.mailbox.length.should.equal(2);
-        ctx.mailbox[0].message.value.should.equal('msg1');
-        ctx.mailbox[1].message.value.should.equal('msg2');
+        ctx.mailbox.get(0)!.message.value.should.equal('msg1');
+        ctx.mailbox.get(1)!.message.value.should.equal('msg2');
         return ctx.escalate;
       };
       const parent = createSupervisor(system, 'test1');
@@ -718,7 +717,7 @@ describe('Actor', function () {
       const child2 = spawn(parent, (state = 0, msg) => {
         dispatch(msg.sender, state + 1);
         return state + 1;
-      }, 'test2');
+      }, { name: 'test2' });
       dispatch(child1, { value: 'msg0' });
       dispatch(child1, { value: 'msg1' });
       dispatch(child1, { value: 'msg2' });
@@ -737,13 +736,11 @@ describe('Actor', function () {
         if (state + 1 === 3 && msg.value !== 'msg3') {
           throw new Error('Very bad thing');
         }
-        dispatch(msg.sender, state + 1);
         return state + 1;
       }, { name: 'test', onCrash: escalate });
-      const child2 = spawn(parent, (state = 0, msg) => {
-        dispatch(msg.sender, state + 1);
+      const child2 = spawn(parent, (state = 0) => {
         return state + 1;
-      }, 'test2');
+      }, { name: 'test2' });
       dispatch(child1, { value: 'msg0' });
       dispatch(child1, { value: 'msg1' });
       dispatch(child1, { value: 'msg2' });
@@ -865,9 +862,9 @@ describe('Actor', function () {
     });
 
     it('should be able to act on context after stop', function (done) {
-      const afterStop = (_state: any, ctx: ActorContextWithMailbox<any, any>) => {
+      const afterStop = (_state: any, ctx: ActorContext<any, any>) => {
         ctx.mailbox.length.should.equal(1);
-        ctx.mailbox[0].message.should.equal(2);
+        ctx.mailbox.shift().message.should.equal(2);
 
         ctx.parent.should.equal(system);
         done();
