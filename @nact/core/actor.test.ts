@@ -158,7 +158,7 @@ describe('Actor', function () {
             return state + msg.payload;
           }
         },
-        { name: 'Nact', initialStateFunc: () => { throw new Error('A bad moon is on the rise'); }, onCrash: (_, __, ctx) => { handled = true; return ctx.stop; } }
+        { name: 'Nact', initialStateFunc: () => { throw new Error('A bad moon is on the rise'); }, onCrash: (_: any, __: any, ctx: { stop: any; }) => { handled = true; return ctx.stop; } }
       );
       await retry(() => isStopped(actor).should.be.true, 12, 10);
       handled.should.be.true;
@@ -849,6 +849,20 @@ describe('Actor', function () {
       let result2 = await query(child2, x => ({ sender: x, value: 'msg3' }), 300);
       result.should.equal(1);
       result2.should.equal(4);
+    });
+
+    it('should be executed for a stateless actor', async function() {
+      const mockCrash = jest.fn((msg: any, _err: any, ctx: SupervisionContext<any, any>) => { 
+        dispatch(msg.sender, { error: 'we crashed' }); 
+        return ctx.resume; 
+      });
+
+      const crashingActor = spawnStateless(system, (_) => {
+        throw new Error("it's crash o'clock");
+      }, { name: 'crashyboi', onCrash: mockCrash });
+
+      await query(crashingActor, ref => ({ sender: ref }), 5000);
+      expect(mockCrash.mock.calls.length).toBe(1);
     });
   });
 

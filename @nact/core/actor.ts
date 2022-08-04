@@ -354,13 +354,17 @@ export type ActorProps<State, Msg, ParentRef extends ActorSystemRef | LocalActor
   afterStop?: (state: State, ctx: ActorContext<Msg, ParentRef>) => void | Promise<void>
 };
 
-export type StatelessActorProps<Msg, ParentRef extends ActorSystemRef | LocalActorRef<any>> = Omit<ActorProps<any, Msg, ParentRef>, 'initialState' | 'initialStateFunc' | 'afterStop'>;
+export type StatelessActorProps<ParentRef extends ActorSystemRef | LocalActorRef<any>> = {
+  name?: string,
+  shutdownAfter?: Milliseconds,
+  onCrash?: SupervisionActorFunc<InferMsgFromStatelessFunc<any>, ParentRef>,
+};
 
 
 export function spawn<ParentRef extends LocalActorSystemRef | LocalActorRef<any>, Func extends ActorFunc<any, any, ParentRef>>(
   parent: ParentRef,
   f: Func,
-  properties?: ActorProps<InferStateFromFunc<Func>, InferMsgFromFunc<Func>, ParentRef>
+  properties?: ActorProps<InferStateFromFunc<Func>, InferMsgFromFunc<Func>, ParentRef> | StatelessActorProps<ParentRef>
 ): LocalActorRef<InferMsgFromFunc<Func>> {
   return applyOrThrowIfStopped(
     parent,
@@ -380,20 +384,17 @@ const statelessSupervisionPolicy = (_: unknown, __: unknown, ctx: SupervisionCon
 export function spawnStateless<ParentRef extends LocalActorSystemRef | LocalActorRef<any>, Func extends StatelessActorFunc<any, ParentRef>>(
   parent: ParentRef,
   f: Func,
-  propertiesOrName?: StatelessActorProps<InferMsgFromStatelessFunc<Func>, ParentRef>
+  propertiesOrName?: StatelessActorProps<ParentRef>
 ): LocalActorRef<InferMsgFromStatelessFunc<Func>> {
   return spawn(
     parent,
     (_state: undefined, msg: InferMsgFromStatelessFunc<Func>, ctx: ActorContext<InferMsgFromStatelessFunc<Func>, ParentRef>): undefined => {
-      try {
         f.call(ctx, msg, ctx);
-      } finally {
         return undefined;
-      }
     },
     {
-      ...propertiesOrName,
-      onCrash: statelessSupervisionPolicy
+      onCrash: statelessSupervisionPolicy,
+      ...propertiesOrName
     }
   );
 }
