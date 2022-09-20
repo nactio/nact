@@ -1,6 +1,6 @@
 import { ActorSystemRef, localActorRef, LocalActorRef, LocalActorSystemRef, localTemporaryRef } from "./references";
 import { Deferral } from './deferral';
-import { applyOrThrowIfStopped } from './system-map';
+import { applyOrThrowIfStopped, find } from './system-map';
 import Queue from './vendored/denque';
 import assert from './assert';
 import { defaultSupervisionPolicy, SupervisionActions } from './supervision';
@@ -38,7 +38,7 @@ export type RequiredActorSystemCapabilities =
   & ICanManageTempReferences;
 
 export class Actor<State, Msg, ParentRef extends LocalActorSystemRef | LocalActorRef<any>, Child extends RequiredChildCapabilities = RequiredChildCapabilities> implements ICanDispatch<Msg>, ICanStop, ICanQuery<Msg>, IHaveName, IHaveChildren<Child, RequiredActorSystemCapabilities>, ICanReset, ICanHandleFault<Child>, ICanAssertNotStopped {
-  // TODO: Swap concreate parent class for interfaces 
+  // TODO: Swap concreate parent class for interfaces
   parent: ParentTypeFromRefType<ParentRef>
 
   name: ActorName;
@@ -389,8 +389,8 @@ export function spawnStateless<ParentRef extends LocalActorSystemRef | LocalActo
   return spawn(
     parent,
     (_state: undefined, msg: InferMsgFromStatelessFunc<Func>, ctx: ActorContext<InferMsgFromStatelessFunc<Func>, ParentRef>): undefined => {
-        f.call(ctx, msg, ctx);
-        return undefined;
+      void executeStatelessActorFunc(f, msg, ctx);
+      return undefined;
     },
     {
       onCrash: statelessSupervisionPolicy,
@@ -399,3 +399,21 @@ export function spawnStateless<ParentRef extends LocalActorSystemRef | LocalActo
   );
 }
 
+
+async function executeStatelessActorFunc<ParentRef extends LocalActorSystemRef | LocalActorRef<any>,
+  Func extends StatelessActorFunc<any, ParentRef>>(
+  f: Func,
+  msg: InferMsgFromStatelessFunc<Func>,
+  ctx: ActorContext<any, ParentRef>
+) {
+  try {
+    await f.call(ctx, msg, ctx);
+  } catch (e: unknown) {
+    if (e instanceof Error) {
+      const actor = find<Actor<any, any, any>>(ctx.self);
+      if (actor) {
+        await actor.handleFault(msg, e);
+      } else throw e;
+    } else throw e;
+  }
+}
