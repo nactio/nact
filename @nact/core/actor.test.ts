@@ -852,12 +852,26 @@ describe('Actor', function () {
     });
 
     it('should be executed for a stateless actor', async function() {
-      const mockCrash = jest.fn((msg: any, _err: any, ctx: SupervisionContext<any, any>) => { 
-        dispatch(msg.sender, { error: 'we crashed' }); 
-        return ctx.resume; 
+      const mockCrash = jest.fn((msg: any, _err: any, ctx: SupervisionContext<any, any>) => {
+        dispatch(msg.sender, { error: 'we crashed' });
+        return ctx.resume;
       });
 
       const crashingActor = spawnStateless(system, (_) => {
+        throw new Error("it's crash o'clock");
+      }, { name: 'crashyboi', onCrash: mockCrash });
+
+      await query(crashingActor, ref => ({ sender: ref }), 5000);
+      expect(mockCrash.mock.calls.length).toBe(1);
+    });
+
+    it('should be executed for a stateless actor with async function', async function() {
+      const mockCrash = jest.fn((msg: any, _err: any, ctx: SupervisionContext<any, any>) => {
+        dispatch(msg.sender, { error: 'we crashed' });
+        return ctx.resume;
+      });
+
+      const crashingActor = spawnStateless(system, async (_) => {
         throw new Error("it's crash o'clock");
       }, { name: 'crashyboi', onCrash: mockCrash });
 
