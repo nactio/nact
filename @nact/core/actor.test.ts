@@ -164,6 +164,56 @@ describe('Actor', function () {
       handled.should.be.true;
     });
 
+    it('correctly handles an asynchronous initial state function', async function () {
+      let actor = spawn(
+        system,
+        function (state, msg) {
+          if (msg.type === 'query') {
+            dispatch(msg.sender, state);
+            return state;
+          } else if (msg.type === 'append') {
+            return state + msg.payload;
+          }
+        },
+        {
+          name: 'Nact',
+          initialStateFunc: async () => {
+            await new Promise(f => setTimeout(f, 20));
+            return 'Cheese!';
+            },
+        }
+      );
+
+      dispatch(actor, { payload: ' Magical wheels of golden hue!', type: 'append' });
+      let result = await query(actor, x => ({ type: 'query', sender: x }), 30);
+      result.should.equal('Cheese! Magical wheels of golden hue!');
+    });
+
+    it('correctly handles an async initial state function which throws an error', async function () {
+      let handled = false;
+      let actor = spawn(
+        system,
+        function (state, msg) {
+          if (msg.type === 'query') {
+            dispatch(msg.sender, state);
+            return state;
+          } else if (msg.type === 'append') {
+            return state + msg.payload;
+          }
+        },
+        {
+          name: 'Nact',
+          initialStateFunc: async () => {
+            await new Promise(f => setTimeout(f, 15));
+            throw new Error('A bad moon is on the rise');
+          },
+          onCrash: (_: any, __: any, ctx: { stop: any; }) => { handled = true; return ctx.stop; }
+        }
+      );
+      await retry(() => isStopped(actor).should.be.true, 12, 10);
+      handled.should.be.true;
+    });
+
     it('evalutes in order when returning a promise from a stateful actor function', async function () {
       let child = spawn(
         system,
