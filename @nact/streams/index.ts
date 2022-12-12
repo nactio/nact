@@ -1,5 +1,7 @@
 import { dispatch, Dispatchable, LocalActorRef, LocalActorSystemRef, spawn, start, stop } from "@nact/core";
 
+type FIXME = any
+
 const HANDSHAKE: HANDSHAKE = 0;
 type HANDSHAKE = 0;
 
@@ -27,7 +29,7 @@ type ProducerProtocol<Msg> =
 type Producer<Msg> = Dispatchable<ProducerProtocol<Msg>>;
 type Consumer<Msg> = Dispatchable<ConsumerProtocol<Msg>>;
 
-export function open(port, actor) {
+export function open(port: FIXME, actor: FIXME) {
   const openPort = port(actor);
   dispatch(openPort, [HANDSHAKE, actor]);
 }
@@ -42,7 +44,7 @@ export function close(port: Producer<any>, error?: Error | undefined) {
 
 export function fromIterable<G extends Generator<any>>(iterator: G) {
   return function <ParentRef extends Consumer<any>>(parent: ParentRef) {
-    return spawn(parent, (target, msg, ctx) => {
+    return spawn(parent as FIXME, (target, msg, ctx) => {
       switch (msg[0]) {
         case HANDSHAKE:
           dispatch(msg[1], [HANDSHAKE, ctx.self]);
@@ -69,7 +71,7 @@ export function fromIterable<G extends Generator<any>>(iterator: G) {
   };
 }
 
-function fromWebSocket(socket: WebSocket) {
+export function fromWebSocket(socket: WebSocket) {
   return function <ParentRef extends LocalActorRef<any> | LocalActorSystemRef>(parent: ParentRef): Producer<any> {
     const actor = spawn(parent, async (subscriber, [type, payload], ctx) => {
       switch (type) {

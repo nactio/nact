@@ -2,10 +2,21 @@
   "name": "@nact/streams",
   "version": "0.1.0",
   "description": "",
-  "module": "index.js",
   "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "import": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
   "scripts": {
     "ts-node": "ts-node",
+    "build": "nanobundle build --platform node",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
@@ -18,6 +29,7 @@
     "chai": "^4.3.6",
     "chai-as-promised": "^7.1.1",
     "jest": "^27.5.1",
+    "nanobundle": "^1.0.0",
     "rollup": "^2.70.1",
     "semistandard": "^16.0.1",
     "ts-jest": "^27.1.3",
