@@ -56,7 +56,8 @@ export class Actor<State, Msg, ParentRef extends LocalActorSystemRef | LocalActo
   immediate: number | undefined;
   onCrash: SupervisionActorFunc<Msg, ParentRef> | ((msg: any, err: any, ctx: any, child?: undefined | LocalActorRef<unknown>) => any);
   initialState: State | undefined;
-  initialStateFunc: ((ctx: ActorContext<Msg, ParentRef>) => State) | undefined;
+  initialStateFunc: ((ctx: ActorContext<Msg, ParentRef>) => State | Promise<State>) | undefined;
+  initializeStatePromise: Promise<void>
   shutdownPeriod?: Milliseconds;
   state: any;
   timeout?: Milliseconds;
@@ -101,16 +102,20 @@ export class Actor<State, Msg, ParentRef extends LocalActorSystemRef | LocalActo
     } else {
       this.setTimeout = unit;
     }
-    this.initializeState();
+    this.initializeStatePromise = this.initializeState();
     this.setTimeout();
   }
 
-  initializeState() {
+  async waitUntilInitialized() {
+    await this.initializeStatePromise;
+  }
+
+  async initializeState() {
     if (this.initialStateFunc) {
       try {
-        this.state = this.initialStateFunc(this.createContext());
+        this.state = await Promise.resolve(this.initialStateFunc(this.createContext()));
       } catch (e) {
-        this.handleFault(undefined, e as Error | undefined);
+        await this.handleFault(undefined, e as Error | undefined);
       }
     } else {
       this.state = this.initialState;
@@ -120,7 +125,7 @@ export class Actor<State, Msg, ParentRef extends LocalActorSystemRef | LocalActo
 
   reset() {
     [...this.children.values()].forEach(x => x.stop());
-    this.initializeState();
+    this.initializeStatePromise = this.initializeState();
     this.resume();
   }
 
@@ -287,6 +292,7 @@ export class Actor<State, Msg, ParentRef extends LocalActorSystemRef | LocalActo
     this.busy = true;
     this.immediate = addMacrotask(async () => {
       try {
+        await this.waitUntilInitialized();
         let ctx = this.createContext();
         let next = await Promise.resolve(this.f.call(ctx, this.state, message, ctx));
         this.state = next;
@@ -350,7 +356,7 @@ export type ActorProps<State, Msg, ParentRef extends ActorSystemRef | LocalActor
   shutdownAfter?: Milliseconds,
   onCrash?: SupervisionActorFunc<Msg, ParentRef>,
   initialState?: State,
-  initialStateFunc?: (ctx: ActorContext<Msg, ParentRef>) => State,
+  initialStateFunc?: (ctx: ActorContext<Msg, ParentRef>) => State | Promise<State>,
   afterStop?: (state: State, ctx: ActorContext<Msg, ParentRef>) => void | Promise<void>
 };
 
